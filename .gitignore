@@ -8,15 +8,22 @@ UserSettings/
 
 *.csproj
 *.unityproj
-*.sln
 *.user
 *.userprefs
 *.pidb
 *.booproj
-
+.vs/
+.utmp/
+*.apk
+*.aab
+*.slnx
+*.sln
 *.svd
 *.pdb
 *.mdb
+
+BRAWL_RAIDERS_BurstDebugInformation_DoNotShip/
+*_BackUpThisFolder_ButDontShipItWithYourGame/
 
 .DS_Store
 Thumbs.db
