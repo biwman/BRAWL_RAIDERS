@@ -152,7 +152,7 @@ public class TreasureCollector : MonoBehaviourPun
 
         Treasure treasureToCollect = currentTreasure;
 
-        // 🔥 blokada spamu
+        // 🔥 blokada spamu (drugi gracz / drugi klik)
         if (treasureToCollect.isBeingCollected)
         {
             isCollecting = false;
@@ -161,6 +161,7 @@ public class TreasureCollector : MonoBehaviourPun
 
         treasureToCollect.isBeingCollected = true;
 
+        // 🔒 blokujemy ruch i strzał
         if (movement != null) movement.enabled = false;
         if (shooting != null) shooting.enabled = false;
 
@@ -168,6 +169,7 @@ public class TreasureCollector : MonoBehaviourPun
 
         while (timer < collectTime)
         {
+            // ❌ przerwanie jeśli puścisz przycisk
             if (!isCollecting)
             {
                 treasureToCollect.isBeingCollected = false;
@@ -180,20 +182,29 @@ public class TreasureCollector : MonoBehaviourPun
 
         Debug.Log("Collect DONE");
 
-        // 💰 punkty
+        // 💰 dodanie punktów
         totalScore += treasureToCollect.value;
 
         if (scoreText != null)
             scoreText.text = "Score: " + totalScore;
 
-        // 🔥 MULTIPLAYER DESTROY (POPRAWNY)
+        // 🌐 MULTIPLAYER DESTROY
         PhotonView treasureView = treasureToCollect.GetComponent<PhotonView>();
 
         if (treasureView != null)
         {
-            photonView.RPC("RequestDestroyTreasure", RpcTarget.MasterClient, treasureView.ViewID);
+            if (PhotonNetwork.IsMasterClient)
+            {
+                PhotonNetwork.Destroy(treasureView.gameObject);
+            }
+            else
+            {
+                photonView.RPC("RequestDestroyTreasure", RpcTarget.MasterClient, treasureView.ViewID);
+            }
         }
 
+        // 🔓 reset stanu
+        treasureToCollect.isBeingCollected = false;
         isCollecting = false;
 
         if (movement != null) movement.enabled = true;
