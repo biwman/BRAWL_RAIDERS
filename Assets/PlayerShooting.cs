@@ -1,17 +1,32 @@
 using UnityEngine;
+using Photon.Pun;
 
-public class PlayerShooting : MonoBehaviour
+public class PlayerShooting : MonoBehaviourPun
 {
     public Joystick shootJoystick;
     public GameObject bulletPrefab;
     public float bulletSpeed = 10f;
     public float fireRate = 0.3f;
+
     private float nextFireTime = 0f;
 
+    void Start()
+    {
+        if (!photonView.IsMine) return;
+
+        if (shootJoystick == null)
+        {
+            GameObject sj = GameObject.Find("ShootJoystick");
+            if (sj != null)
+                shootJoystick = sj.GetComponent<Joystick>();
+        }
+    }
 
     void Update()
     {
-        Vector2 direction = shootJoystick.inputVector;
+        if (!photonView.IsMine) return;
+
+        Vector2 direction = shootJoystick != null ? shootJoystick.inputVector : Vector2.zero;
 
         if (direction.magnitude > 0.2f)
         {
@@ -20,7 +35,6 @@ public class PlayerShooting : MonoBehaviour
                 Shoot(direction);
                 nextFireTime = Time.time + fireRate;
             }
-            ;
         }
     }
 
@@ -28,7 +42,12 @@ public class PlayerShooting : MonoBehaviour
     {
         Vector3 spawnPos = transform.position + transform.up * 0.5f;
 
-        GameObject bullet = Instantiate(bulletPrefab, spawnPos, Quaternion.identity);
+        // 🔥 KLUCZOWE: zamiast Instantiate
+        GameObject bullet = PhotonNetwork.Instantiate(
+            bulletPrefab.name,
+            spawnPos,
+            Quaternion.identity
+        );
 
         Rigidbody2D rb = bullet.GetComponent<Rigidbody2D>();
         rb.linearVelocity = direction * bulletSpeed;
@@ -37,6 +56,7 @@ public class PlayerShooting : MonoBehaviour
         Collider2D playerCollider = GetComponent<Collider2D>();
         Collider2D bulletCollider = bullet.GetComponent<Collider2D>();
 
-        Physics2D.IgnoreCollision(bulletCollider, playerCollider);
+        if (bulletCollider != null && playerCollider != null)
+            Physics2D.IgnoreCollision(bulletCollider, playerCollider);
     }
 }

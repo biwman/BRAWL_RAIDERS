@@ -17,6 +17,9 @@ public class CameraFollow : MonoBehaviour
 
     void LateUpdate()
     {
+        // 🔥 zabezpieczenie przed errorem
+        if (target == null) return;
+
         float minX = -mapSizeX / 2 + camHalfWidth;
         float maxX = mapSizeX / 2 - camHalfWidth;
 
@@ -26,6 +29,9 @@ public class CameraFollow : MonoBehaviour
         float clampedX = Mathf.Clamp(target.position.x, minX, maxX);
         float clampedY = Mathf.Clamp(target.position.y, minY, maxY);
 
-        transform.position = new Vector3(clampedX, clampedY, -10);
+        Vector3 targetPos = new Vector3(clampedX, clampedY, -10);
+
+        // 🎥 płynne podążanie (opcjonalne)
+        transform.position = Vector3.Lerp(transform.position, targetPos, Time.deltaTime * 5f);
     }
 }

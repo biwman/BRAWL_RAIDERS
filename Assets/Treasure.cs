@@ -1,27 +1,35 @@
 using UnityEngine;
+using Photon.Pun;
 
-public class Treasure : MonoBehaviour
+public class Treasure : MonoBehaviourPun
 {
     public int value;
 
     private SpriteRenderer sr;
     private Color originalColor;
 
+    // 🔥 blokada zbierania
+    public bool isBeingCollected = false;
+
     void Start()
     {
         value = Random.Range(1, 11);
 
         sr = GetComponent<SpriteRenderer>();
-        originalColor = sr.color;
+
+        if (sr != null)
+            originalColor = sr.color;
     }
 
     public void Highlight()
     {
-        sr.color = Color.yellow; // możesz zmienić kolor
+        if (sr != null)
+            sr.color = Color.yellow;
     }
 
     public void Unhighlight()
     {
-        sr.color = originalColor;
+        if (sr != null)
+            sr.color = originalColor;
     }
 }
