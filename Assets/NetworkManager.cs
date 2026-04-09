@@ -7,6 +7,10 @@ public class NetworkManager : MonoBehaviourPunCallbacks
     void Start()
     {
         Debug.Log("Connecting...");
+
+        PhotonNetwork.GameVersion = Application.version;
+        Debug.Log("Game Version: " + PhotonNetwork.GameVersion);
+
         PhotonNetwork.ConnectUsingSettings();
     }
 

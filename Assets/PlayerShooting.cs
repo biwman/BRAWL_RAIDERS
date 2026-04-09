@@ -14,49 +14,82 @@ public class PlayerShooting : MonoBehaviourPun
     {
         if (!photonView.IsMine) return;
 
-        if (shootJoystick == null)
-        {
-            GameObject sj = GameObject.Find("ShootJoystick");
-            if (sj != null)
-                shootJoystick = sj.GetComponent<Joystick>();
-        }
+        Debug.Log("PlayerShooting START");
     }
 
     void Update()
     {
         if (!photonView.IsMine) return;
 
-        Vector2 direction = shootJoystick != null ? shootJoystick.inputVector : Vector2.zero;
-
-        if (direction.magnitude > 0.2f)
+        // 🔥 znajdź joystick (retry aż znajdzie)
+        if (shootJoystick == null)
         {
-            if (Time.time >= nextFireTime)
+            GameObject sj = GameObject.Find("ShootJoystickBG");
+
+            if (sj != null)
             {
-                Shoot(direction);
-                nextFireTime = Time.time + fireRate;
+                shootJoystick = sj.GetComponent<Joystick>();
+                Debug.Log("✅ ShootJoystick znaleziony");
             }
+        }
+
+        // jeśli nadal brak joysticka → nie strzelamy
+        if (shootJoystick == null) return;
+
+        Vector2 direction = shootJoystick.inputVector;
+
+        // dead zone
+        if (direction.magnitude < 0.2f) return;
+
+        if (Time.time >= nextFireTime)
+        {
+            Debug.Log("🔥 STRZAŁ");
+
+            Shoot(direction.normalized);
+            nextFireTime = Time.time + fireRate;
         }
     }
 
     void Shoot(Vector2 direction)
     {
+        if (bulletPrefab == null)
+        {
+            Debug.LogError("❌ bulletPrefab NULL");
+            return;
+        }
+
         Vector3 spawnPos = transform.position + transform.up * 0.5f;
 
-        // 🔥 KLUCZOWE: zamiast Instantiate
         GameObject bullet = PhotonNetwork.Instantiate(
             bulletPrefab.name,
             spawnPos,
             Quaternion.identity
         );
 
+        if (bullet == null)
+        {
+            Debug.LogError("❌ Bullet się nie stworzył");
+            return;
+        }
+
         Rigidbody2D rb = bullet.GetComponent<Rigidbody2D>();
-        rb.linearVelocity = direction * bulletSpeed;
+
+        if (rb != null)
+        {
+            rb.linearVelocity = direction * bulletSpeed;
+        }
+        else
+        {
+            Debug.LogError("❌ Bullet NIE ma Rigidbody2D");
+        }
 
         // ignoruj kolizję z graczem
         Collider2D playerCollider = GetComponent<Collider2D>();
         Collider2D bulletCollider = bullet.GetComponent<Collider2D>();
 
         if (bulletCollider != null && playerCollider != null)
+        {
             Physics2D.IgnoreCollision(bulletCollider, playerCollider);
+        }
     }
 }
