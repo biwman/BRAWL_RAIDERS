@@ -26,15 +26,29 @@ public class TreasureCollector : MonoBehaviourPun
 
         // 🎯 SCORE UI
         if (scoreText == null)
-            scoreText = FindObjectOfType<TMP_Text>();
+        {
+            GameObject obj = GameObject.Find("ScoreText");
+
+            if (obj != null)
+            {
+                scoreText = obj.GetComponent<TMP_Text>();
+            }
+        }
 
         if (scoreText != null)
+        {
             scoreText.text = "Score: 0";
-
+        }
         // 🔘 BUTTON
         if (collectButton == null)
-            collectButton = FindObjectOfType<Button>();
+        {
+            GameObject obj = GameObject.Find("CollectButton");
 
+            if (obj != null)
+            {
+                collectButton = obj.GetComponent<Button>();
+            }
+        }
         if (collectButton != null)
         {
             EventTrigger trigger = collectButton.GetComponent<EventTrigger>();

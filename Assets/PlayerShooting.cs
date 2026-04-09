@@ -7,7 +7,7 @@ public class PlayerShooting : MonoBehaviourPun
     public GameObject bulletPrefab;
     public float bulletSpeed = 10f;
     public float fireRate = 0.3f;
-
+    public static bool gameStarted = false;
     private float nextFireTime = 0f;
 
     void Start()
@@ -19,6 +19,7 @@ public class PlayerShooting : MonoBehaviourPun
 
     void Update()
     {
+        if (!gameStarted) return;
         if (!photonView.IsMine) return;
 
         // 🔥 znajdź joystick (retry aż znajdzie)

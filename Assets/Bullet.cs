@@ -8,22 +8,26 @@ public class Bullet : MonoBehaviourPun
 
     void Start()
     {
-        Debug.Log("BULLET SPAWN");
-        Destroy(gameObject, lifetime);
+        if (photonView.IsMine)
+        {
+            Destroy(gameObject, lifetime);
+        }
     }
 
     void OnCollisionEnter2D(Collision2D collision)
     {
+        // 🔥 tylko właściciel pocisku robi logikę
+        if (!photonView.IsMine) return;
+
         PlayerHealth hp = collision.gameObject.GetComponent<PlayerHealth>();
 
         if (hp != null && hp.photonView != photonView)
         {
-            hp.photonView.RPC("TakeDamage", RpcTarget.All, damage);
+            // 🔥 damage liczy tylko MasterClient
+            hp.photonView.RPC("TakeDamage", RpcTarget.MasterClient, damage);
         }
 
-        if (photonView.IsMine)
-        {
-            PhotonNetwork.Destroy(gameObject);
-        }
+        // 🔥 niszczenie tylko raz (networkowo)
+        PhotonNetwork.Destroy(gameObject);
     }
 }

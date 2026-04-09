@@ -37,11 +37,19 @@ public class PlayerHealth : MonoBehaviourPun
     [PunRPC]
     public void TakeDamage(int dmg)
     {
+        // 🔥 tylko Master liczy HP
+        if (!PhotonNetwork.IsMasterClient) return;
+
         currentHP -= dmg;
 
-        Debug.Log("HP: " + currentHP);
+        // 🔥 synchronizacja do wszystkich
+        photonView.RPC("SyncHP", RpcTarget.All, currentHP);
+    }
+    [PunRPC]
+    void SyncHP(int newHP)
+    {
+        currentHP = newHP;
 
-        // 🔥 update tylko lokalnego UI
         if (photonView.IsMine && hpBar != null)
         {
             hpBar.value = currentHP;
@@ -52,7 +60,6 @@ public class PlayerHealth : MonoBehaviourPun
             Die();
         }
     }
-
     void Die()
     {
         if (photonView.IsMine)

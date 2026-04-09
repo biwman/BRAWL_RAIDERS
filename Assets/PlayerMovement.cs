@@ -3,8 +3,11 @@ using Photon.Pun;
 
 public class PlayerMovement : MonoBehaviourPun
 {
+    public static bool gameStarted = false;
+
     private Rigidbody2D rb;
     public float speed = 5f;
+
     public Joystick joystick;
     public Joystick shootJoystick;
 
@@ -18,29 +21,34 @@ public class PlayerMovement : MonoBehaviourPun
         // ❌ zdalni gracze NIC nie robią
         if (!photonView.IsMine) return;
 
-        // 🔥 PODPIĘCIE KAMERY
+        // 🔥 kamera podąża za graczem
         CameraFollow cam = FindObjectOfType<CameraFollow>();
         if (cam != null)
         {
             cam.target = transform;
         }
 
-        // 🎮 joystick movement
+        // 🎮 joystick ruchu
         if (joystick == null)
+        {
             joystick = FindObjectOfType<Joystick>();
+        }
 
         // 🎯 joystick strzału
         if (shootJoystick == null)
         {
-            GameObject sj = GameObject.Find("ShootJoystick");
+            GameObject sj = GameObject.Find("ShootJoystickBG");
             if (sj != null)
+            {
                 shootJoystick = sj.GetComponent<Joystick>();
+            }
         }
     }
 
     void Update()
     {
         if (!photonView.IsMine) return;
+        if (!gameStarted) return;
 
         moveInput = joystick != null ? joystick.inputVector : Vector2.zero;
         shootInput = shootJoystick != null ? shootJoystick.inputVector : Vector2.zero;
@@ -69,10 +77,20 @@ public class PlayerMovement : MonoBehaviourPun
     {
         if (!photonView.IsMine) return;
 
+        // 🔥 blokada ruchu przed startem gry
+        if (!gameStarted)
+        {
+            rb.linearVelocity = Vector2.zero;
+            return;
+        }
+
         rb.linearVelocity = moveInput * speed;
     }
+
     void OnTriggerEnter2D(Collider2D other)
     {
+        if (!photonView.IsMine) return;
+
         Debug.Log("DOTKNALEM: " + other.name);
     }
 }
