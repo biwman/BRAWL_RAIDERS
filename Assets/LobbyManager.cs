@@ -14,25 +14,55 @@ public class LobbyManager : MonoBehaviourPunCallbacks
 
     void Start()
     {
-        // 🔥 reset gry przy wejściu do lobby
+        // reset stanu gry lokalnie
         PlayerMovement.gameStarted = false;
         PlayerShooting.gameStarted = false;
 
+        // przypięcie przycisku
         if (readyButton != null)
         {
             readyButton.onClick.AddListener(ToggleReady);
         }
 
-        SetReady(false);
+        // ustaw ready = false tylko jeśli brak
+        if (!PhotonNetwork.LocalPlayer.CustomProperties.ContainsKey("ready"))
+        {
+            SetReady(false);
+        }
+
+        // jeśli gra już wystartowała (ważne dla drugiego gracza)
+        if (PhotonNetwork.CurrentRoom != null &&
+            PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue("gameStarted", out object value))
+        {
+            if ((bool)value)
+            {
+                Debug.Log("🎮 GAME ALREADY STARTED (Start)");
+
+                PlayerMovement.gameStarted = true;
+                PlayerShooting.gameStarted = true;
+
+                CanvasGroup cg = GetComponent<CanvasGroup>();
+
+                if (cg != null)
+                {
+                    cg.alpha = 0;
+                    cg.interactable = false;
+                    cg.blocksRaycasts = false;
+                }
+                else
+                {
+                    gameObject.SetActive(false);
+                }
+            }
+        }
+
+
     }
 
     void ToggleReady()
     {
         isReady = !isReady;
         SetReady(isReady);
-
-        // 🔥 opóźnienie 0.1s (ważne)
-        Invoke(nameof(CheckAllReady), 0.1f);
     }
 
     void SetReady(bool ready)
@@ -44,7 +74,7 @@ public class LobbyManager : MonoBehaviourPunCallbacks
 
         if (readyText != null)
         {
-            readyText.text = ready ? "READY ✅" : "NOT READY ❌";
+            readyText.text = ready ? "READY " : "NOT READY ";
         }
     }
 
@@ -58,25 +88,26 @@ public class LobbyManager : MonoBehaviourPunCallbacks
 
     void CheckAllReady()
     {
+        Debug.Log("SPRAWDZAM READY");
+
         foreach (Player p in PhotonNetwork.PlayerList)
         {
             object readyValue;
 
             if (!p.CustomProperties.TryGetValue("ready", out readyValue))
             {
-                Debug.Log("Brak ready u gracza");
                 return;
             }
 
             if (!(bool)readyValue)
             {
-                Debug.Log("Gracz nie gotowy");
                 return;
             }
         }
 
         Debug.Log("✅ WSZYSCY GOTOWI");
 
+        // 🔥 tylko master ustawia start gry
         if (PhotonNetwork.IsMasterClient)
         {
             StartGame();
@@ -85,14 +116,38 @@ public class LobbyManager : MonoBehaviourPunCallbacks
 
     void StartGame()
     {
-        Debug.Log("🚀 START GRY");
+        Debug.Log("START GRY");
 
-        PlayerMovement.gameStarted = true;
-        PlayerShooting.gameStarted = true;
+        Hashtable props = new Hashtable();
+        props["gameStarted"] = true;
 
-        PhotonNetwork.CurrentRoom.IsOpen = false;
-        PhotonNetwork.CurrentRoom.IsVisible = false;
+        PhotonNetwork.CurrentRoom.SetCustomProperties(props);
 
-        gameObject.SetActive(false);
+        
+    }
+
+    public override void OnRoomPropertiesUpdate(Hashtable propertiesThatChanged)
+    {
+        
+        if (propertiesThatChanged.ContainsKey("gameStarted"))
+        {
+            Debug.Log("GAME STARTED (ROOM PROP)");
+
+            PlayerMovement.gameStarted = true;
+            PlayerShooting.gameStarted = true;
+
+            CanvasGroup cg = GetComponent<CanvasGroup>();
+
+            if (cg != null)
+            {
+                cg.alpha = 0;
+                cg.interactable = false;
+                cg.blocksRaycasts = false;
+            }
+            else
+            {
+                gameObject.SetActive(false);
+            }
+        }
     }
 }

@@ -19,7 +19,7 @@ public class PlayerShooting : MonoBehaviourPun
 
     void Update()
     {
-        if (!gameStarted) return;
+        if (!IsGameStarted()) return;
         if (!photonView.IsMine) return;
 
         // 🔥 znajdź joystick (retry aż znajdzie)
@@ -92,5 +92,19 @@ public class PlayerShooting : MonoBehaviourPun
         {
             Physics2D.IgnoreCollision(bulletCollider, playerCollider);
         }
+    }
+    bool IsGameStarted()
+    {
+        if (PhotonNetwork.CurrentRoom == null)
+            return false;
+
+        object value;
+
+        if (PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue("gameStarted", out value))
+        {
+            return (bool)value;
+        }
+
+        return false;
     }
 }

@@ -48,7 +48,7 @@ public class PlayerMovement : MonoBehaviourPun
     void Update()
     {
         if (!photonView.IsMine) return;
-        if (!gameStarted) return;
+        if (!IsGameStarted()) return;
 
         moveInput = joystick != null ? joystick.inputVector : Vector2.zero;
         shootInput = shootJoystick != null ? shootJoystick.inputVector : Vector2.zero;
@@ -77,8 +77,7 @@ public class PlayerMovement : MonoBehaviourPun
     {
         if (!photonView.IsMine) return;
 
-        // 🔥 blokada ruchu przed startem gry
-        if (!gameStarted)
+        if (!IsGameStarted())
         {
             rb.linearVelocity = Vector2.zero;
             return;
@@ -92,5 +91,19 @@ public class PlayerMovement : MonoBehaviourPun
         if (!photonView.IsMine) return;
 
         Debug.Log("DOTKNALEM: " + other.name);
+    }
+    bool IsGameStarted()
+    {
+        if (PhotonNetwork.CurrentRoom == null)
+            return false;
+
+        object value;
+
+        if (PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue("gameStarted", out value))
+        {
+            return (bool)value;
+        }
+
+        return false;
     }
 }
