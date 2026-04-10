@@ -5,6 +5,7 @@ public class Bullet : MonoBehaviourPun
 {
     public float lifetime = 2f;
     public int damage = 10;
+    public int ownerViewID;
 
     void Start()
     {
@@ -16,18 +17,15 @@ public class Bullet : MonoBehaviourPun
 
     void OnCollisionEnter2D(Collision2D collision)
     {
-        // 🔥 tylko właściciel pocisku robi logikę
         if (!photonView.IsMine) return;
 
         PlayerHealth hp = collision.gameObject.GetComponent<PlayerHealth>();
 
-        if (hp != null && hp.photonView != photonView)
+        if (hp != null && hp.photonView.ViewID != ownerViewID)
         {
-            // 🔥 damage liczy tylko MasterClient
-            hp.photonView.RPC("TakeDamage", RpcTarget.MasterClient, damage);
+            hp.photonView.RPC("TakeDamage", RpcTarget.All, damage, ownerViewID);
         }
 
-        // 🔥 niszczenie tylko raz (networkowo)
         PhotonNetwork.Destroy(gameObject);
     }
 }

@@ -13,7 +13,6 @@ public class PlayerHealth : MonoBehaviourPun
     {
         currentHP = maxHP;
 
-        // 🔥 tylko lokalny gracz szuka UI
         if (photonView.IsMine)
         {
             GameObject barObj = GameObject.Find("HP_Bar");
@@ -35,20 +34,12 @@ public class PlayerHealth : MonoBehaviourPun
     }
 
     [PunRPC]
-    public void TakeDamage(int dmg)
+    public void TakeDamage(int dmg, int attackerViewID)
     {
-        // 🔥 tylko Master liczy HP
-        if (!PhotonNetwork.IsMasterClient) return;
-
         currentHP -= dmg;
 
-        // 🔥 synchronizacja do wszystkich
-        photonView.RPC("SyncHP", RpcTarget.All, currentHP);
-    }
-    [PunRPC]
-    void SyncHP(int newHP)
-    {
-        currentHP = newHP;
+        if (currentHP < 0)
+            currentHP = 0;
 
         if (photonView.IsMine && hpBar != null)
         {
@@ -57,14 +48,30 @@ public class PlayerHealth : MonoBehaviourPun
 
         if (currentHP <= 0)
         {
-            Die();
+            Die(attackerViewID);
         }
     }
-    void Die()
+
+    void Die(int attackerViewID)
     {
+        // 🔥 zabity znika
         if (photonView.IsMine)
         {
             PhotonNetwork.Destroy(gameObject);
+        }
+
+        // 🔥 znajdź kto zabił
+        PhotonView attacker = PhotonView.Find(attackerViewID);
+
+        if (attacker != null && attacker.IsMine)
+        {
+            TreasureCollector collector = attacker.GetComponent<TreasureCollector>();
+
+            if (collector != null)
+            {
+                collector.AddScore(10);
+                Debug.Log("🏆 KILL +10");
+            }
         }
     }
 }

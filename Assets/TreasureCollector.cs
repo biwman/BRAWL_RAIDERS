@@ -197,10 +197,7 @@ public class TreasureCollector : MonoBehaviourPun
         Debug.Log("Collect DONE");
 
         // 💰 dodanie punktów
-        totalScore += treasureToCollect.value;
-
-        if (scoreText != null)
-            scoreText.text = "Score: " + totalScore;
+        AddScore(treasureToCollect.value);
 
         // 🌐 MULTIPLAYER DESTROY
         PhotonView treasureView = treasureToCollect.GetComponent<PhotonView>();
@@ -236,6 +233,15 @@ public class TreasureCollector : MonoBehaviourPun
         if (pv != null)
         {
             PhotonNetwork.Destroy(pv.gameObject);
+        }
+    }
+    public void AddScore(int amount)
+    {
+        totalScore += amount;
+
+        if (scoreText != null)
+        {
+            scoreText.text = "Score: " + totalScore;
         }
     }
 }

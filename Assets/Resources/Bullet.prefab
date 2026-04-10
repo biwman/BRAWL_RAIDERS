@@ -173,6 +173,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Bullet
   lifetime: 2
   damage: 10
+  ownerViewID: 0
 --- !u!114 &-6867266216501134346
 MonoBehaviour:
   m_ObjectHideFlags: 0

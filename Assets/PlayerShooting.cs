@@ -66,6 +66,8 @@ public class PlayerShooting : MonoBehaviourPun
             spawnPos,
             Quaternion.identity
         );
+        PhotonView pv = GetComponent<PhotonView>();
+        bullet.GetComponent<Bullet>().ownerViewID = pv.ViewID;
 
         if (bullet == null)
         {
