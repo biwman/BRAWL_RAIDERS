@@ -1,17 +1,16 @@
 using UnityEngine;
 using Photon.Pun;
 using TMPro;
+using ExitGames.Client.Photon;
 
 public class GameTimer : MonoBehaviourPun
 {
-    public float roundTime = 180f; // 🔥 łatwo zmienisz (np. 60 = 1 min)
-
-    private float currentTime;
-    private bool isRunning = false;
+    public float roundTime = 180f;
 
     private TMP_Text timerText;
 
-    private float syncTimer = 0f; // 🔥 do ograniczenia RPC
+    private double startTime;
+    private bool timerStarted = false;
 
     void Start()
     {
@@ -25,62 +24,80 @@ public class GameTimer : MonoBehaviourPun
         {
             Debug.LogError("❌ Nie znaleziono TimerText");
         }
-
-        currentTime = roundTime;
     }
 
     void Update()
     {
         if (!IsGameStarted()) return;
 
-        // 🔥 tylko MASTER liczy czas
-        if (PhotonNetwork.IsMasterClient)
+        // 🔥 pobierz startTime z rooma
+        if (!timerStarted)
         {
-            if (!isRunning)
+            if (PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue("startTime", out object value))
             {
-                isRunning = true;
+                startTime = (double)value;
+                timerStarted = true;
             }
-
-            currentTime -= Time.deltaTime;
-            syncTimer += Time.deltaTime;
-
-            // 🔥 wysyłaj co 0.1 sekundy zamiast co klatkę
-            if (syncTimer >= 0.1f)
+            else
             {
-                photonView.RPC("UpdateTimer", RpcTarget.All, currentTime);
-                syncTimer = 0f;
+                return;
             }
+        }
 
-            // 🔥 koniec gry tylko raz
-            if (currentTime <= 0 && isRunning)
-            {
-                isRunning = false;
-                photonView.RPC("EndGame", RpcTarget.All);
-            }
+        // 🔥 oblicz czas na podstawie Photon Time
+        double elapsed = PhotonNetwork.Time - startTime;
+        float remaining = roundTime - (float)elapsed;
+
+        // 🔥 clamp
+        remaining = Mathf.Max(0f, remaining);
+
+        // 🔥 update UI
+        UpdateTimerUI(remaining);
+
+        // 🔥 tylko master kończy grę
+        if (remaining <= 0f && PhotonNetwork.IsMasterClient)
+        {
+            EndGame();
         }
     }
 
-    [PunRPC]
-    void UpdateTimer(float time)
+    void UpdateTimerUI(float time)
     {
-        currentTime = time;
-
         if (timerText != null)
         {
-            int minutes = Mathf.FloorToInt(currentTime / 60);
-            int seconds = Mathf.Clamp(Mathf.FloorToInt(currentTime % 60), 0, 59);
+            int minutes = Mathf.FloorToInt(time / 60f);
+            int seconds = Mathf.FloorToInt(time % 60f);
 
             timerText.text = minutes.ToString("00") + ":" + seconds.ToString("00");
         }
     }
 
-    [PunRPC]
     void EndGame()
     {
+        // 🔥 zabezpieczenie żeby nie odpalało się wiele razy
+        if (!IsGameStarted()) return;
+
         Debug.Log("⏰ KONIEC GRY");
 
         PlayerMovement.gameStarted = false;
         PlayerShooting.gameStarted = false;
+
+        // 🔥 ustaw gameStarted = false w roomie
+        Hashtable props = new Hashtable();
+        props["gameStarted"] = false;
+        PhotonNetwork.CurrentRoom.SetCustomProperties(props);
+    }
+
+    public static void StartGame()
+    {
+        if (!PhotonNetwork.IsMasterClient) return;
+
+        Hashtable props = new Hashtable();
+
+        props["gameStarted"] = true;
+        props["startTime"] = PhotonNetwork.Time; // 🔥 KLUCZ
+
+        PhotonNetwork.CurrentRoom.SetCustomProperties(props);
     }
 
     bool IsGameStarted()
@@ -88,9 +105,7 @@ public class GameTimer : MonoBehaviourPun
         if (PhotonNetwork.CurrentRoom == null)
             return false;
 
-        object value;
-
-        if (PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue("gameStarted", out value))
+        if (PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue("gameStarted", out object value))
         {
             return (bool)value;
         }

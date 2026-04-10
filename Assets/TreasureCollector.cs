@@ -16,7 +16,7 @@ public class TreasureCollector : MonoBehaviourPun
 
     private Treasure currentTreasure;
     private bool isCollecting = false;
-
+    private ExtractionZone currentExtraction;
     public float collectTime = 3f;
     public int totalScore = 0;
 
@@ -113,6 +113,12 @@ public class TreasureCollector : MonoBehaviourPun
             currentTreasure = tParent;
             tParent.Highlight();
         }
+        ExtractionZone ez = other.GetComponent<ExtractionZone>();
+
+        if (ez != null)
+        {
+            currentExtraction = ez;
+        }
     }
 
     void OnTriggerExit2D(Collider2D other)
@@ -125,6 +131,12 @@ public class TreasureCollector : MonoBehaviourPun
             t.Unhighlight();
             currentTreasure = null;
         }
+        ExtractionZone ez = other.GetComponent<ExtractionZone>();
+
+        if (ez != null)
+        {
+            currentExtraction = null;
+        }
     }
 
     public void StartHolding()
@@ -132,6 +144,23 @@ public class TreasureCollector : MonoBehaviourPun
         if (!photonView.IsMine) return;
 
         Debug.Log("START HOLD");
+
+        // 🔥 1. Extraction ma priorytet
+        if (currentExtraction != null)
+        {
+            PhotonView ezView = currentExtraction.GetComponent<PhotonView>();
+
+            if (ezView != null)
+            {
+                Debug.Log("🚁 PRÓBA AKTYWACJI EXTRACTION");
+
+                photonView.RPC("RequestUseExtraction", RpcTarget.MasterClient, ezView.ViewID);
+            }
+
+            return; // ❗ ważne – nie przechodzimy dalej
+        }
+
+        // 🔥 2. Skarby (jak było)
         Debug.Log("currentTreasure: " + currentTreasure);
 
         if (currentTreasure != null && !isCollecting)
@@ -147,8 +176,13 @@ public class TreasureCollector : MonoBehaviourPun
 
         Debug.Log("STOP HOLD");
 
-        isCollecting = false;
-        
+        // 🔥 jeśli zbierasz skarb → przerwij
+        if (isCollecting)
+        {
+            isCollecting = false;
+        }
+
+        // 🔥 extraction NIE przerywamy (bo leci po stronie Mastera)
 
         if (movement != null) movement.enabled = true;
         if (shooting != null) shooting.enabled = true;
@@ -242,6 +276,23 @@ public class TreasureCollector : MonoBehaviourPun
         if (scoreText != null)
         {
             scoreText.text = "Score: " + totalScore;
+        }
+    }
+    [PunRPC]
+    void RequestUseExtraction(int viewID)
+    {
+        if (!PhotonNetwork.IsMasterClient) return;
+
+        PhotonView pv = PhotonView.Find(viewID);
+
+        if (pv != null)
+        {
+            ExtractionZone ez = pv.GetComponent<ExtractionZone>();
+
+            if (ez != null)
+            {
+                ez.TryUse(photonView);
+            }
         }
     }
 }

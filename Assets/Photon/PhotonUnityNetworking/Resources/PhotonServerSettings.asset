@@ -46,6 +46,14 @@ MonoBehaviour:
   - StartGameRPC
   - EndGame
   - UpdateTimer
+  - ActivateZone
+  - EvacuatePlayers
+  - RequestUseExtraction
+  - ResetZone
+  - OnEvacuated
+  - ShowExtractionMessage
+  - AddKillScore
+  - ShowDeathMessage
   DisableAutoOpenWizard: 1
   ShowSettings: 1
   DevRegionSetOnce: 1

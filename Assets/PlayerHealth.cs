@@ -1,6 +1,7 @@
 using UnityEngine;
 using Photon.Pun;
 using UnityEngine.UI;
+using System.Collections;
 
 public class PlayerHealth : MonoBehaviourPun
 {
@@ -8,6 +9,9 @@ public class PlayerHealth : MonoBehaviourPun
     private int currentHP;
 
     private Slider hpBar;
+
+    public GameObject deathMessage;
+    private bool messageShowing = false;
 
     void Start()
     {
@@ -41,6 +45,7 @@ public class PlayerHealth : MonoBehaviourPun
         if (currentHP < 0)
             currentHP = 0;
 
+        // 🔥 update HP bara tylko lokalnie
         if (photonView.IsMine && hpBar != null)
         {
             hpBar.value = currentHP;
@@ -54,24 +59,91 @@ public class PlayerHealth : MonoBehaviourPun
 
     void Die(int attackerViewID)
     {
-        // 🔥 zabity znika
+        // 🔥 pokaż komunikat u wszystkich
+        photonView.RPC("ShowDeathMessage", RpcTarget.All);
+
+        PhotonView attackerPV = PhotonView.Find(attackerViewID);
+
+        TreasureCollector victimTC = GetComponent<TreasureCollector>();
+
+        if (victimTC != null)
+        {
+            int victimScore = victimTC.totalScore;
+
+            // 🔥 zabójca dostaje 50%
+            int reward = victimScore / 2;
+
+            if (attackerPV != null)
+            {
+                attackerPV.RPC("AddKillScore", attackerPV.Owner, reward);
+            }
+
+            // 🔥 ofiara traci 75%
+            int loss = (int)(victimScore * 0.75f);
+            victimTC.totalScore -= loss;
+
+            if (victimTC.totalScore < 0)
+                victimTC.totalScore = 0;
+
+            // 🔥 odśwież UI ofiary
+            if (photonView.IsMine)
+            {
+                victimTC.AddScore(0);
+            }
+        }
+
         if (photonView.IsMine)
         {
             PhotonNetwork.Destroy(gameObject);
         }
+    }
 
-        // 🔥 znajdź kto zabił
-        PhotonView attacker = PhotonView.Find(attackerViewID);
+    [PunRPC]
+    public void AddKillScore(int amount)
+    {
+        if (!photonView.IsMine) return;
 
-        if (attacker != null && attacker.IsMine)
+        TreasureCollector tc = GetComponent<TreasureCollector>();
+
+        if (tc != null)
         {
-            TreasureCollector collector = attacker.GetComponent<TreasureCollector>();
-
-            if (collector != null)
-            {
-                collector.AddScore(10);
-                Debug.Log("🏆 KILL +10");
-            }
+            tc.AddScore(amount);
         }
+    }
+
+    [PunRPC]
+    public void OnEvacuated(int reward)
+    {
+        if (!photonView.IsMine) return;
+
+        TreasureCollector tc = GetComponent<TreasureCollector>();
+
+        if (tc != null)
+        {
+            tc.AddScore(reward);
+        }
+    }
+
+    [PunRPC]
+    void ShowDeathMessage()
+    {
+        if (messageShowing) return;
+
+        GameObject obj = GameObject.Find("DeathMessage");
+
+        if (obj != null)
+        {
+            messageShowing = true;
+            obj.SetActive(true);
+            StartCoroutine(HideDeathMessage(obj));
+        }
+    }
+
+    IEnumerator HideDeathMessage(GameObject obj)
+    {
+        yield return new WaitForSeconds(3f);
+
+        obj.SetActive(false);
+        messageShowing = false;
     }
 }

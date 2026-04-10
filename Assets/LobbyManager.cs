@@ -118,12 +118,7 @@ public class LobbyManager : MonoBehaviourPunCallbacks
     {
         Debug.Log("START GRY");
 
-        Hashtable props = new Hashtable();
-        props["gameStarted"] = true;
-
-        PhotonNetwork.CurrentRoom.SetCustomProperties(props);
-
-        
+        GameTimer.StartGame(); // 🔥 NAJWAŻNIEJSZE
     }
 
     public override void OnRoomPropertiesUpdate(Hashtable propertiesThatChanged)
