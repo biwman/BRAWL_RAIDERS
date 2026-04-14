@@ -113,6 +113,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: '::'
   speed: 5
+  depletedSpeedMultiplier: 0.7
+  boosterDuration: 5
+  maxSpeedThreshold: 0.9
+  fullSpeedSnapThreshold: 0.92
+  boosterRecoveryThreshold: 0.2
   joystick: {fileID: 0}
   shootJoystick: {fileID: 0}
 --- !u!114 &3558705361026971605
@@ -310,4 +315,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerHealth
   maxHP: 100
-  deathMessage: {fileID: 0}
+  endScreen: {fileID: 0}
+  endMessage: {fileID: 0}
+  playerListContent: {fileID: 0}
+  playerListItemPrefab: {fileID: 0}

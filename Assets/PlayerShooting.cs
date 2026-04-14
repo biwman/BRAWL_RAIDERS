@@ -22,7 +22,7 @@ public class PlayerShooting : MonoBehaviourPun
         if (!IsGameStarted()) return;
         if (!photonView.IsMine) return;
 
-        // 🔥 znajdź joystick (retry aż znajdzie)
+        // znajdź joystick (retry aż znajdzie)
         if (shootJoystick == null)
         {
             GameObject sj = GameObject.Find("ShootJoystickBG");
@@ -30,21 +30,21 @@ public class PlayerShooting : MonoBehaviourPun
             if (sj != null)
             {
                 shootJoystick = sj.GetComponent<Joystick>();
-                Debug.Log("✅ ShootJoystick znaleziony");
+                Debug.Log("ShootJoystick znaleziony");
             }
         }
 
         // jeśli nadal brak joysticka → nie strzelamy
         if (shootJoystick == null) return;
 
-        Vector2 direction = shootJoystick.inputVector;
+        Vector2 direction = shootJoystick.IsPressed ? shootJoystick.inputVector : Vector2.zero;
 
         // dead zone
         if (direction.magnitude < 0.2f) return;
 
         if (Time.time >= nextFireTime)
         {
-            Debug.Log("🔥 STRZAŁ");
+            Debug.Log("STRZAŁ");
 
             Shoot(direction.normalized);
             nextFireTime = Time.time + fireRate;
@@ -55,7 +55,7 @@ public class PlayerShooting : MonoBehaviourPun
     {
         if (bulletPrefab == null)
         {
-            Debug.LogError("❌ bulletPrefab NULL");
+            Debug.LogError("bulletPrefab NULL");
             return;
         }
 
@@ -71,7 +71,7 @@ public class PlayerShooting : MonoBehaviourPun
 
         if (bullet == null)
         {
-            Debug.LogError("❌ Bullet się nie stworzył");
+            Debug.LogError("Bullet się nie stworzył");
             return;
         }
 
@@ -83,7 +83,7 @@ public class PlayerShooting : MonoBehaviourPun
         }
         else
         {
-            Debug.LogError("❌ Bullet NIE ma Rigidbody2D");
+            Debug.LogError("Bullet NIE ma Rigidbody2D");
         }
 
         // ignoruj kolizję z graczem

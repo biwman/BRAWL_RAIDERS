@@ -4,10 +4,21 @@ using UnityEngine;
 
 public class NetworkManager : MonoBehaviourPunCallbacks
 {
+    void Awake()
+    {
+        PhotonNetwork.AutomaticallySyncScene = true;
+    }
+
     void Start()
     {
-        Debug.Log("Connecting...");
+        if (PhotonNetwork.InRoom)
+        {
+            Debug.Log("Already in room, restoring scene state...");
+            RestoreRoomStateAfterSceneLoad();
+            return;
+        }
 
+        Debug.Log("Connecting...");
         PhotonNetwork.GameVersion = Application.version;
         Debug.Log("Game Version: " + PhotonNetwork.GameVersion);
 
@@ -32,18 +43,14 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 
     public override void OnJoinedRoom()
     {
-        Debug.Log("Joined Room ✔");
+        Debug.Log("Joined Room");
 
-        SpawnPlayer();
-
-        // 🔥 DODAJ TO
-        if (PhotonNetwork.IsMasterClient)
+        if (string.IsNullOrWhiteSpace(PhotonNetwork.NickName))
         {
-            Debug.Log("Tworzę TreasureSpawner");
-
-            GameObject spawner = new GameObject("TreasureSpawner");
-            spawner.AddComponent<TreasureSpawner>();
+            PhotonNetwork.NickName = "Player " + PhotonNetwork.LocalPlayer.ActorNumber;
         }
+
+        RestoreRoomStateAfterSceneLoad();
     }
 
     void SpawnPlayer()
@@ -52,5 +59,51 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 
         Vector3 spawnPos = new Vector3(Random.Range(-3, 3), Random.Range(-3, 3), 0);
         PhotonNetwork.Instantiate("Player", spawnPos, Quaternion.identity);
+    }
+
+    void RestoreRoomStateAfterSceneLoad()
+    {
+        if (PhotonNetwork.LocalPlayer != null && string.IsNullOrWhiteSpace(PhotonNetwork.NickName))
+        {
+            PhotonNetwork.NickName = "Player " + PhotonNetwork.LocalPlayer.ActorNumber;
+        }
+
+        SpawnPlayerIfNeeded();
+        EnsureTreasureSpawnerExists();
+    }
+
+    void SpawnPlayerIfNeeded()
+    {
+        if (!PhotonNetwork.InRoom)
+            return;
+
+        if (PhotonNetwork.LocalPlayer.TagObject is GameObject taggedObject && taggedObject != null)
+            return;
+
+        PlayerHealth[] players = FindObjectsByType<PlayerHealth>(FindObjectsSortMode.None);
+        foreach (PlayerHealth player in players)
+        {
+            if (player.photonView != null && player.photonView.IsMine)
+            {
+                PhotonNetwork.LocalPlayer.TagObject = player.gameObject;
+                return;
+            }
+        }
+
+        SpawnPlayer();
+    }
+
+    void EnsureTreasureSpawnerExists()
+    {
+        if (!PhotonNetwork.IsMasterClient)
+            return;
+
+        if (FindFirstObjectByType<TreasureSpawner>() != null)
+            return;
+
+        Debug.Log("Tworze TreasureSpawner");
+
+        GameObject spawner = new GameObject("TreasureSpawner");
+        spawner.AddComponent<TreasureSpawner>();
     }
 }

@@ -11,29 +11,29 @@ public class TreasureSpawner : MonoBehaviourPun
 
     void Start()
     {
-        // 🔥 zamiast odpalać od razu → czekamy na Photon
-        Debug.Log("🔥 TreasureSpawner Start działa");
+        // zamiast odpalać od razu → czekamy na Photon
+        Debug.Log("TreasureSpawner Start działa");
         StartCoroutine(SpawnWhenReady());
     }
 
     IEnumerator SpawnWhenReady()
     {
-        // 🔥 czekamy aż Photon będzie gotowy
+        // czekamy aż Photon będzie gotowy
         while (!PhotonNetwork.IsConnectedAndReady)
         {
             yield return null;
         }
 
-        Debug.Log("✅ Photon gotowy!");
+        Debug.Log("Photon gotowy!");
 
-        // 🔥 tylko MasterClient spawnuje
+        // tylko MasterClient spawnuje
         if (!PhotonNetwork.IsMasterClient)
         {
-            Debug.Log("❌ Nie jestem MasterClient - nie spawnuję");
+            Debug.Log("Nie jestem MasterClient - nie spawnuję");
             yield break;
         }
 
-        Debug.Log("🔥 Jestem MasterClient - spawnuję skarby");
+        Debug.Log("Jestem MasterClient - spawnuję skarby");
 
         SpawnTreasures();
     }
@@ -60,25 +60,25 @@ public class TreasureSpawner : MonoBehaviourPun
             {
                 Vector3 pos = new Vector3(x, y, 0);
 
-                // 🔥 KLUCZOWE: Photon spawn
+                // KLUCZOWE: Photon spawn
                 GameObject t = PhotonNetwork.Instantiate("TreasureNetwork", pos, Quaternion.identity);
 
                 PhotonView pv = t.GetComponent<PhotonView>();
 
                 if (pv == null)
                 {
-                    Debug.LogError("❌ Treasure NIE ma PhotonView!");
+                    Debug.LogError("Treasure NIE ma PhotonView!");
                 }
                 else
                 {
-                    Debug.Log("✅ Spawn OK: " + t.name);
-                    Debug.Log("➡ ViewID: " + pv.ViewID);
+                    Debug.Log("Spawn OK: " + t.name);
+                    Debug.Log("ViewID: " + pv.ViewID);
                 }
 
                 spawned++;
             }
         }
 
-        Debug.Log("🎯 Spawned treasures: " + spawned);
+        Debug.Log("Spawned treasures: " + spawned);
     }
 }

@@ -171,9 +171,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2e2735cafd35068478b77c9f097a23bd, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Bullet
-  lifetime: 2
   damage: 10
   ownerViewID: 0
+  rangeMultiplier: 15
+  fallbackPlayerLength: 1
+  safetyLifetime: 10
 --- !u!114 &-6867266216501134346
 MonoBehaviour:
   m_ObjectHideFlags: 0

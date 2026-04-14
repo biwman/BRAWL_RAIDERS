@@ -8,7 +8,7 @@ public class Treasure : MonoBehaviourPun
     private SpriteRenderer sr;
     private Color originalColor;
 
-    // 🔥 blokada zbierania
+    // blokada zbierania
     public bool isBeingCollected = false;
 
     void Start()
@@ -18,13 +18,16 @@ public class Treasure : MonoBehaviourPun
         sr = GetComponent<SpriteRenderer>();
 
         if (sr != null)
-            originalColor = sr.color;
+        {
+            sr.color = Color.white;
+            originalColor = Color.white;
+        }
     }
 
     public void Highlight()
     {
         if (sr != null)
-            sr.color = Color.yellow;
+            sr.color = Color.green;
     }
 
     public void Unhighlight()

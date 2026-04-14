@@ -2,6 +2,7 @@ using UnityEngine;
 using Photon.Pun;
 using System.Collections;
 using System.Collections.Generic;
+using TMPro;
 
 public class ExtractionZone : MonoBehaviourPun
 {
@@ -28,10 +29,10 @@ public class ExtractionZone : MonoBehaviourPun
             sr.color = c;
     }
 
-    // 🔥 wywoływane przez gracza (idzie do MASTER)
+    // FIX: działa w single i multi
     public void TryUse(PhotonView playerView)
     {
-        if (!PhotonNetwork.IsMasterClient) return;
+        if (PhotonNetwork.IsConnected && !PhotonNetwork.IsMasterClient) return;
 
         if (!isBeingUsed)
         {
@@ -53,12 +54,13 @@ public class ExtractionZone : MonoBehaviourPun
 
         if (!isActive)
         {
+            isActive = true; // lokalnie od razu
+
             photonView.RPC("ActivateZone", RpcTarget.All);
             photonView.RPC("ShowExtractionMessage", RpcTarget.All);
         }
         else
         {
-            // 🔥 tylko MASTER wywołuje ewakuację
             EvacuatePlayers();
         }
 
@@ -91,8 +93,7 @@ public class ExtractionZone : MonoBehaviourPun
             yield return null;
         }
 
-        // 🔥 timeout → tylko MASTER odpala ewakuację
-        if (PhotonNetwork.IsMasterClient)
+        if (!PhotonNetwork.IsConnected || PhotonNetwork.IsMasterClient)
         {
             EvacuatePlayers();
         }
@@ -110,24 +111,24 @@ public class ExtractionZone : MonoBehaviourPun
         }
     }
 
-    // 🔥 KLUCZOWA FUNKCJA (tylko MASTER)
+    // 🔥 NAJWAŻNIEJSZA FUNKCJA
     void EvacuatePlayers()
     {
-        if (!PhotonNetwork.IsMasterClient) return;
+        if (PhotonNetwork.IsConnected && !PhotonNetwork.IsMasterClient) return;
         if (isEvacuating) return;
 
         isEvacuating = true;
 
-        Debug.Log("🚁 EVACUATION!");
+        Debug.Log("EVACUATION!");
 
+        PlayerHealth[] playersBeforeEvacuation = FindObjectsByType<PlayerHealth>(FindObjectsSortMode.None);
         Collider2D[] hits = Physics2D.OverlapCircleAll(transform.position, 1.0f);
 
-        // 🔥 zabezpieczenie przed duplikacją
         HashSet<int> processedPlayers = new HashSet<int>();
 
         foreach (var hit in hits)
         {
-            PlayerHealth p = hit.GetComponent<PlayerHealth>();
+            PlayerHealth p = hit.GetComponentInParent<PlayerHealth>();
 
             if (p != null)
             {
@@ -138,15 +139,53 @@ public class ExtractionZone : MonoBehaviourPun
 
                 processedPlayers.Add(pv.ViewID);
 
-                // 🔥 punkt tylko dla właściciela
+                Debug.Log("Evacuating: " + pv.Owner.NickName);
+
+                // punkt tylko dla właściciela
                 pv.RPC("OnEvacuated", pv.Owner, 5);
 
-                // 🔥 usunięcie gracza
-                PhotonNetwork.Destroy(pv.gameObject);
+                // ZAMIANA (ważne!)
+                if (pv.IsMine || !PhotonNetwork.IsConnected)
+                {
+                    PhotonNetwork.Destroy(pv.gameObject);
+                }
+                else
+                {
+                    pv.RPC("DestroySelf", pv.Owner);
+                }
             }
         }
 
         photonView.RPC("ResetZone", RpcTarget.All);
+
+        // skrócenie czasu
+        bool anyPlayerEvacuated = processedPlayers.Count > 0;
+        GameTimer timer = FindFirstObjectByType<GameTimer>();
+        if (timer != null && anyPlayerEvacuated)
+        {
+            timer.ReduceTime(30f);
+        }
+
+        // KLUCZOWE — KONIEC GRY
+        GameManager gm = FindFirstObjectByType<GameManager>();
+        bool anyPlayerRemaining = false;
+
+        foreach (PlayerHealth player in playersBeforeEvacuation)
+        {
+            if (player == null || player.photonView == null)
+                continue;
+
+            if (!processedPlayers.Contains(player.photonView.ViewID))
+            {
+                anyPlayerRemaining = true;
+                break;
+            }
+        }
+
+        if (gm != null && anyPlayerEvacuated && !anyPlayerRemaining)
+        {
+            gm.EndGame();
+        }
     }
 
     [PunRPC]
@@ -171,6 +210,16 @@ public class ExtractionZone : MonoBehaviourPun
 
         if (obj != null)
         {
+            TMP_Text text = obj.GetComponent<TMP_Text>();
+            if (text == null)
+                text = obj.GetComponentInChildren<TMP_Text>(true);
+
+            if (text != null)
+            {
+                text.text = "Extraction Zone Activated";
+                text.fontStyle = FontStyles.Bold;
+            }
+
             messageShowing = true;
             obj.SetActive(true);
             StartCoroutine(HideMessage(obj));
@@ -184,9 +233,10 @@ public class ExtractionZone : MonoBehaviourPun
         obj.SetActive(false);
         messageShowing = false;
     }
+
     GameObject FindExtractionMessage()
     {
-        var allTexts = Resources.FindObjectsOfTypeAll<UnityEngine.GameObject>();
+        var allTexts = Resources.FindObjectsOfTypeAll<GameObject>();
 
         foreach (var go in allTexts)
         {

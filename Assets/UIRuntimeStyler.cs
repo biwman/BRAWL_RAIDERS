@@ -1,0 +1,484 @@
+using System.Collections;
+using TMPro;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+using UnityEngine.UI;
+
+public class UIRuntimeStyler : MonoBehaviour
+{
+    static UIRuntimeStyler instance;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+    static void Bootstrap()
+    {
+        if (instance != null)
+            return;
+
+        GameObject root = new GameObject("UIRuntimeStyler");
+        DontDestroyOnLoad(root);
+        instance = root.AddComponent<UIRuntimeStyler>();
+    }
+
+    void Awake()
+    {
+        SceneManager.sceneLoaded += OnSceneLoaded;
+    }
+
+    void OnDestroy()
+    {
+        SceneManager.sceneLoaded -= OnSceneLoaded;
+    }
+
+    void Start()
+    {
+        StartCoroutine(ApplyStylesDeferred());
+    }
+
+    void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        StartCoroutine(ApplyStylesDeferred());
+    }
+
+    IEnumerator ApplyStylesDeferred()
+    {
+        yield return null;
+        yield return null;
+
+        StyleButtons();
+        StyleJoysticks();
+        StyleScoreText();
+        StyleLobbyPanel();
+        StyleEndScreen();
+        StyleExtractionMessage();
+    }
+
+    void StyleButtons()
+    {
+        foreach (Button button in Resources.FindObjectsOfTypeAll<Button>())
+        {
+            if (!IsSceneObject(button.gameObject))
+                continue;
+
+            StyleButton(button);
+        }
+    }
+
+    void StyleButton(Button button)
+    {
+        Image image = button.GetComponent<Image>();
+        TMP_Text text = button.GetComponentInChildren<TMP_Text>(true);
+        RectTransform rect = button.GetComponent<RectTransform>();
+
+        if (image == null || rect == null)
+            return;
+
+        string role = ResolveButtonRole(button, text);
+        Image useVisual = role == "use" ? GetOrCreateUseButtonVisual(button.transform) : null;
+
+        image.type = Image.Type.Sliced;
+        image.raycastTarget = true;
+        button.transition = Selectable.Transition.ColorTint;
+
+        Color baseColor = new Color(0.18f, 0.22f, 0.28f, 0.95f);
+        Color highlighted = new Color(0.24f, 0.29f, 0.36f, 1f);
+        Color pressed = new Color(0.12f, 0.16f, 0.2f, 1f);
+        Color textColor = Color.white;
+        Vector2 targetSize = rect.sizeDelta;
+
+        switch (role)
+        {
+            case "ready":
+                baseColor = new Color(0.14f, 0.56f, 0.44f, 0.96f);
+                highlighted = new Color(0.19f, 0.66f, 0.52f, 1f);
+                pressed = new Color(0.09f, 0.39f, 0.3f, 1f);
+                targetSize = new Vector2(220f, 62f);
+                break;
+            case "restart":
+                baseColor = new Color(0.85f, 0.45f, 0.18f, 0.96f);
+                highlighted = new Color(0.93f, 0.55f, 0.26f, 1f);
+                pressed = new Color(0.64f, 0.3f, 0.1f, 1f);
+                targetSize = new Vector2(210f, 64f);
+                break;
+            case "use":
+                baseColor = new Color(0.97f, 0.8f, 0.24f, 0.97f);
+                highlighted = new Color(1f, 0.87f, 0.34f, 1f);
+                pressed = new Color(0.82f, 0.61f, 0.1f, 1f);
+                textColor = new Color(0.14f, 0.1f, 0.04f, 1f);
+                targetSize = new Vector2(188f, 112f);
+                break;
+        }
+
+        rect.sizeDelta = targetSize;
+        image.color = role == "use" ? new Color(1f, 1f, 1f, 0.02f) : baseColor;
+
+        ColorBlock colors = button.colors;
+        colors.normalColor = baseColor;
+        colors.highlightedColor = highlighted;
+        colors.selectedColor = highlighted;
+        colors.pressedColor = pressed;
+        colors.disabledColor = new Color(baseColor.r, baseColor.g, baseColor.b, 0.45f);
+        colors.colorMultiplier = 1f;
+        colors.fadeDuration = 0.08f;
+        button.colors = colors;
+
+        if (role != "use")
+        {
+            ApplyOutline(image.gameObject, new Color(0f, 0f, 0f, 0.24f), new Vector2(2f, -2f));
+        }
+
+        if (text != null)
+        {
+            text.color = textColor;
+            text.fontSize = role == "use" ? 30f : 26f;
+            text.fontStyle = FontStyles.Bold;
+            text.enableWordWrapping = false;
+            text.alignment = TextAlignmentOptions.Center;
+            text.characterSpacing = role == "use" ? 3f : 5f;
+            text.margin = new Vector4(12f, 6f, 12f, 6f);
+        }
+
+        if (role == "use")
+        {
+            ConfigureUseButtonVisual(button, useVisual, baseColor, highlighted, pressed);
+        }
+        else if (useVisual != null)
+        {
+            useVisual.gameObject.SetActive(false);
+            button.targetGraphic = image;
+        }
+    }
+
+    string ResolveButtonRole(Button button, TMP_Text text)
+    {
+        string name = button.gameObject.name.ToLowerInvariant();
+        string label = text != null ? text.text.ToLowerInvariant() : string.Empty;
+
+        if (name.Contains("ready") || label.Contains("ready"))
+            return "ready";
+
+        if (name.Contains("restart") || label.Contains("restart"))
+            return "restart";
+
+        if (label.Contains("use"))
+            return "use";
+
+        return "default";
+    }
+
+    void StyleJoysticks()
+    {
+        StyleJoystick("JoystickBG", new Color(0.08f, 0.11f, 0.16f, 0.38f), new Color(0.95f, 0.77f, 0.26f, 0.95f));
+        StyleJoystick("ShootJoystickBG", new Color(0.12f, 0.09f, 0.14f, 0.4f), new Color(0.92f, 0.36f, 0.28f, 0.95f));
+    }
+
+    void StyleScoreText()
+    {
+        GameObject scoreObject = FindSceneObjectByName("ScoreText");
+        if (scoreObject == null)
+            return;
+
+        TMP_Text text = scoreObject.GetComponent<TMP_Text>();
+        RectTransform rect = scoreObject.GetComponent<RectTransform>();
+        Image badge = GetOrCreateBackground(scoreObject.transform, "ScoreBadge");
+
+        if (text != null)
+        {
+            text.fontSize = 30f;
+            text.fontStyle = FontStyles.Bold;
+            text.color = new Color(1f, 0.96f, 0.82f, 1f);
+            text.characterSpacing = 0.5f;
+            text.alignment = TextAlignmentOptions.TopRight;
+            text.margin = new Vector4(18f, 8f, 18f, 8f);
+        }
+
+        if (rect != null)
+        {
+            rect.anchorMin = new Vector2(1f, 1f);
+            rect.anchorMax = new Vector2(1f, 1f);
+            rect.pivot = new Vector2(1f, 1f);
+            rect.anchoredPosition = new Vector2(-28f, -22f);
+            rect.sizeDelta = new Vector2(240f, 56f);
+        }
+
+        if (badge != null)
+        {
+            badge.color = new Color(0.07f, 0.1f, 0.14f, 0.78f);
+            badge.type = Image.Type.Sliced;
+        }
+
+        ApplyOutline(scoreObject, new Color(0f, 0f, 0f, 0.5f), new Vector2(3f, -3f));
+    }
+
+    void StyleLobbyPanel()
+    {
+        GameObject lobbyPanel = FindSceneObjectByName("LobbyPanel");
+        if (lobbyPanel == null)
+            return;
+
+        Image image = lobbyPanel.GetComponent<Image>();
+        RectTransform rect = lobbyPanel.GetComponent<RectTransform>();
+
+        if (image != null)
+        {
+            image.color = new Color(0.08f, 0.12f, 0.16f, 0.88f);
+            image.type = Image.Type.Sliced;
+            ApplyOutline(lobbyPanel, new Color(0f, 0f, 0f, 0.42f), new Vector2(6f, -6f));
+        }
+
+        if (rect != null)
+        {
+            rect.anchorMin = new Vector2(0.5f, 0.5f);
+            rect.anchorMax = new Vector2(0.5f, 0.5f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.anchoredPosition = new Vector2(0f, 0f);
+            rect.sizeDelta = new Vector2(420f, 240f);
+        }
+
+        GameObject readyTextObject = FindSceneObjectByName("ReadyText");
+        if (readyTextObject != null)
+        {
+            TMP_Text readyText = readyTextObject.GetComponent<TMP_Text>();
+            if (readyText != null)
+            {
+                readyText.fontSize = 30f;
+                readyText.fontStyle = FontStyles.Bold;
+                readyText.characterSpacing = 4f;
+                readyText.color = Color.white;
+                readyText.alignment = TextAlignmentOptions.Center;
+            }
+        }
+
+        GameObject readyButtonObject = FindSceneObjectByName("readyButton");
+        if (readyButtonObject != null)
+        {
+            RectTransform buttonRect = readyButtonObject.GetComponent<RectTransform>();
+            if (buttonRect != null)
+            {
+                buttonRect.anchorMin = new Vector2(0.5f, 0.5f);
+                buttonRect.anchorMax = new Vector2(0.5f, 0.5f);
+                buttonRect.pivot = new Vector2(0.5f, 0.5f);
+                buttonRect.anchoredPosition = new Vector2(0f, -10f);
+            }
+        }
+    }
+
+    void StyleEndScreen()
+    {
+        GameObject endScreen = FindSceneObjectByName("EndScreen");
+        if (endScreen != null)
+        {
+            RectTransform rect = endScreen.GetComponent<RectTransform>();
+            if (rect != null)
+            {
+                rect.sizeDelta = new Vector2(760f, 560f);
+            }
+        }
+
+        GameObject gameOverPanel = FindSceneObjectByName("GameOver");
+        if (gameOverPanel != null)
+        {
+            Image image = gameOverPanel.GetComponent<Image>();
+            RectTransform rect = gameOverPanel.GetComponent<RectTransform>();
+
+            if (image != null)
+            {
+                image.color = new Color(0.94f, 0.94f, 0.9f, 0.98f);
+                image.type = Image.Type.Sliced;
+                ApplyOutline(gameOverPanel, new Color(0f, 0f, 0f, 0.22f), new Vector2(6f, -6f));
+            }
+
+            if (rect != null)
+            {
+                rect.sizeDelta = new Vector2(760f, 560f);
+            }
+        }
+
+        GameObject endMessageTextObject = FindSceneObjectByName("EndMessageText");
+        if (endMessageTextObject != null)
+        {
+            TMP_Text text = endMessageTextObject.GetComponent<TMP_Text>();
+            if (text != null)
+            {
+                text.fontSize = 40f;
+                text.fontStyle = FontStyles.Bold;
+                text.color = new Color(0.15f, 0.18f, 0.24f, 1f);
+                text.alignment = TextAlignmentOptions.Center;
+                text.characterSpacing = 2f;
+            }
+        }
+    }
+
+    void StyleExtractionMessage()
+    {
+        GameObject messageObject = FindSceneObjectByName("ExtractionMessage");
+        if (messageObject == null)
+            return;
+
+        TMP_Text text = messageObject.GetComponent<TMP_Text>();
+        if (text == null)
+            text = messageObject.GetComponentInChildren<TMP_Text>(true);
+
+        RectTransform rect = messageObject.GetComponent<RectTransform>();
+
+        if (rect != null)
+        {
+            rect.anchorMin = new Vector2(0.5f, 1f);
+            rect.anchorMax = new Vector2(0.5f, 1f);
+            rect.pivot = new Vector2(0.5f, 1f);
+            rect.anchoredPosition = new Vector2(0f, -96f);
+            rect.sizeDelta = new Vector2(520f, 84f);
+        }
+
+        if (text != null)
+        {
+            text.text = "Extraction Zone Activated";
+            text.fontSize = 34f;
+            text.fontStyle = FontStyles.Bold;
+            text.color = new Color(0.87f, 1f, 0.96f, 1f);
+            text.alignment = TextAlignmentOptions.Center;
+            text.enableWordWrapping = false;
+            text.characterSpacing = 1.5f;
+            text.margin = new Vector4(24f, 10f, 24f, 10f);
+        }
+
+        ApplyOutline(messageObject, new Color(0f, 0f, 0f, 0.4f), new Vector2(3f, -3f));
+    }
+
+    void StyleJoystick(string objectName, Color backgroundColor, Color handleColor)
+    {
+        GameObject root = GameObject.Find(objectName);
+        if (root == null)
+            return;
+
+        Image[] images = root.GetComponentsInChildren<Image>(true);
+        RectTransform rootRect = root.GetComponent<RectTransform>();
+
+        if (rootRect != null)
+        {
+            rootRect.sizeDelta = new Vector2(285f, 285f);
+        }
+
+        foreach (Image image in images)
+        {
+            RectTransform rect = image.GetComponent<RectTransform>();
+
+            if (image.gameObject == root)
+            {
+                image.color = backgroundColor;
+                ApplyOutline(image.gameObject, new Color(1f, 1f, 1f, 0.08f), new Vector2(2f, 2f));
+                continue;
+            }
+
+            image.color = handleColor;
+            if (rect != null)
+            {
+                rect.sizeDelta = new Vector2(135f, 135f);
+            }
+
+            ApplyOutline(image.gameObject, new Color(0f, 0f, 0f, 0.28f), new Vector2(2f, -2f));
+        }
+    }
+
+    void ApplyOutline(GameObject target, Color effectColor, Vector2 distance)
+    {
+        Shadow shadow = target.GetComponent<Shadow>();
+        if (shadow == null)
+        {
+            shadow = target.AddComponent<Shadow>();
+        }
+
+        shadow.effectColor = effectColor;
+        shadow.effectDistance = distance;
+        shadow.useGraphicAlpha = true;
+    }
+
+    void ConfigureUseButtonVisual(Button button, Image visual, Color baseColor, Color highlighted, Color pressed)
+    {
+        if (visual == null)
+            return;
+
+        RectTransform rect = visual.rectTransform;
+        rect.anchorMin = Vector2.zero;
+        rect.anchorMax = Vector2.one;
+        rect.pivot = new Vector2(0.5f, 0.5f);
+        rect.offsetMin = Vector2.zero;
+        rect.offsetMax = Vector2.zero;
+
+        Sprite knobSprite = Resources.GetBuiltinResource<Sprite>("UI/Skin/Knob.psd");
+        if (knobSprite != null)
+        {
+            visual.sprite = knobSprite;
+            visual.type = Image.Type.Simple;
+            visual.preserveAspect = false;
+        }
+
+        visual.gameObject.SetActive(true);
+        visual.color = baseColor;
+        button.targetGraphic = visual;
+
+        ApplyOutline(visual.gameObject, new Color(0f, 0f, 0f, 0.22f), new Vector2(2f, -2f));
+    }
+
+    bool IsSceneObject(GameObject obj)
+    {
+        return obj != null && obj.scene.IsValid();
+    }
+
+    GameObject FindSceneObjectByName(string name)
+    {
+        foreach (GameObject go in Resources.FindObjectsOfTypeAll<GameObject>())
+        {
+            if (go.name == name && IsSceneObject(go))
+            {
+                return go;
+            }
+        }
+
+        return null;
+    }
+
+    Image GetOrCreateBackground(Transform parent, string name)
+    {
+        Transform existing = parent.Find(name);
+        GameObject backgroundObject;
+
+        if (existing != null)
+        {
+            backgroundObject = existing.gameObject;
+        }
+        else
+        {
+            backgroundObject = new GameObject(name, typeof(RectTransform), typeof(Image));
+            backgroundObject.transform.SetParent(parent, false);
+            backgroundObject.transform.SetAsFirstSibling();
+        }
+
+        RectTransform rect = backgroundObject.GetComponent<RectTransform>();
+        rect.anchorMin = Vector2.zero;
+        rect.anchorMax = Vector2.one;
+        rect.pivot = new Vector2(0.5f, 0.5f);
+        rect.offsetMin = new Vector2(-8f, -4f);
+        rect.offsetMax = new Vector2(8f, 4f);
+
+        return backgroundObject.GetComponent<Image>();
+    }
+
+    Image GetOrCreateUseButtonVisual(Transform parent)
+    {
+        Transform existing = parent.Find("UseButtonVisual");
+        GameObject visualObject;
+
+        if (existing != null)
+        {
+            visualObject = existing.gameObject;
+        }
+        else
+        {
+            visualObject = new GameObject("UseButtonVisual", typeof(RectTransform), typeof(Image));
+            visualObject.transform.SetParent(parent, false);
+            visualObject.transform.SetAsFirstSibling();
+        }
+
+        return visualObject.GetComponent<Image>();
+    }
+}

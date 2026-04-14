@@ -54,6 +54,12 @@ MonoBehaviour:
   - ShowExtractionMessage
   - AddKillScore
   - ShowDeathMessage
+  - RefreshScore
+  - DestroySelf
+  - OnTimeUp
+  - ShowEndScreen
+  - ShowEndScreenForAll
+  - DisplaySortedPlayers
   DisableAutoOpenWizard: 1
   ShowSettings: 1
   DevRegionSetOnce: 1

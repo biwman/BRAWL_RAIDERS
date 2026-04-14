@@ -3,6 +3,7 @@ using UnityEngine.UI;
 using TMPro;
 using System.Collections;
 using Photon.Pun;
+using ExitGames.Client.Photon;
 using UnityEngine.EventSystems;
 using System.Collections.Generic;
 
@@ -24,7 +25,7 @@ public class TreasureCollector : MonoBehaviourPun
     {
         if (!photonView.IsMine) return;
 
-        // 🎯 SCORE UI
+        // SCORE UI
         if (scoreText == null)
         {
             GameObject obj = GameObject.Find("ScoreText");
@@ -39,7 +40,7 @@ public class TreasureCollector : MonoBehaviourPun
         {
             scoreText.text = "Score: 0";
         }
-        // 🔘 BUTTON
+        // BUTTON
         if (collectButton == null)
         {
             GameObject obj = GameObject.Find("CollectButton");
@@ -58,13 +59,13 @@ public class TreasureCollector : MonoBehaviourPun
 
             trigger.triggers = new List<EventTrigger.Entry>();
 
-            // 🟢 HOLD START
+            // HOLD START
             EventTrigger.Entry down = new EventTrigger.Entry();
             down.eventID = EventTriggerType.PointerDown;
             down.callback.AddListener((data) => { StartHolding(); });
             trigger.triggers.Add(down);
 
-            // 🔴 HOLD STOP
+            // HOLD STOP
             EventTrigger.Entry up = new EventTrigger.Entry();
             up.eventID = EventTriggerType.PointerUp;
             up.callback.AddListener((data) => { StopHolding(); });
@@ -72,14 +73,14 @@ public class TreasureCollector : MonoBehaviourPun
         }
     }
 
-    // 🔥 wejście w skarb
+    // wejście w skarb
     void OnTriggerEnter2D(Collider2D other)
     {
         if (!photonView.IsMine) return;
 
         Debug.Log("Trigger z: " + other.name);
 
-        // 🔍 pokaż wszystkie komponenty na tym obiekcie
+        // pokaż wszystkie komponenty na tym obiekcie
         var components = other.GetComponents<Component>();
         foreach (var c in components)
         {
@@ -90,11 +91,11 @@ public class TreasureCollector : MonoBehaviourPun
 
         if (t == null)
         {
-            Debug.Log("❌ GetComponent NIE znalazł Treasure");
+            Debug.Log("GetComponent NIE znalazł Treasure");
         }
         else
         {
-            Debug.Log("✅ ZNALAZŁEM Treasure (direct)");
+            Debug.Log("ZNALAZŁEM Treasure (direct)");
 
             currentTreasure = t;
             t.Highlight();
@@ -104,11 +105,11 @@ public class TreasureCollector : MonoBehaviourPun
 
         if (tParent == null)
         {
-            Debug.Log("❌ GetComponentInParent NIE znalazł Treasure");
+            Debug.Log("GetComponentInParent NIE znalazł Treasure");
         }
         else
         {
-            Debug.Log("✅ ZNALAZŁEM Treasure (parent)");
+            Debug.Log("ZNALAZŁEM Treasure (parent)");
 
             currentTreasure = tParent;
             tParent.Highlight();
@@ -152,7 +153,7 @@ public class TreasureCollector : MonoBehaviourPun
 
             if (ezView != null)
             {
-                Debug.Log("🚁 PRÓBA AKTYWACJI EXTRACTION");
+                Debug.Log("PRÓBA AKTYWACJI EXTRACTION");
 
                 photonView.RPC("RequestUseExtraction", RpcTarget.MasterClient, ezView.ViewID);
             }
@@ -160,7 +161,7 @@ public class TreasureCollector : MonoBehaviourPun
             return; // ❗ ważne – nie przechodzimy dalej
         }
 
-        // 🔥 2. Skarby (jak było)
+        // 2. Skarby (jak było)
         Debug.Log("currentTreasure: " + currentTreasure);
 
         if (currentTreasure != null && !isCollecting)
@@ -176,13 +177,13 @@ public class TreasureCollector : MonoBehaviourPun
 
         Debug.Log("STOP HOLD");
 
-        // 🔥 jeśli zbierasz skarb → przerwij
+        // jeśli zbierasz skarb → przerwij
         if (isCollecting)
         {
             isCollecting = false;
         }
 
-        // 🔥 extraction NIE przerywamy (bo leci po stronie Mastera)
+        // extraction NIE przerywamy (bo leci po stronie Mastera)
 
         if (movement != null) movement.enabled = true;
         if (shooting != null) shooting.enabled = true;
@@ -200,7 +201,7 @@ public class TreasureCollector : MonoBehaviourPun
 
         Treasure treasureToCollect = currentTreasure;
 
-        // 🔥 blokada spamu (drugi gracz / drugi klik)
+        // blokada spamu (drugi gracz / drugi klik)
         if (treasureToCollect.isBeingCollected)
         {
             isCollecting = false;
@@ -209,7 +210,7 @@ public class TreasureCollector : MonoBehaviourPun
 
         treasureToCollect.isBeingCollected = true;
 
-        // 🔒 blokujemy ruch i strzał
+        // blokujemy ruch i strzał
         if (movement != null) movement.enabled = false;
         if (shooting != null) shooting.enabled = false;
 
@@ -217,7 +218,7 @@ public class TreasureCollector : MonoBehaviourPun
 
         while (timer < collectTime)
         {
-            // ❌ przerwanie jeśli puścisz przycisk
+            // przerwanie jeśli puścisz przycisk
             if (!isCollecting)
             {
                 treasureToCollect.isBeingCollected = false;
@@ -230,10 +231,10 @@ public class TreasureCollector : MonoBehaviourPun
 
         Debug.Log("Collect DONE");
 
-        // 💰 dodanie punktów
+        // dodanie punktów
         AddScore(treasureToCollect.value);
 
-        // 🌐 MULTIPLAYER DESTROY
+        // MULTIPLAYER DESTROY
         PhotonView treasureView = treasureToCollect.GetComponent<PhotonView>();
 
         if (treasureView != null)
@@ -248,7 +249,7 @@ public class TreasureCollector : MonoBehaviourPun
             }
         }
 
-        // 🔓 reset stanu
+        // reset stanu
         treasureToCollect.isBeingCollected = false;
         isCollecting = false;
 
@@ -256,7 +257,7 @@ public class TreasureCollector : MonoBehaviourPun
         if (shooting != null) shooting.enabled = true;
     }
 
-    // 🔥 MASTER usuwa obiekt
+    // MASTER usuwa obiekt
     [PunRPC]
     void RequestDestroyTreasure(int viewID)
     {
@@ -277,6 +278,8 @@ public class TreasureCollector : MonoBehaviourPun
         {
             scoreText.text = "Score: " + totalScore;
         }
+
+        SyncScoreProperty();
     }
     [PunRPC]
     void RequestUseExtraction(int viewID)
@@ -295,4 +298,15 @@ public class TreasureCollector : MonoBehaviourPun
             }
         }
     }
+
+    void SyncScoreProperty()
+    {
+        if (!photonView.IsMine || !PhotonNetwork.IsConnected)
+            return;
+
+        ExitGames.Client.Photon.Hashtable props = new ExitGames.Client.Photon.Hashtable();
+        props["score"] = totalScore;
+        PhotonNetwork.LocalPlayer.SetCustomProperties(props);
+    }
 }
+

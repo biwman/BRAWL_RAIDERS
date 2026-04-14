@@ -10,7 +10,7 @@ public class GameTimer : MonoBehaviourPun
     private TMP_Text timerText;
 
     private double startTime;
-    private bool timerStarted = false;
+    
 
     void Start()
     {
@@ -22,7 +22,7 @@ public class GameTimer : MonoBehaviourPun
         }
         else
         {
-            Debug.LogError("❌ Nie znaleziono TimerText");
+            Debug.LogError("Nie znaleziono TimerText");
         }
     }
 
@@ -30,31 +30,27 @@ public class GameTimer : MonoBehaviourPun
     {
         if (!IsGameStarted()) return;
 
-        // 🔥 pobierz startTime z rooma
-        if (!timerStarted)
+        // pobierz startTime z rooma
+        if (PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue("startTime", out object value))
         {
-            if (PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue("startTime", out object value))
-            {
-                startTime = (double)value;
-                timerStarted = true;
-            }
-            else
-            {
-                return;
-            }
+            startTime = (double)value;
+        }
+        else
+        {
+            return;
         }
 
-        // 🔥 oblicz czas na podstawie Photon Time
+        // oblicz czas na podstawie Photon Time
         double elapsed = PhotonNetwork.Time - startTime;
         float remaining = roundTime - (float)elapsed;
 
-        // 🔥 clamp
+        // clamp
         remaining = Mathf.Max(0f, remaining);
 
-        // 🔥 update UI
+        // update UI
         UpdateTimerUI(remaining);
 
-        // 🔥 tylko master kończy grę
+        // tylko master kończy grę
         if (remaining <= 0f && PhotonNetwork.IsMasterClient)
         {
             EndGame();
@@ -74,15 +70,38 @@ public class GameTimer : MonoBehaviourPun
 
     void EndGame()
     {
-        // 🔥 zabezpieczenie żeby nie odpalało się wiele razy
         if (!IsGameStarted()) return;
 
-        Debug.Log("⏰ KONIEC GRY");
+        Debug.Log("KONIEC GRY");
+
+        var players = FindObjectsByType<PlayerHealth>(FindObjectsSortMode.None);
+
+        foreach (var p in players)
+        {
+            PhotonView pv = p.photonView;
+
+            if (pv != null)
+            {
+                pv.RPC("OnTimeUp", pv.Owner);
+            }
+        }
+
+        // NAJWAŻNIEJSZE — BEZ RPC
+        EndScreenUI ui = FindFirstObjectByType<EndScreenUI>();
+
+        if (ui != null)
+        {
+            Debug.Log("CALLING UI");
+            ui.Show();
+        }
+        else
+        {
+            Debug.LogError("EndScreenUI NOT FOUND");
+        }
 
         PlayerMovement.gameStarted = false;
         PlayerShooting.gameStarted = false;
 
-        // 🔥 ustaw gameStarted = false w roomie
         Hashtable props = new Hashtable();
         props["gameStarted"] = false;
         PhotonNetwork.CurrentRoom.SetCustomProperties(props);
@@ -112,4 +131,26 @@ public class GameTimer : MonoBehaviourPun
 
         return false;
     }
+    public void ReduceTime(float amount)
+    {
+        if (!PhotonNetwork.IsMasterClient) return;
+
+        if (PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue("startTime", out object value))
+        {
+            double currentStart = (double)value;
+
+            // POPRAWKA
+            double newStart = currentStart + amount;
+
+            Hashtable props = new Hashtable();
+            props["startTime"] = newStart;
+
+            PhotonNetwork.CurrentRoom.SetCustomProperties(props);
+
+            Debug.Log("Timer skrocony o " + amount + " sekund");
+        }
+    }
+    
+
 }
+
