@@ -3,40 +3,108 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
+[ExecuteAlways]
 public class UIRuntimeStyler : MonoBehaviour
 {
     static UIRuntimeStyler instance;
+#if UNITY_EDITOR
+    double nextEditorRefreshTime;
+#endif
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Bootstrap()
     {
+        EnsureInstance();
+    }
+
+#if UNITY_EDITOR
+    [InitializeOnLoadMethod]
+    static void BootstrapInEditor()
+    {
+        EditorApplication.delayCall += EnsureEditorInstance;
+    }
+#endif
+
+    static void EnsureInstance()
+    {
         if (instance != null)
             return;
 
-        GameObject root = new GameObject("UIRuntimeStyler");
-        DontDestroyOnLoad(root);
-        instance = root.AddComponent<UIRuntimeStyler>();
+        GameObject root = GameObject.Find("UIRuntimeStyler");
+        if (root == null)
+        {
+            root = new GameObject("UIRuntimeStyler");
+#if UNITY_EDITOR
+            if (!Application.isPlaying)
+                root.hideFlags = HideFlags.HideInHierarchy | HideFlags.DontSaveInEditor;
+#endif
+        }
+
+        instance = root.GetComponent<UIRuntimeStyler>();
+        if (instance == null)
+            instance = root.AddComponent<UIRuntimeStyler>();
+
+        if (Application.isPlaying)
+            DontDestroyOnLoad(root);
     }
+
+#if UNITY_EDITOR
+    static void EnsureEditorInstance()
+    {
+        if (Application.isPlaying)
+            return;
+
+        EnsureInstance();
+        if (instance != null)
+            instance.ApplyStylesImmediate();
+    }
+#endif
 
     void Awake()
     {
         SceneManager.sceneLoaded += OnSceneLoaded;
     }
 
+    void OnEnable()
+    {
+#if UNITY_EDITOR
+        if (!Application.isPlaying)
+            EditorApplication.hierarchyChanged += OnEditorHierarchyChanged;
+#endif
+
+        if (Application.isPlaying)
+            StartCoroutine(ApplyStylesDeferred());
+        else
+            ApplyStylesImmediate();
+    }
+
     void OnDestroy()
     {
         SceneManager.sceneLoaded -= OnSceneLoaded;
+#if UNITY_EDITOR
+        if (!Application.isPlaying)
+            EditorApplication.hierarchyChanged -= OnEditorHierarchyChanged;
+#endif
+        if (instance == this)
+            instance = null;
     }
 
     void Start()
     {
-        StartCoroutine(ApplyStylesDeferred());
+        if (Application.isPlaying)
+            StartCoroutine(ApplyStylesDeferred());
     }
 
     void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
-        StartCoroutine(ApplyStylesDeferred());
+        if (Application.isPlaying)
+            StartCoroutine(ApplyStylesDeferred());
+        else
+            ApplyStylesImmediate();
     }
 
     IEnumerator ApplyStylesDeferred()
@@ -44,6 +112,11 @@ public class UIRuntimeStyler : MonoBehaviour
         yield return null;
         yield return null;
 
+        ApplyStylesImmediate();
+    }
+
+    void ApplyStylesImmediate()
+    {
         StyleButtons();
         StyleJoysticks();
         StyleScoreText();
@@ -51,6 +124,30 @@ public class UIRuntimeStyler : MonoBehaviour
         StyleEndScreen();
         StyleExtractionMessage();
     }
+
+    void Update()
+    {
+#if UNITY_EDITOR
+        if (!Application.isPlaying)
+        {
+            if (EditorApplication.timeSinceStartup < nextEditorRefreshTime)
+                return;
+
+            nextEditorRefreshTime = EditorApplication.timeSinceStartup + 0.75f;
+            ApplyStylesImmediate();
+        }
+#endif
+    }
+
+#if UNITY_EDITOR
+    void OnEditorHierarchyChanged()
+    {
+        if (Application.isPlaying)
+            return;
+
+        ApplyStylesImmediate();
+    }
+#endif
 
     void StyleButtons()
     {
@@ -231,7 +328,7 @@ public class UIRuntimeStyler : MonoBehaviour
             rect.anchorMax = new Vector2(0.5f, 0.5f);
             rect.pivot = new Vector2(0.5f, 0.5f);
             rect.anchoredPosition = new Vector2(0f, 0f);
-            rect.sizeDelta = new Vector2(420f, 240f);
+            rect.sizeDelta = new Vector2(500f, 516f);
         }
 
         GameObject readyTextObject = FindSceneObjectByName("ReadyText");
@@ -257,8 +354,81 @@ public class UIRuntimeStyler : MonoBehaviour
                 buttonRect.anchorMin = new Vector2(0.5f, 0.5f);
                 buttonRect.anchorMax = new Vector2(0.5f, 0.5f);
                 buttonRect.pivot = new Vector2(0.5f, 0.5f);
-                buttonRect.anchoredPosition = new Vector2(0f, -10f);
+                buttonRect.anchoredPosition = new Vector2(0f, -200f);
             }
+        }
+
+        GameObject roomPlayersObject = FindSceneObjectByName("RoomPlayersText");
+        if (roomPlayersObject != null)
+        {
+            TMP_Text roomPlayersText = roomPlayersObject.GetComponent<TMP_Text>();
+            RectTransform playersRect = roomPlayersObject.GetComponent<RectTransform>();
+
+            if (playersRect != null)
+            {
+                playersRect.anchorMin = new Vector2(0.5f, 1f);
+                playersRect.anchorMax = new Vector2(0.5f, 1f);
+                playersRect.pivot = new Vector2(0.5f, 1f);
+                playersRect.anchoredPosition = new Vector2(0f, -26f);
+                playersRect.sizeDelta = new Vector2(390f, 145f);
+            }
+
+            if (roomPlayersText != null)
+            {
+                roomPlayersText.fontSize = 23f;
+                roomPlayersText.fontStyle = FontStyles.Bold;
+                roomPlayersText.color = new Color(0.93f, 0.96f, 1f, 1f);
+                roomPlayersText.alignment = TextAlignmentOptions.TopLeft;
+                roomPlayersText.enableWordWrapping = false;
+                roomPlayersText.lineSpacing = 8f;
+                roomPlayersText.margin = new Vector4(12f, 10f, 12f, 10f);
+            }
+        }
+
+        StyleLobbySettingButton("RoundSettingButton", new Vector2(-120f, -208f));
+        StyleLobbySettingButton("ObstacleSettingButton", new Vector2(120f, -208f));
+        StyleLobbySettingButton("TreasureSettingButton", new Vector2(-120f, -262f));
+        StyleLobbySettingButton("ExtractionSettingButton", new Vector2(120f, -262f));
+        StyleLobbySettingButton("BoosterSettingButton", new Vector2(-120f, -316f));
+        StyleLobbySettingButton("AmmoSettingButton", new Vector2(120f, -316f));
+    }
+
+    void StyleLobbySettingButton(string objectName, Vector2 anchoredPosition)
+    {
+        GameObject buttonObject = FindSceneObjectByName(objectName);
+        if (buttonObject == null)
+            return;
+
+        Button button = buttonObject.GetComponent<Button>();
+        Image image = buttonObject.GetComponent<Image>();
+        RectTransform rect = buttonObject.GetComponent<RectTransform>();
+        TMP_Text text = buttonObject.GetComponentInChildren<TMP_Text>(true);
+
+        if (rect != null)
+        {
+            rect.anchorMin = new Vector2(0.5f, 1f);
+            rect.anchorMax = new Vector2(0.5f, 1f);
+            rect.pivot = new Vector2(0.5f, 1f);
+            rect.anchoredPosition = anchoredPosition;
+            rect.sizeDelta = new Vector2(210f, 42f);
+        }
+
+        if (image != null)
+        {
+            image.type = Image.Type.Sliced;
+            image.color = button != null && !button.interactable
+                ? new Color(0.12f, 0.14f, 0.18f, 0.72f)
+                : new Color(0.16f, 0.2f, 0.27f, 0.95f);
+        }
+
+        if (text != null)
+        {
+            text.fontSize = 18f;
+            text.fontStyle = FontStyles.Bold;
+            text.alignment = TextAlignmentOptions.Center;
+            text.color = new Color(0.95f, 0.97f, 1f, 1f);
+            text.margin = new Vector4(8f, 4f, 8f, 4f);
+            text.enableWordWrapping = false;
         }
     }
 
@@ -404,13 +574,9 @@ public class UIRuntimeStyler : MonoBehaviour
         rect.offsetMin = Vector2.zero;
         rect.offsetMax = Vector2.zero;
 
-        Sprite knobSprite = Resources.GetBuiltinResource<Sprite>("UI/Skin/Knob.psd");
-        if (knobSprite != null)
-        {
-            visual.sprite = knobSprite;
-            visual.type = Image.Type.Simple;
-            visual.preserveAspect = false;
-        }
+        visual.sprite = null;
+        visual.type = Image.Type.Sliced;
+        visual.preserveAspect = false;
 
         visual.gameObject.SetActive(true);
         visual.color = baseColor;

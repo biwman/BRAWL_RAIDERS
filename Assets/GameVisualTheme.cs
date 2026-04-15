@@ -2,11 +2,16 @@ using Photon.Pun;
 using System.IO;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
+[ExecuteAlways]
 public class GameVisualTheme : MonoBehaviour
 {
     const float PlayerTargetSize = 1.04f;
     const float TreasureTargetSize = 1.5f;
+    const float TreasureTriggerSizeMultiplier = 1.12f;
     const float ObstacleTargetSize = 3.0f;
     const float ExtractionTargetSize = 4.3f;
     const float RefreshInterval = 0.75f;
@@ -19,17 +24,58 @@ public class GameVisualTheme : MonoBehaviour
     Sprite extractionSprite;
     Sprite backgroundSprite;
     float nextRefreshTime;
+#if UNITY_EDITOR
+    double nextEditorRefreshTime;
+#endif
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Bootstrap()
     {
+        EnsureInstance();
+    }
+
+#if UNITY_EDITOR
+    [InitializeOnLoadMethod]
+    static void BootstrapInEditor()
+    {
+        EditorApplication.delayCall += EnsureEditorInstance;
+    }
+#endif
+
+    static void EnsureInstance()
+    {
         if (instance != null)
             return;
 
-        GameObject root = new GameObject("GameVisualTheme");
-        DontDestroyOnLoad(root);
-        instance = root.AddComponent<GameVisualTheme>();
+        GameObject root = GameObject.Find("GameVisualTheme");
+        if (root == null)
+        {
+            root = new GameObject("GameVisualTheme");
+#if UNITY_EDITOR
+            if (!Application.isPlaying)
+                root.hideFlags = HideFlags.HideInHierarchy | HideFlags.DontSaveInEditor;
+#endif
+        }
+
+        instance = root.GetComponent<GameVisualTheme>();
+        if (instance == null)
+            instance = root.AddComponent<GameVisualTheme>();
+
+        if (Application.isPlaying)
+            DontDestroyOnLoad(root);
     }
+
+#if UNITY_EDITOR
+    static void EnsureEditorInstance()
+    {
+        if (Application.isPlaying)
+            return;
+
+        EnsureInstance();
+        if (instance != null)
+            instance.ApplyThemeInEditor();
+    }
+#endif
 
     void Awake()
     {
@@ -37,9 +83,26 @@ public class GameVisualTheme : MonoBehaviour
         LoadAssets();
     }
 
+    void OnEnable()
+    {
+        LoadAssets();
+        nextRefreshTime = 0f;
+        ApplyTheme();
+#if UNITY_EDITOR
+        if (!Application.isPlaying)
+            EditorApplication.hierarchyChanged += OnEditorHierarchyChanged;
+#endif
+    }
+
     void OnDestroy()
     {
         SceneManager.sceneLoaded -= OnSceneLoaded;
+#if UNITY_EDITOR
+        if (!Application.isPlaying)
+            EditorApplication.hierarchyChanged -= OnEditorHierarchyChanged;
+#endif
+        if (instance == this)
+            instance = null;
     }
 
     void Start()
@@ -49,6 +112,18 @@ public class GameVisualTheme : MonoBehaviour
 
     void Update()
     {
+#if UNITY_EDITOR
+        if (!Application.isPlaying)
+        {
+            if (EditorApplication.timeSinceStartup < nextEditorRefreshTime)
+                return;
+
+            nextEditorRefreshTime = EditorApplication.timeSinceStartup + RefreshInterval;
+            ApplyThemeInEditor();
+            return;
+        }
+#endif
+
         if (Time.unscaledTime < nextRefreshTime)
             return;
 
@@ -62,6 +137,22 @@ public class GameVisualTheme : MonoBehaviour
         nextRefreshTime = 0f;
         ApplyTheme();
     }
+
+#if UNITY_EDITOR
+    void OnEditorHierarchyChanged()
+    {
+        if (Application.isPlaying)
+            return;
+
+        ApplyThemeInEditor();
+    }
+
+    void ApplyThemeInEditor()
+    {
+        LoadAssets();
+        ApplyTheme();
+    }
+#endif
 
     void LoadAssets()
     {
@@ -160,14 +251,19 @@ public class GameVisualTheme : MonoBehaviour
                 continue;
 
             BoxCollider2D triggerCollider = treasure.GetComponent<BoxCollider2D>();
-            Vector2 triggerWorldSize = GetWorldBoxSize(triggerCollider);
 
             if (renderer.sprite != treasureSprite)
             {
                 renderer.sprite = treasureSprite;
             }
             FitSpriteToTargetSize(renderer, TreasureTargetSize);
-            SetWorldBoxSize(triggerCollider, triggerWorldSize);
+
+            if (triggerCollider != null)
+            {
+                Vector2 spriteWorldSize = GetSpriteWorldSize(renderer);
+                Vector2 expandedSize = spriteWorldSize * TreasureTriggerSizeMultiplier;
+                SetWorldBoxSize(triggerCollider, expandedSize);
+            }
         }
     }
 
@@ -253,6 +349,15 @@ public class GameVisualTheme : MonoBehaviour
 
         float scale = targetMaxWorldSize / maxDimension;
         renderer.transform.localScale = new Vector3(scale, scale, 1f);
+    }
+
+    Vector2 GetSpriteWorldSize(SpriteRenderer renderer)
+    {
+        if (renderer == null || renderer.sprite == null)
+            return Vector2.zero;
+
+        Bounds bounds = renderer.bounds;
+        return new Vector2(bounds.size.x, bounds.size.y);
     }
 
     float GetStableObstacleSizeMultiplier(Vector3 position)

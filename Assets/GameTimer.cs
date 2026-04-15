@@ -5,12 +5,15 @@ using ExitGames.Client.Photon;
 
 public class GameTimer : MonoBehaviourPun
 {
+    const string RoundDurationKey = "roundDuration";
+    const string ObstacleLayoutKey = "obstacleLayout";
+    const string ExtractionLayoutKey = "extractionLayout";
+    const string MapSeedKey = "mapSeed";
+
     public float roundTime = 180f;
 
     private TMP_Text timerText;
-
     private double startTime;
-    
 
     void Start()
     {
@@ -28,9 +31,11 @@ public class GameTimer : MonoBehaviourPun
 
     void Update()
     {
-        if (!IsGameStarted()) return;
+        if (!IsGameStarted())
+            return;
 
-        // pobierz startTime z rooma
+        roundTime = GetConfiguredRoundTime();
+
         if (PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue("startTime", out object value))
         {
             startTime = (double)value;
@@ -40,17 +45,12 @@ public class GameTimer : MonoBehaviourPun
             return;
         }
 
-        // oblicz czas na podstawie Photon Time
         double elapsed = PhotonNetwork.Time - startTime;
         float remaining = roundTime - (float)elapsed;
-
-        // clamp
         remaining = Mathf.Max(0f, remaining);
 
-        // update UI
         UpdateTimerUI(remaining);
 
-        // tylko master kończy grę
         if (remaining <= 0f && PhotonNetwork.IsMasterClient)
         {
             EndGame();
@@ -63,32 +63,28 @@ public class GameTimer : MonoBehaviourPun
         {
             int minutes = Mathf.FloorToInt(time / 60f);
             int seconds = Mathf.FloorToInt(time % 60f);
-
             timerText.text = minutes.ToString("00") + ":" + seconds.ToString("00");
         }
     }
 
     void EndGame()
     {
-        if (!IsGameStarted()) return;
+        if (!IsGameStarted())
+            return;
 
         Debug.Log("KONIEC GRY");
 
         var players = FindObjectsByType<PlayerHealth>(FindObjectsSortMode.None);
-
         foreach (var p in players)
         {
             PhotonView pv = p.photonView;
-
             if (pv != null)
             {
                 pv.RPC("OnTimeUp", pv.Owner);
             }
         }
 
-        // NAJWAŻNIEJSZE — BEZ RPC
         EndScreenUI ui = FindFirstObjectByType<EndScreenUI>();
-
         if (ui != null)
         {
             Debug.Log("CALLING UI");
@@ -104,18 +100,20 @@ public class GameTimer : MonoBehaviourPun
 
         Hashtable props = new Hashtable();
         props["gameStarted"] = false;
+        props[ObstacleLayoutKey] = string.Empty;
+        props[ExtractionLayoutKey] = string.Empty;
+        props[MapSeedKey] = -1;
         PhotonNetwork.CurrentRoom.SetCustomProperties(props);
     }
 
     public static void StartGame()
     {
-        if (!PhotonNetwork.IsMasterClient) return;
+        if (!PhotonNetwork.IsMasterClient)
+            return;
 
         Hashtable props = new Hashtable();
-
         props["gameStarted"] = true;
-        props["startTime"] = PhotonNetwork.Time; // 🔥 KLUCZ
-
+        props["startTime"] = PhotonNetwork.Time;
         PhotonNetwork.CurrentRoom.SetCustomProperties(props);
     }
 
@@ -131,26 +129,38 @@ public class GameTimer : MonoBehaviourPun
 
         return false;
     }
+
     public void ReduceTime(float amount)
     {
-        if (!PhotonNetwork.IsMasterClient) return;
+        if (!PhotonNetwork.IsMasterClient)
+            return;
 
         if (PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue("startTime", out object value))
         {
             double currentStart = (double)value;
-
-            // POPRAWKA
             double newStart = currentStart + amount;
 
             Hashtable props = new Hashtable();
             props["startTime"] = newStart;
-
             PhotonNetwork.CurrentRoom.SetCustomProperties(props);
 
             Debug.Log("Timer skrocony o " + amount + " sekund");
         }
     }
-    
 
+    float GetConfiguredRoundTime()
+    {
+        if (PhotonNetwork.CurrentRoom != null &&
+            PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue(RoundDurationKey, out object value))
+        {
+            if (value is float floatValue)
+                return floatValue;
+            if (value is int intValue)
+                return intValue;
+            if (value is double doubleValue)
+                return (float)doubleValue;
+        }
+
+        return roundTime;
+    }
 }
-

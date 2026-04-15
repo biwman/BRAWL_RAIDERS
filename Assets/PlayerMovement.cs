@@ -3,6 +3,8 @@ using Photon.Pun;
 
 public class PlayerMovement : MonoBehaviourPun
 {
+    const string BoosterSlowdownKey = "boosterSlowdownPercent";
+
     public static bool gameStarted = false;
 
     private Rigidbody2D rb;
@@ -22,9 +24,11 @@ public class PlayerMovement : MonoBehaviourPun
     private Vector2 lastFacingDirection = Vector2.up;
     private float boosterCharge = 1f;
     private bool boosterExhausted = false;
+    private float targetRotationAngle = 0f;
 
     public float BoosterNormalized => boosterCharge;
     public bool IsBoosterDepleted => boosterExhausted;
+    float CurrentDepletedSpeedMultiplier => 1f - GetBoosterSlowdownFraction();
 
     void Start()
     {
@@ -32,7 +36,11 @@ public class PlayerMovement : MonoBehaviourPun
         if (rb != null)
         {
             rb.interpolation = RigidbodyInterpolation2D.Interpolate;
+            rb.constraints = RigidbodyConstraints2D.FreezeRotation;
+            rb.angularVelocity = 0f;
         }
+
+        targetRotationAngle = transform.eulerAngles.z;
 
         if (!photonView.IsMine)
             return;
@@ -61,6 +69,10 @@ public class PlayerMovement : MonoBehaviourPun
             moveInput = Vector2.zero;
             shootInput = Vector2.zero;
             effectiveMoveInput = Vector2.zero;
+            if (rb != null)
+            {
+                rb.angularVelocity = 0f;
+            }
             return;
         }
 
@@ -91,12 +103,18 @@ public class PlayerMovement : MonoBehaviourPun
             if (rb != null)
             {
                 rb.linearVelocity = Vector2.zero;
+                rb.angularVelocity = 0f;
             }
             return;
         }
 
-        float currentSpeed = IsBoosterDepleted ? speed * depletedSpeedMultiplier : speed;
-        rb.linearVelocity = effectiveMoveInput * currentSpeed;
+        float currentSpeed = IsBoosterDepleted ? speed * CurrentDepletedSpeedMultiplier : speed;
+        if (rb != null)
+        {
+            rb.linearVelocity = effectiveMoveInput * currentSpeed;
+            rb.angularVelocity = 0f;
+            rb.MoveRotation(targetRotationAngle);
+        }
     }
 
     void OnTriggerEnter2D(Collider2D other)
@@ -173,7 +191,12 @@ public class PlayerMovement : MonoBehaviourPun
         lastFacingDirection = desiredDirection;
 
         float angle = Mathf.Atan2(lastFacingDirection.y, lastFacingDirection.x) * Mathf.Rad2Deg;
-        transform.rotation = Quaternion.Euler(0f, 0f, angle - 90f);
+        targetRotationAngle = angle - 90f;
+
+        if (rb == null)
+        {
+            transform.rotation = Quaternion.Euler(0f, 0f, targetRotationAngle);
+        }
     }
 
     void ResolveJoysticks()
@@ -195,5 +218,20 @@ public class PlayerMovement : MonoBehaviourPun
                 shootJoystick = shootingJoystick.GetComponent<Joystick>();
             }
         }
+    }
+
+    float GetBoosterSlowdownFraction()
+    {
+        if (PhotonNetwork.CurrentRoom != null &&
+            PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue(BoosterSlowdownKey, out object value))
+        {
+            if (value is int intValue)
+                return Mathf.Clamp01(intValue / 100f);
+
+            if (value is float floatValue)
+                return Mathf.Clamp01(floatValue / 100f);
+        }
+
+        return 1f - depletedSpeedMultiplier;
     }
 }

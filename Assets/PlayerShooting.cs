@@ -3,50 +3,88 @@ using Photon.Pun;
 
 public class PlayerShooting : MonoBehaviourPun
 {
+    const string AmmoCountKey = "ammoCount";
+
     public Joystick shootJoystick;
     public GameObject bulletPrefab;
     public float bulletSpeed = 10f;
     public float fireRate = 0.3f;
+    public int maxAmmo = 10;
+    public float reloadDuration = 4f;
     public static bool gameStarted = false;
-    private float nextFireTime = 0f;
+
+    float nextFireTime = 0f;
+    int currentAmmo;
+    bool isReloading;
+    float reloadFinishTime;
+
+    public int CurrentAmmo => currentAmmo;
+    public int MaxAmmo => maxAmmo;
+    public bool IsReloading => isReloading;
+    public float ReloadProgress
+    {
+        get
+        {
+            if (!isReloading || reloadDuration <= 0f)
+                return 0f;
+
+            float remaining = Mathf.Max(0f, reloadFinishTime - Time.time);
+            return 1f - Mathf.Clamp01(remaining / reloadDuration);
+        }
+    }
 
     void Start()
     {
-        if (!photonView.IsMine) return;
+        maxAmmo = GetConfiguredMaxAmmo();
+        currentAmmo = maxAmmo;
+
+        if (!photonView.IsMine)
+            return;
+
+        if (GetComponent<AmmoUI>() == null)
+        {
+            gameObject.AddComponent<AmmoUI>();
+        }
 
         Debug.Log("PlayerShooting START");
     }
 
     void Update()
     {
-        if (!IsGameStarted()) return;
-        if (!photonView.IsMine) return;
+        if (!IsGameStarted())
+            return;
 
-        // znajdź joystick (retry aż znajdzie)
+        if (!photonView.IsMine)
+            return;
+
+        SyncAmmoSetting();
+
+        UpdateReload();
+
         if (shootJoystick == null)
         {
-            GameObject sj = GameObject.Find("ShootJoystickBG");
-
-            if (sj != null)
+            GameObject shootJoystickObject = GameObject.Find("ShootJoystickBG");
+            if (shootJoystickObject != null)
             {
-                shootJoystick = sj.GetComponent<Joystick>();
-                Debug.Log("ShootJoystick znaleziony");
+                shootJoystick = shootJoystickObject.GetComponent<Joystick>();
+                Debug.Log("ShootJoystick found");
             }
         }
 
-        // jeśli nadal brak joysticka → nie strzelamy
-        if (shootJoystick == null) return;
+        if (shootJoystick == null)
+            return;
+
+        if (isReloading || currentAmmo <= 0)
+            return;
 
         Vector2 direction = shootJoystick.IsPressed ? shootJoystick.inputVector : Vector2.zero;
-
-        // dead zone
-        if (direction.magnitude < 0.2f) return;
+        if (direction.magnitude < 0.2f)
+            return;
 
         if (Time.time >= nextFireTime)
         {
-            Debug.Log("STRZAŁ");
-
             Shoot(direction.normalized);
+            ConsumeAmmo();
             nextFireTime = Time.time + fireRate;
         }
     }
@@ -66,47 +104,115 @@ public class PlayerShooting : MonoBehaviourPun
             spawnPos,
             Quaternion.identity
         );
-        PhotonView pv = GetComponent<PhotonView>();
-        bullet.GetComponent<Bullet>().ownerViewID = pv.ViewID;
 
         if (bullet == null)
         {
-            Debug.LogError("Bullet się nie stworzył");
+            Debug.LogError("Bullet failed to spawn");
             return;
         }
 
-        Rigidbody2D rb = bullet.GetComponent<Rigidbody2D>();
+        PhotonView playerView = GetComponent<PhotonView>();
+        Bullet bulletComponent = bullet.GetComponent<Bullet>();
+        if (bulletComponent != null && playerView != null)
+        {
+            bulletComponent.ownerViewID = playerView.ViewID;
+        }
 
+        Rigidbody2D rb = bullet.GetComponent<Rigidbody2D>();
         if (rb != null)
         {
             rb.linearVelocity = direction * bulletSpeed;
         }
         else
         {
-            Debug.LogError("Bullet NIE ma Rigidbody2D");
+            Debug.LogError("Bullet is missing Rigidbody2D");
         }
 
-        // ignoruj kolizję z graczem
         Collider2D playerCollider = GetComponent<Collider2D>();
         Collider2D bulletCollider = bullet.GetComponent<Collider2D>();
-
         if (bulletCollider != null && playerCollider != null)
         {
             Physics2D.IgnoreCollision(bulletCollider, playerCollider);
         }
     }
+
+    void ConsumeAmmo()
+    {
+        currentAmmo = Mathf.Max(0, currentAmmo - 1);
+        if (currentAmmo <= 0)
+        {
+            StartReload();
+        }
+    }
+
+    void StartReload()
+    {
+        if (isReloading)
+            return;
+
+        isReloading = true;
+        reloadFinishTime = Time.time + reloadDuration;
+    }
+
+    void UpdateReload()
+    {
+        if (!isReloading)
+            return;
+
+        if (Time.time < reloadFinishTime)
+            return;
+
+        isReloading = false;
+        currentAmmo = maxAmmo;
+    }
+
+    void SyncAmmoSetting()
+    {
+        int configuredAmmo = GetConfiguredMaxAmmo();
+        if (configuredAmmo == maxAmmo)
+            return;
+
+        int previousMaxAmmo = maxAmmo;
+        maxAmmo = configuredAmmo;
+
+        if (isReloading)
+            return;
+
+        if (currentAmmo == previousMaxAmmo)
+        {
+            currentAmmo = maxAmmo;
+        }
+        else
+        {
+            currentAmmo = Mathf.Min(currentAmmo, maxAmmo);
+        }
+    }
+
     bool IsGameStarted()
     {
         if (PhotonNetwork.CurrentRoom == null)
             return false;
 
-        object value;
-
-        if (PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue("gameStarted", out value))
+        if (PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue("gameStarted", out object value))
         {
             return (bool)value;
         }
 
         return false;
+    }
+
+    int GetConfiguredMaxAmmo()
+    {
+        if (PhotonNetwork.CurrentRoom != null &&
+            PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue(AmmoCountKey, out object value))
+        {
+            if (value is int intValue)
+                return Mathf.Clamp(intValue, 5, 30);
+
+            if (value is float floatValue)
+                return Mathf.Clamp(Mathf.RoundToInt(floatValue), 5, 30);
+        }
+
+        return maxAmmo;
     }
 }

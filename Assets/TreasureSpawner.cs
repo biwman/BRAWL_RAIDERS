@@ -1,84 +1,162 @@
 using UnityEngine;
 using Photon.Pun;
 using System.Collections;
+using System.Collections.Generic;
+using System.Globalization;
 
 public class TreasureSpawner : MonoBehaviourPun
 {
-    public int treasureCount = 10;
+    const string GameStartedKey = "gameStarted";
+    const string TreasureDensityKey = "treasureDensity";
+    const string ObstacleLayoutKey = "obstacleLayout";
+    const string ExtractionLayoutKey = "extractionLayout";
+    const float MinDistanceFromExtraction = 3f;
+    const float MinDistanceFromObstacle = 2.6f;
 
+    public int treasureCount = 10;
     public float mapSizeX = 25f;
     public float mapSizeY = 25f;
 
     void Start()
     {
-        // zamiast odpalać od razu → czekamy na Photon
-        Debug.Log("TreasureSpawner Start działa");
-        StartCoroutine(SpawnWhenReady());
+        Debug.Log("TreasureSpawner Start");
+        StartCoroutine(SpawnWhenRoundStarts());
     }
 
-    IEnumerator SpawnWhenReady()
+    IEnumerator SpawnWhenRoundStarts()
     {
-        // czekamy aż Photon będzie gotowy
-        while (!PhotonNetwork.IsConnectedAndReady)
-        {
+        while (!PhotonNetwork.IsConnectedAndReady || !PhotonNetwork.InRoom)
             yield return null;
-        }
 
-        Debug.Log("Photon gotowy!");
+        while (!IsRoundStarted())
+            yield return null;
 
-        // tylko MasterClient spawnuje
+        while (!HasExtractionLayout() || !HasObstacleLayout())
+            yield return null;
+
         if (!PhotonNetwork.IsMasterClient)
-        {
-            Debug.Log("Nie jestem MasterClient - nie spawnuję");
             yield break;
-        }
 
-        Debug.Log("Jestem MasterClient - spawnuję skarby");
-
+        Debug.Log("Master spawning treasures for started round");
         SpawnTreasures();
     }
 
     void SpawnTreasures()
     {
+        List<Vector2> obstaclePositions = ParseLayout(ObstacleLayoutKey);
+        List<Vector2> extractionPositions = ParseLayout(ExtractionLayoutKey);
         int spawned = 0;
         int attempts = 0;
+        int targetCount = Mathf.Max(1, Mathf.RoundToInt(treasureCount * GetDensityMultiplier()));
 
-        while (spawned < treasureCount && attempts < 100)
+        while (spawned < targetCount && attempts < 300)
         {
             attempts++;
 
             float margin = 2f;
-
             float x = Random.Range(-mapSizeX / 2 + margin, mapSizeX / 2 - margin);
             float y = Random.Range(-mapSizeY / 2 + margin, mapSizeY / 2 - margin);
-
             Vector2 pos2D = new Vector2(x, y);
 
-            Collider2D hit = Physics2D.OverlapCircle(pos2D, 1f);
+            if (!IsFarEnough(pos2D, extractionPositions, MinDistanceFromExtraction))
+                continue;
 
+            if (!IsFarEnough(pos2D, obstaclePositions, MinDistanceFromObstacle))
+                continue;
+
+            Collider2D hit = Physics2D.OverlapCircle(pos2D, 1f);
             if (hit == null)
             {
-                Vector3 pos = new Vector3(x, y, 0);
-
-                // KLUCZOWE: Photon spawn
-                GameObject t = PhotonNetwork.Instantiate("TreasureNetwork", pos, Quaternion.identity);
-
-                PhotonView pv = t.GetComponent<PhotonView>();
-
-                if (pv == null)
-                {
-                    Debug.LogError("Treasure NIE ma PhotonView!");
-                }
-                else
-                {
-                    Debug.Log("Spawn OK: " + t.name);
-                    Debug.Log("ViewID: " + pv.ViewID);
-                }
-
+                PhotonNetwork.Instantiate("TreasureNetwork", new Vector3(x, y, 0f), Quaternion.identity);
                 spawned++;
             }
         }
 
         Debug.Log("Spawned treasures: " + spawned);
+    }
+
+    bool IsFarEnough(Vector2 candidate, List<Vector2> positions, float minDistance)
+    {
+        for (int i = 0; i < positions.Count; i++)
+        {
+            if (Vector2.Distance(candidate, positions[i]) < minDistance)
+                return false;
+        }
+
+        return true;
+    }
+
+    List<Vector2> ParseLayout(string key)
+    {
+        List<Vector2> positions = new List<Vector2>();
+        if (PhotonNetwork.CurrentRoom == null ||
+            !PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue(key, out object value) ||
+            value is not string layout ||
+            string.IsNullOrWhiteSpace(layout))
+        {
+            return positions;
+        }
+
+        string[] entries = layout.Split(';');
+        foreach (string entry in entries)
+        {
+            string[] parts = entry.Split(',');
+            if (parts.Length != 2)
+                continue;
+
+            if (float.TryParse(parts[0], NumberStyles.Float, CultureInfo.InvariantCulture, out float x) &&
+                float.TryParse(parts[1], NumberStyles.Float, CultureInfo.InvariantCulture, out float y))
+            {
+                positions.Add(new Vector2(x, y));
+            }
+        }
+
+        return positions;
+    }
+
+    float GetDensityMultiplier()
+    {
+        if (PhotonNetwork.CurrentRoom != null &&
+            PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue(TreasureDensityKey, out object value) &&
+            value is string density)
+        {
+            switch (density)
+            {
+                case "low": return 0.5f;
+                case "high": return 2f;
+                default: return 1f;
+            }
+        }
+
+        return 1f;
+    }
+
+    bool IsRoundStarted()
+    {
+        if (PhotonNetwork.CurrentRoom == null)
+            return false;
+
+        if (PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue(GameStartedKey, out object value) && value is bool started)
+        {
+            return started;
+        }
+
+        return false;
+    }
+
+    bool HasExtractionLayout()
+    {
+        return PhotonNetwork.CurrentRoom != null &&
+               PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue(ExtractionLayoutKey, out object value) &&
+               value is string layout &&
+               !string.IsNullOrWhiteSpace(layout);
+    }
+
+    bool HasObstacleLayout()
+    {
+        return PhotonNetwork.CurrentRoom != null &&
+               PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue(ObstacleLayoutKey, out object value) &&
+               value is string layout &&
+               !string.IsNullOrWhiteSpace(layout);
     }
 }

@@ -18,6 +18,9 @@ public class Joystick : MonoBehaviour, IDragHandler, IPointerDownHandler, IPoint
 
     public void OnDrag(PointerEventData eventData)
     {
+        if (!IsPressed)
+            return;
+
         Vector2 pos;
 
         RectTransformUtility.ScreenPointToLocalPointInRectangle(
