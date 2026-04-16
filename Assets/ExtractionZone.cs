@@ -132,7 +132,7 @@ public class ExtractionZone : MonoBehaviourPun
 
         Debug.Log("EVACUATION!");
 
-        PlayerHealth[] playersBeforeEvacuation = FindObjectsByType<PlayerHealth>(FindObjectsSortMode.None);
+        PlayerHealth[] playersBeforeEvacuation = FindObjectsByType<PlayerHealth>(FindObjectsInactive.Exclude);
         Collider2D[] hits = Physics2D.OverlapCircleAll(transform.position, 1.0f);
 
         HashSet<int> processedPlayers = new HashSet<int>();
@@ -171,14 +171,14 @@ public class ExtractionZone : MonoBehaviourPun
 
         // skrócenie czasu
         bool anyPlayerEvacuated = processedPlayers.Count > 0;
-        GameTimer timer = FindFirstObjectByType<GameTimer>();
+        GameTimer timer = FindAnyObjectByType<GameTimer>();
         if (timer != null && anyPlayerEvacuated)
         {
             timer.ReduceTime(30f);
         }
 
         // KLUCZOWE — KONIEC GRY
-        GameManager gm = FindFirstObjectByType<GameManager>();
+        GameManager gm = FindAnyObjectByType<GameManager>();
         bool anyPlayerRemaining = false;
 
         foreach (PlayerHealth player in playersBeforeEvacuation)

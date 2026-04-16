@@ -6,6 +6,9 @@ using UnityEngine.UI;
 
 public class AudioManager : MonoBehaviour
 {
+    const float SpatialMinDistance = 1.5f;
+    const float SpatialMaxDistance = 18f;
+
     static AudioManager instance;
 
     AudioClip laserClip;
@@ -14,6 +17,7 @@ public class AudioManager : MonoBehaviour
     AudioClip engineClip;
     AudioClip alarmClip;
     AudioClip explosionClip;
+    AudioClip reloadClip;
 
     AudioSource oneShotSource;
     AudioSource drillingLoopSource;
@@ -30,6 +34,8 @@ public class AudioManager : MonoBehaviour
     }
 
     public AudioClip EngineClip => engineClip;
+    public AudioClip DrillingClip => drillingClip;
+    public AudioClip AlarmClip => alarmClip;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Bootstrap()
@@ -84,12 +90,13 @@ public class AudioManager : MonoBehaviour
 
     void LoadClips()
     {
-        laserClip = Resources.Load<AudioClip>("Audio/laser");
+        laserClip = Resources.Load<AudioClip>("Audio/strzal_pistol_cut");
         drillingClip = Resources.Load<AudioClip>("Audio/drilling");
         clickClip = Resources.Load<AudioClip>("Audio/click");
         engineClip = Resources.Load<AudioClip>("Audio/silnik");
         alarmClip = Resources.Load<AudioClip>("Audio/alarm");
         explosionClip = Resources.Load<AudioClip>("Audio/explosion");
+        reloadClip = Resources.Load<AudioClip>("Audio/gun_reload");
     }
 
     void EnsureSources()
@@ -149,9 +156,24 @@ public class AudioManager : MonoBehaviour
         PlayOneShot(laserClip, 0.55f);
     }
 
+    public void PlayLaserAt(Vector3 worldPosition)
+    {
+        PlaySpatialOneShot(laserClip, worldPosition, 0.55f);
+    }
+
     public void PlayExplosion()
     {
         PlayOneShot(explosionClip, 0.75f);
+    }
+
+    public void PlayExplosionAt(Vector3 worldPosition)
+    {
+        PlaySpatialOneShot(explosionClip, worldPosition, 0.75f);
+    }
+
+    public void PlayReloadAt(Vector3 worldPosition)
+    {
+        PlaySpatialOneShot(reloadClip, worldPosition, 0.62f);
     }
 
     public void StartDrillingLoop()
@@ -196,5 +218,35 @@ public class AudioManager : MonoBehaviour
             return;
 
         oneShotSource.PlayOneShot(clip, volumeScale);
+    }
+
+    void PlaySpatialOneShot(AudioClip clip, Vector3 worldPosition, float volumeScale)
+    {
+        if (clip == null)
+            return;
+
+        GameObject tempObject = new GameObject("SpatialAudio_" + clip.name);
+        tempObject.transform.position = worldPosition;
+
+        AudioSource source = tempObject.AddComponent<AudioSource>();
+        ConfigureSpatialSource(source, volumeScale);
+        source.clip = clip;
+        source.Play();
+
+        Destroy(tempObject, clip.length + 0.1f);
+    }
+
+    public void ConfigureSpatialSource(AudioSource source, float volume)
+    {
+        if (source == null)
+            return;
+
+        source.spatialBlend = 1f;
+        source.rolloffMode = AudioRolloffMode.Linear;
+        source.minDistance = SpatialMinDistance;
+        source.maxDistance = SpatialMaxDistance;
+        source.dopplerLevel = 0f;
+        source.spread = 0f;
+        source.volume = volume;
     }
 }

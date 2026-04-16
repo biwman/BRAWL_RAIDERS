@@ -16,6 +16,10 @@ public static class RoomSettings
     public const string DeathRetainPercentKey = "deathRetainPercent";
     public const string TimeUpRetainPercentKey = "timeUpRetainPercent";
     public const string MapSizeKey = "mapSize";
+    public const string MovingObjectsEnabledKey = "movingObjectsEnabled";
+    public const string ObstacleWeightFactorKey = "obstacleWeightFactor";
+    public const string TreasureWeightFactorKey = "treasureWeightFactor";
+    public const string ShipSkinKey = "shipSkinIndex";
     public const string ScoreKey = "score";
 
     public const float DefaultRoundDuration = 180f;
@@ -28,6 +32,9 @@ public static class RoomSettings
     public const int DefaultDeathRetainPercent = 25;
     public const int DefaultTimeUpRetainPercent = 25;
     public const string DefaultMapSize = "medium";
+    public const bool DefaultMovingObjectsEnabled = false;
+    public const int DefaultObstacleWeightFactor = 6;
+    public const int DefaultTreasureWeightFactor = 6;
 
     public static float GetRoundDuration()
     {
@@ -97,6 +104,39 @@ public static class RoomSettings
         return DefaultMapSize;
     }
 
+    public static bool AreMovingObjectsEnabled()
+    {
+        if (PhotonNetwork.CurrentRoom != null &&
+            PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue(MovingObjectsEnabledKey, out object value) &&
+            value is bool enabled)
+        {
+            return enabled;
+        }
+
+        return DefaultMovingObjectsEnabled;
+    }
+
+    public static int GetObstacleWeightFactor()
+    {
+        return GetInt(ObstacleWeightFactorKey, DefaultObstacleWeightFactor, 1, 12);
+    }
+
+    public static int GetTreasureWeightFactor()
+    {
+        return GetInt(TreasureWeightFactorKey, DefaultTreasureWeightFactor, 1, 12);
+    }
+
+    public static string GetMassLabel(int mass)
+    {
+        if (mass <= 2)
+            return "LIGHT";
+
+        if (mass >= 12)
+            return "HEAVY";
+
+        return "MEDIUM";
+    }
+
     public static Vector2 GetMapDimensions()
     {
         switch (GetMapSizeMode())
@@ -131,6 +171,17 @@ public static class RoomSettings
         }
 
         return 0;
+    }
+
+    public static int GetPlayerShipSkin(Photon.Realtime.Player player, int fallback)
+    {
+        if (player != null &&
+            player.CustomProperties.TryGetValue(ShipSkinKey, out object value))
+        {
+            return Mathf.Clamp(ConvertToInt(value, fallback), 0, 2);
+        }
+
+        return Mathf.Clamp(fallback, 0, 2);
     }
 
     static int GetInt(string key, int defaultValue, int min, int max)

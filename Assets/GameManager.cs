@@ -1,15 +1,17 @@
 using UnityEngine;
 using Photon.Pun;
+using Photon.Realtime;
 using UnityEngine.SceneManagement;
 using ExitGames.Client.Photon;
 
-public class GameManager : MonoBehaviourPun
+public class GameManager : MonoBehaviourPunCallbacks
 {
     const string ObstacleLayoutKey = "obstacleLayout";
     const string ExtractionLayoutKey = "extractionLayout";
     const string NebulaLayoutKey = "nebulaLayout";
     const string MapSeedKey = "mapSeed";
     bool restartInProgress;
+    bool leavingRoomToProfile;
 
     public void StartGame()
     {
@@ -34,8 +36,12 @@ public class GameManager : MonoBehaviourPun
         {
             if (IsRoundStopped())
             {
-                Debug.Log("LOCAL RETURN TO LOBBY");
-                SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+                Debug.Log("LOCAL READY AFTER HOST RESTART");
+                NetworkManager networkManager = FindAnyObjectByType<NetworkManager>();
+                if (networkManager != null)
+                {
+                    networkManager.RestoreRoomStateAfterSceneLoad();
+                }
             }
 
             return;
@@ -64,6 +70,39 @@ public class GameManager : MonoBehaviourPun
         {
             PhotonNetwork.CurrentRoom.SetCustomProperties(props);
         }
+    }
+
+    public void LeaveRoomToProfile()
+    {
+        if (leavingRoomToProfile)
+            return;
+
+        leavingRoomToProfile = true;
+
+        PlayerMovement.gameStarted = false;
+        PlayerShooting.gameStarted = false;
+
+        if (!PhotonNetwork.IsConnected)
+        {
+            SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+            return;
+        }
+
+        if (PhotonNetwork.InRoom)
+        {
+            PhotonNetwork.LocalPlayer.TagObject = null;
+        }
+
+        PhotonNetwork.Disconnect();
+    }
+
+    public override void OnDisconnected(DisconnectCause cause)
+    {
+        if (!leavingRoomToProfile)
+            return;
+
+        leavingRoomToProfile = false;
+        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
 
     System.Collections.IEnumerator RestartAfterCleanup()

@@ -115,10 +115,10 @@ public class AmmoUI : MonoBehaviourPun
         text.fontStyle = FontStyles.Bold;
         text.color = Color.white;
         text.alignment = alignment;
-        text.enableWordWrapping = false;
+        text.textWrappingMode = TextWrappingModes.NoWrap;
         text.margin = new Vector4(16f, 6f, 16f, 6f);
 
-        TMP_Text referenceText = FindFirstObjectByType<TMP_Text>();
+        TMP_Text referenceText = FindAnyObjectByType<TMP_Text>();
         if (referenceText != null)
         {
             text.font = referenceText.font;

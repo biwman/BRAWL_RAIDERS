@@ -25,6 +25,7 @@ public class PlayerMovement : MonoBehaviourPun
     private float targetRotationAngle = 0f;
     private float boosterRecoveryDelayTimer = 0f;
     private AudioSource engineAudioSource;
+    private Vector3 lastAudioPosition;
 
     public float BoosterNormalized => boosterCharge;
     public bool IsBoosterDepleted => boosterExhausted;
@@ -47,6 +48,9 @@ public class PlayerMovement : MonoBehaviourPun
 
         targetRotationAngle = transform.eulerAngles.z;
 
+        SetupEngineAudio();
+        lastAudioPosition = transform.position;
+
         if (!photonView.IsMine)
             return;
 
@@ -62,42 +66,42 @@ public class PlayerMovement : MonoBehaviourPun
         {
             gameObject.AddComponent<BoosterBarUI>();
         }
-
-        SetupEngineAudio();
     }
 
     void Update()
     {
-        if (!photonView.IsMine)
-            return;
-
-        if (!IsGameStarted())
+        if (photonView.IsMine)
         {
-            moveInput = Vector2.zero;
-            shootInput = Vector2.zero;
-            effectiveMoveInput = Vector2.zero;
-            if (rb != null)
+            if (!IsGameStarted())
             {
-                rb.angularVelocity = 0f;
+                moveInput = Vector2.zero;
+                shootInput = Vector2.zero;
+                effectiveMoveInput = Vector2.zero;
+                if (rb != null)
+                {
+                    rb.angularVelocity = 0f;
+                }
+                UpdateEngineAudio();
+                return;
             }
-            return;
+
+            ResolveJoysticks();
+
+            moveInput = joystick != null && joystick.IsPressed ? joystick.inputVector : Vector2.zero;
+            shootInput = shootJoystick != null && shootJoystick.IsPressed ? shootJoystick.inputVector : Vector2.zero;
+
+            if (moveInput.magnitude < 0.2f)
+                moveInput = Vector2.zero;
+
+            if (shootInput.magnitude < 0.3f)
+                shootInput = Vector2.zero;
+
+            effectiveMoveInput = GetEffectiveMoveInput(moveInput);
+
+            UpdateBooster(Time.deltaTime);
+            UpdateFacingDirection();
         }
 
-        ResolveJoysticks();
-
-        moveInput = joystick != null && joystick.IsPressed ? joystick.inputVector : Vector2.zero;
-        shootInput = shootJoystick != null && shootJoystick.IsPressed ? shootJoystick.inputVector : Vector2.zero;
-
-        if (moveInput.magnitude < 0.2f)
-            moveInput = Vector2.zero;
-
-        if (shootInput.magnitude < 0.3f)
-            shootInput = Vector2.zero;
-
-        effectiveMoveInput = GetEffectiveMoveInput(moveInput);
-
-        UpdateBooster(Time.deltaTime);
-        UpdateFacingDirection();
         UpdateEngineAudio();
     }
 
@@ -238,9 +242,6 @@ public class PlayerMovement : MonoBehaviourPun
 
     void SetupEngineAudio()
     {
-        if (!photonView.IsMine)
-            return;
-
         AudioClip engineClip = AudioManager.Instance.EngineClip;
         if (engineClip == null)
             return;
@@ -254,14 +255,14 @@ public class PlayerMovement : MonoBehaviourPun
         engineAudioSource.clip = engineClip;
         engineAudioSource.loop = true;
         engineAudioSource.playOnAwake = false;
-        engineAudioSource.spatialBlend = 0f;
+        AudioManager.Instance.ConfigureSpatialSource(engineAudioSource, 0f);
         engineAudioSource.volume = 0f;
         engineAudioSource.pitch = 0.85f;
     }
 
     void UpdateEngineAudio()
     {
-        if (!photonView.IsMine || engineAudioSource == null)
+        if (engineAudioSource == null)
             return;
 
         if (!IsGameStarted())
@@ -272,18 +273,35 @@ public class PlayerMovement : MonoBehaviourPun
             return;
         }
 
-        float speedReference = IsBoosterDepleted ? speed * CurrentDepletedSpeedMultiplier : speed;
-        float normalizedSpeed = 0f;
+        float speedReference = photonView.IsMine && IsBoosterDepleted ? speed * CurrentDepletedSpeedMultiplier : speed;
+        if (speedReference <= 0.001f)
+            speedReference = speed;
 
-        if (rb != null && speedReference > 0.001f)
-        {
-            normalizedSpeed = Mathf.Clamp01(rb.linearVelocity.magnitude / speedReference);
-        }
+        float normalizedSpeed = GetAudioSpeedRatio(speedReference);
 
         if (!engineAudioSource.isPlaying)
             engineAudioSource.Play();
 
         engineAudioSource.volume = Mathf.Lerp(0.12f, 0.42f, normalizedSpeed);
         engineAudioSource.pitch = Mathf.Lerp(0.88f, 1.24f, normalizedSpeed);
+    }
+
+    float GetAudioSpeedRatio(float speedReference)
+    {
+        if (photonView.IsMine)
+        {
+            if (rb != null && speedReference > 0.001f)
+            {
+                return Mathf.Clamp01(rb.linearVelocity.magnitude / speedReference);
+            }
+
+            return 0f;
+        }
+
+        float delta = Time.unscaledDeltaTime > 0.0001f
+            ? Vector3.Distance(transform.position, lastAudioPosition) / Time.unscaledDeltaTime
+            : 0f;
+        lastAudioPosition = transform.position;
+        return Mathf.Clamp01(delta / speedReference);
     }
 }

@@ -69,12 +69,13 @@ public class EndGameWatcher : MonoBehaviour
             endScreenRoot.SetActive(true);
         }
 
-        EndScreenUI ui = FindFirstObjectByType<EndScreenUI>();
+        EndScreenUI ui = FindAnyObjectByType<EndScreenUI>();
 
         if (ui != null)
         {
             ShowEndScreenUi(ui);
             FixEndScreenLayout(ui);
+            EnsureBackButton(ui);
             PopulateScoreboard(ui);
         }
         else
@@ -182,7 +183,7 @@ public class EndGameWatcher : MonoBehaviour
                 rect.anchorMin = new Vector2(0.5f, 0f);
                 rect.anchorMax = new Vector2(0.5f, 0f);
                 rect.pivot = new Vector2(0.5f, 0f);
-                rect.anchoredPosition = new Vector2(0f, 24f);
+                rect.anchoredPosition = new Vector2(118f, 24f);
                 rect.sizeDelta = new Vector2(220f, 56f);
             }
         }
@@ -199,6 +200,76 @@ public class EndGameWatcher : MonoBehaviour
                 rect.offsetMin = new Vector2(40f, 100f);
                 rect.offsetMax = new Vector2(-40f, -100f);
             }
+        }
+    }
+
+    void EnsureBackButton(EndScreenUI ui)
+    {
+        if (ui.panel == null)
+            return;
+
+        GameObject backButtonObject = FindObjectEvenIfDisabled("BackButton");
+        Button backButton = backButtonObject != null ? backButtonObject.GetComponent<Button>() : null;
+
+        if (backButton == null)
+        {
+            backButtonObject = new GameObject("BackButton", typeof(RectTransform), typeof(Image), typeof(Button));
+            backButtonObject.transform.SetParent(ui.panel.transform, false);
+            backButton = backButtonObject.GetComponent<Button>();
+
+            GameObject textObject = new GameObject("BackButtonText", typeof(RectTransform), typeof(TextMeshProUGUI));
+            textObject.transform.SetParent(backButtonObject.transform, false);
+
+            RectTransform textRect = textObject.GetComponent<RectTransform>();
+            textRect.anchorMin = Vector2.zero;
+            textRect.anchorMax = Vector2.one;
+            textRect.offsetMin = Vector2.zero;
+            textRect.offsetMax = Vector2.zero;
+
+            TextMeshProUGUI text = textObject.GetComponent<TextMeshProUGUI>();
+            text.text = "BACK";
+            text.fontSize = 24f;
+            text.fontStyle = FontStyles.Bold;
+            text.alignment = TextAlignmentOptions.Center;
+            text.color = Color.white;
+
+            TMP_Text reference = FindAnyObjectByType<TMP_Text>();
+            if (reference != null)
+            {
+                text.font = reference.font;
+                text.fontSharedMaterial = reference.fontSharedMaterial;
+            }
+        }
+
+        backButtonObject.SetActive(true);
+
+        RectTransform rect = backButtonObject.GetComponent<RectTransform>();
+        if (rect != null)
+        {
+            rect.anchorMin = new Vector2(0.5f, 0f);
+            rect.anchorMax = new Vector2(0.5f, 0f);
+            rect.pivot = new Vector2(0.5f, 0f);
+            rect.anchoredPosition = new Vector2(-118f, 24f);
+            rect.sizeDelta = new Vector2(220f, 56f);
+        }
+
+        Image image = backButtonObject.GetComponent<Image>();
+        if (image != null)
+        {
+            image.color = new Color(0.18f, 0.22f, 0.28f, 0.96f);
+            image.type = Image.Type.Sliced;
+        }
+
+        backButton.onClick.RemoveAllListeners();
+        backButton.onClick.AddListener(OnBackButtonClicked);
+    }
+
+    void OnBackButtonClicked()
+    {
+        GameManager gameManager = FindAnyObjectByType<GameManager>();
+        if (gameManager != null)
+        {
+            gameManager.LeaveRoomToProfile();
         }
     }
 

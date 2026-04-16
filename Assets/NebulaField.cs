@@ -13,9 +13,11 @@ public class NebulaField : MonoBehaviour
 
     SpriteRenderer spriteRenderer;
     CircleCollider2D triggerCollider;
+    int nebulaKey;
 
     void Awake()
     {
+        nebulaKey = GetHashCode();
         spriteRenderer = GetComponent<SpriteRenderer>();
         triggerCollider = GetComponent<CircleCollider2D>();
         ConfigureVisual();
@@ -95,7 +97,7 @@ public class NebulaField : MonoBehaviour
         HideInNebulaTarget target = other.GetComponentInParent<HideInNebulaTarget>();
         if (target != null)
         {
-            target.UpdateNebulaState(GetInstanceID(), ShouldHideTarget(target));
+            target.UpdateNebulaState(nebulaKey, ShouldHideTarget(target));
         }
     }
 
@@ -104,7 +106,7 @@ public class NebulaField : MonoBehaviour
         HideInNebulaTarget target = other.GetComponentInParent<HideInNebulaTarget>();
         if (target != null)
         {
-            target.UpdateNebulaState(GetInstanceID(), ShouldHideTarget(target));
+            target.UpdateNebulaState(nebulaKey, ShouldHideTarget(target));
         }
     }
 
@@ -113,7 +115,7 @@ public class NebulaField : MonoBehaviour
         HideInNebulaTarget target = other.GetComponentInParent<HideInNebulaTarget>();
         if (target != null)
         {
-            target.RemoveNebula(GetInstanceID());
+            target.RemoveNebula(nebulaKey);
         }
     }
 

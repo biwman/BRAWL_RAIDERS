@@ -5,8 +5,30 @@ using ExitGames.Client.Photon;
 
 public class NetworkManager : MonoBehaviourPunCallbacks
 {
+    static NetworkManager instance;
+    public static bool SessionRequested { get; private set; }
+
+    public static void RequestSessionStart()
+    {
+        SessionRequested = true;
+        if (instance == null)
+        {
+            instance = FindAnyObjectByType<NetworkManager>();
+        }
+
+        if (instance != null)
+        {
+            instance.TryConnectOrJoin();
+        }
+        else
+        {
+            Debug.LogWarning("NetworkManager instance not found when requesting session start.");
+        }
+    }
+
     void Awake()
     {
+        instance = this;
         PhotonNetwork.AutomaticallySyncScene = true;
     }
 
@@ -19,11 +41,32 @@ public class NetworkManager : MonoBehaviourPunCallbacks
             return;
         }
 
-        Debug.Log("Connecting...");
         PhotonNetwork.GameVersion = Application.version;
         Debug.Log("Game Version: " + PhotonNetwork.GameVersion);
 
-        PhotonNetwork.ConnectUsingSettings();
+        if (SessionRequested)
+        {
+            TryConnectOrJoin();
+        }
+    }
+
+    void TryConnectOrJoin()
+    {
+        if (PhotonNetwork.InRoom)
+            return;
+
+        if (PhotonNetwork.IsConnectedAndReady)
+        {
+            Debug.Log("Trying to join random room...");
+            PhotonNetwork.JoinRandomRoom();
+            return;
+        }
+
+        if (!PhotonNetwork.IsConnected)
+        {
+            Debug.Log("Connecting...");
+            PhotonNetwork.ConnectUsingSettings();
+        }
     }
 
     public override void OnConnectedToMaster()
@@ -31,9 +74,13 @@ public class NetworkManager : MonoBehaviourPunCallbacks
         Debug.Log("Connected to Master");
 
         PhotonNetwork.AutomaticallySyncScene = true;
+        PlayerProfileService.Instance.ApplyProfileToPhoton();
 
-        Debug.Log("Trying to join random room...");
-        PhotonNetwork.JoinRandomRoom();
+        if (SessionRequested)
+        {
+            Debug.Log("Trying to join random room...");
+            PhotonNetwork.JoinRandomRoom();
+        }
     }
 
     public override void OnJoinRandomFailed(short returnCode, string message)
@@ -45,14 +92,16 @@ public class NetworkManager : MonoBehaviourPunCallbacks
     public override void OnJoinedRoom()
     {
         Debug.Log("Joined Room");
+        SessionRequested = false;
+
+        PlayerProfileService.Instance.ApplyProfileToPhoton();
 
         if (string.IsNullOrWhiteSpace(PhotonNetwork.NickName))
-        {
             PhotonNetwork.NickName = "Player " + PhotonNetwork.LocalPlayer.ActorNumber;
-        }
 
         Hashtable props = new Hashtable();
         props[RoomSettings.ScoreKey] = 0;
+        props[RoomSettings.ShipSkinKey] = PlayerProfileService.Instance.CurrentProfile.ShipSkinIndex;
         PhotonNetwork.LocalPlayer.SetCustomProperties(props);
 
         RestoreRoomStateAfterSceneLoad();
@@ -66,8 +115,10 @@ public class NetworkManager : MonoBehaviourPunCallbacks
         PhotonNetwork.Instantiate("Player", spawnPos, Quaternion.identity);
     }
 
-    void RestoreRoomStateAfterSceneLoad()
+    public void RestoreRoomStateAfterSceneLoad()
     {
+        PlayerProfileService.Instance.ApplyProfileToPhoton();
+
         if (PhotonNetwork.LocalPlayer != null && string.IsNullOrWhiteSpace(PhotonNetwork.NickName))
         {
             PhotonNetwork.NickName = "Player " + PhotonNetwork.LocalPlayer.ActorNumber;

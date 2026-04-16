@@ -163,7 +163,7 @@ public class BoosterBarUI : MonoBehaviourPun
         text.color = Color.white;
         text.alignment = TextAlignmentOptions.Left;
 
-        TMP_Text referenceText = FindFirstObjectByType<TMP_Text>();
+        TMP_Text referenceText = FindAnyObjectByType<TMP_Text>();
         if (referenceText != null)
         {
             text.font = referenceText.font;

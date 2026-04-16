@@ -196,6 +196,12 @@ public class UIRuntimeStyler : MonoBehaviour
                 pressed = new Color(0.64f, 0.3f, 0.1f, 1f);
                 targetSize = new Vector2(210f, 64f);
                 break;
+            case "reload":
+                baseColor = new Color(0.23f, 0.56f, 0.9f, 0.96f);
+                highlighted = new Color(0.34f, 0.66f, 0.98f, 1f);
+                pressed = new Color(0.15f, 0.39f, 0.69f, 1f);
+                targetSize = new Vector2(176f, 62f);
+                break;
             case "use":
                 baseColor = new Color(0.97f, 0.8f, 0.24f, 0.97f);
                 highlighted = new Color(1f, 0.87f, 0.34f, 1f);
@@ -228,7 +234,7 @@ public class UIRuntimeStyler : MonoBehaviour
             text.color = textColor;
             text.fontSize = role == "use" ? 30f : 26f;
             text.fontStyle = FontStyles.Bold;
-            text.enableWordWrapping = false;
+            text.textWrappingMode = TextWrappingModes.NoWrap;
             text.alignment = TextAlignmentOptions.Center;
             text.characterSpacing = role == "use" ? 3f : 5f;
             text.margin = new Vector4(12f, 6f, 12f, 6f);
@@ -258,6 +264,9 @@ public class UIRuntimeStyler : MonoBehaviour
 
         if (label.Contains("use"))
             return "use";
+
+        if (label.Contains("reload"))
+            return "reload";
 
         return "default";
     }
@@ -328,7 +337,7 @@ public class UIRuntimeStyler : MonoBehaviour
             rect.anchorMax = new Vector2(0.5f, 0.5f);
             rect.pivot = new Vector2(0.5f, 0.5f);
             rect.anchoredPosition = new Vector2(0f, 0f);
-            rect.sizeDelta = new Vector2(860f, 826f);
+            rect.sizeDelta = new Vector2(920f, 980f);
         }
 
         GameObject readyTextObject = FindSceneObjectByName("ReadyText");
@@ -354,7 +363,7 @@ public class UIRuntimeStyler : MonoBehaviour
                 buttonRect.anchorMin = new Vector2(0.5f, 0.5f);
                 buttonRect.anchorMax = new Vector2(0.5f, 0.5f);
                 buttonRect.pivot = new Vector2(0.5f, 0.5f);
-                buttonRect.anchoredPosition = new Vector2(0f, -360f);
+                buttonRect.anchoredPosition = new Vector2(0f, -432f);
             }
         }
 
@@ -379,7 +388,7 @@ public class UIRuntimeStyler : MonoBehaviour
                 roomPlayersText.fontStyle = FontStyles.Bold;
                 roomPlayersText.color = new Color(0.93f, 0.96f, 1f, 1f);
                 roomPlayersText.alignment = TextAlignmentOptions.TopLeft;
-                roomPlayersText.enableWordWrapping = false;
+                roomPlayersText.textWrappingMode = TextWrappingModes.NoWrap;
                 roomPlayersText.lineSpacing = 8f;
                 roomPlayersText.margin = new Vector4(12f, 10f, 12f, 10f);
             }
@@ -398,6 +407,9 @@ public class UIRuntimeStyler : MonoBehaviour
         StyleLobbySettingButton("KillRewardSettingButton", new Vector2(-205f, -518f));
         StyleLobbySettingButton("DeathRetainSettingButton", new Vector2(205f, -518f));
         StyleLobbySettingButton("TimeUpRetainSettingButton", new Vector2(0f, -580f));
+        StyleLobbySettingButton("MovingObjectsSettingButton", new Vector2(-205f, -642f));
+        StyleLobbySettingButton("ObstacleWeightSettingButton", new Vector2(205f, -642f));
+        StyleLobbySettingButton("TreasureWeightSettingButton", new Vector2(0f, -704f));
     }
 
     void StyleLobbySettingButton(string objectName, Vector2 anchoredPosition)
@@ -435,7 +447,7 @@ public class UIRuntimeStyler : MonoBehaviour
             text.alignment = TextAlignmentOptions.Center;
             text.color = new Color(0.95f, 0.97f, 1f, 1f);
             text.margin = new Vector4(8f, 4f, 8f, 4f);
-            text.enableWordWrapping = true;
+            text.textWrappingMode = TextWrappingModes.Normal;
         }
     }
 
@@ -514,7 +526,7 @@ public class UIRuntimeStyler : MonoBehaviour
             text.fontStyle = FontStyles.Bold;
             text.color = new Color(0.87f, 1f, 0.96f, 1f);
             text.alignment = TextAlignmentOptions.Center;
-            text.enableWordWrapping = false;
+            text.textWrappingMode = TextWrappingModes.NoWrap;
             text.characterSpacing = 1.5f;
             text.margin = new Vector4(24f, 10f, 24f, 10f);
         }

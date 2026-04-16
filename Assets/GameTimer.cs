@@ -81,7 +81,7 @@ public class GameTimer : MonoBehaviourPun
     {
         Debug.Log("KONIEC GRY");
 
-        var players = FindObjectsByType<PlayerHealth>(FindObjectsSortMode.None);
+        var players = FindObjectsByType<PlayerHealth>(FindObjectsInactive.Exclude);
         foreach (var p in players)
         {
             PhotonView pv = p.photonView;

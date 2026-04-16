@@ -1,5 +1,7 @@
 using UnityEngine;
 using Photon.Pun;
+using TMPro;
+using UnityEngine.UI;
 
 public class PlayerShooting : MonoBehaviourPun
 {
@@ -19,6 +21,7 @@ public class PlayerShooting : MonoBehaviourPun
     public int CurrentAmmo => currentAmmo;
     public int MaxAmmo => maxAmmo;
     public bool IsReloading => isReloading;
+    public bool CanManualReload => photonView.IsMine && IsGameStarted() && !isReloading && currentAmmo > 0 && currentAmmo < maxAmmo;
     public float ReloadProgress
     {
         get
@@ -42,6 +45,11 @@ public class PlayerShooting : MonoBehaviourPun
         if (GetComponent<AmmoUI>() == null)
         {
             gameObject.AddComponent<AmmoUI>();
+        }
+
+        if (GetComponent<ReloadButtonUI>() == null)
+        {
+            gameObject.AddComponent<ReloadButtonUI>();
         }
 
         Debug.Log("PlayerShooting START");
@@ -133,7 +141,7 @@ public class PlayerShooting : MonoBehaviourPun
             Physics2D.IgnoreCollision(bulletCollider, playerCollider);
         }
 
-        AudioManager.Instance.PlayLaser();
+        photonView.RPC(nameof(PlayLaserSfx), RpcTarget.All);
     }
 
     void ConsumeAmmo()
@@ -141,17 +149,22 @@ public class PlayerShooting : MonoBehaviourPun
         currentAmmo = Mathf.Max(0, currentAmmo - 1);
         if (currentAmmo <= 0)
         {
-            StartReload();
+            StartReload(false);
         }
     }
 
-    void StartReload()
+    void StartReload(bool playSound)
     {
         if (isReloading)
             return;
 
         isReloading = true;
         reloadFinishTime = Time.time + reloadDuration;
+
+        if (playSound)
+        {
+            photonView.RPC(nameof(PlayReloadSfx), RpcTarget.All);
+        }
     }
 
     void UpdateReload()
@@ -204,5 +217,150 @@ public class PlayerShooting : MonoBehaviourPun
     int GetConfiguredMaxAmmo()
     {
         return RoomSettings.GetAmmoCount();
+    }
+
+    public void TriggerManualReload()
+    {
+        if (!CanManualReload)
+            return;
+
+        StartReload(true);
+    }
+
+    [PunRPC]
+    void PlayLaserSfx()
+    {
+        AudioManager.Instance.PlayLaserAt(transform.position);
+    }
+
+    [PunRPC]
+    void PlayReloadSfx()
+    {
+        AudioManager.Instance.PlayReloadAt(transform.position);
+    }
+}
+
+[RequireComponent(typeof(PlayerShooting))]
+public class ReloadButtonUI : MonoBehaviourPun
+{
+    const string ReloadButtonName = "ReloadButton";
+
+    PlayerShooting shooting;
+    GameObject buttonObject;
+    Button reloadButton;
+    Image backgroundImage;
+    TextMeshProUGUI buttonText;
+
+    void Start()
+    {
+        shooting = GetComponent<PlayerShooting>();
+
+        if (!photonView.IsMine)
+        {
+            enabled = false;
+            return;
+        }
+
+        CreateButton();
+        RefreshState();
+    }
+
+    void Update()
+    {
+        RefreshState();
+    }
+
+    void OnDestroy()
+    {
+        if (buttonObject != null)
+        {
+            Destroy(buttonObject);
+        }
+    }
+
+    void CreateButton()
+    {
+        GameObject existing = GameObject.Find(ReloadButtonName);
+        if (existing != null)
+        {
+            Destroy(existing);
+        }
+
+        GameObject canvas = GameObject.Find("Canvas");
+        GameObject shootJoystickObject = GameObject.Find("ShootJoystickBG");
+        if (canvas == null || shootJoystickObject == null)
+            return;
+
+        RectTransform canvasRect = canvas.GetComponent<RectTransform>();
+        RectTransform joystickRect = shootJoystickObject.GetComponent<RectTransform>();
+        if (canvasRect == null || joystickRect == null)
+            return;
+
+        buttonObject = new GameObject(ReloadButtonName, typeof(RectTransform), typeof(Image), typeof(Button));
+        buttonObject.transform.SetParent(canvas.transform, false);
+
+        RectTransform rect = buttonObject.GetComponent<RectTransform>();
+        rect.anchorMin = joystickRect.anchorMin;
+        rect.anchorMax = joystickRect.anchorMax;
+        rect.pivot = new Vector2(0.5f, 0.5f);
+        rect.anchoredPosition = joystickRect.anchoredPosition + new Vector2(0f, 208f);
+        rect.sizeDelta = new Vector2(176f, 62f);
+
+        backgroundImage = buttonObject.GetComponent<Image>();
+        backgroundImage.color = new Color(0.23f, 0.56f, 0.9f, 0.96f);
+        backgroundImage.type = Image.Type.Sliced;
+
+        reloadButton = buttonObject.GetComponent<Button>();
+        reloadButton.transition = Selectable.Transition.ColorTint;
+        reloadButton.targetGraphic = backgroundImage;
+        reloadButton.onClick.AddListener(HandleReloadClicked);
+
+        GameObject textObject = new GameObject("ReloadButtonText", typeof(RectTransform), typeof(TextMeshProUGUI));
+        textObject.transform.SetParent(buttonObject.transform, false);
+
+        RectTransform textRect = textObject.GetComponent<RectTransform>();
+        textRect.anchorMin = Vector2.zero;
+        textRect.anchorMax = Vector2.one;
+        textRect.offsetMin = Vector2.zero;
+        textRect.offsetMax = Vector2.zero;
+
+        buttonText = textObject.GetComponent<TextMeshProUGUI>();
+        buttonText.text = "RELOAD";
+        buttonText.fontSize = 26f;
+        buttonText.fontStyle = FontStyles.Bold;
+        buttonText.alignment = TextAlignmentOptions.Center;
+        buttonText.textWrappingMode = TextWrappingModes.NoWrap;
+        buttonText.margin = new Vector4(12f, 6f, 12f, 6f);
+        buttonText.color = Color.white;
+
+        TMP_Text referenceText = FindAnyObjectByType<TMP_Text>();
+        if (referenceText != null)
+        {
+            buttonText.font = referenceText.font;
+            buttonText.fontSharedMaterial = referenceText.fontSharedMaterial;
+        }
+    }
+
+    void RefreshState()
+    {
+        if (shooting == null || reloadButton == null || backgroundImage == null || buttonText == null)
+            return;
+
+        bool canReload = shooting.CanManualReload;
+        reloadButton.interactable = canReload;
+        backgroundImage.color = canReload
+            ? new Color(0.23f, 0.56f, 0.9f, 0.96f)
+            : new Color(0.14f, 0.18f, 0.24f, 0.78f);
+        buttonText.color = canReload
+            ? Color.white
+            : new Color(0.82f, 0.86f, 0.91f, 0.82f);
+    }
+
+    void HandleReloadClicked()
+    {
+        if (shooting == null)
+            return;
+
+        shooting.TriggerManualReload();
     }
 }

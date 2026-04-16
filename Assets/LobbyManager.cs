@@ -6,6 +6,7 @@ using UnityEngine.UI;
 using TMPro;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 
 public class LobbyManager : MonoBehaviourPunCallbacks
 {
@@ -19,6 +20,7 @@ public class LobbyManager : MonoBehaviourPunCallbacks
     static readonly int[] DeathTimerPenaltyOptions = { 0, 5, 10, 15, 20, 25, 30 };
     static readonly int[] PercentOptions = { 0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100 };
     static readonly int[] TimeUpPercentOptions = { 0, 25, 50, 75, 100 };
+    static readonly int[] WeightFactorOptions = { 2, 6, 12 };
 
     public Button readyButton;
     public TMP_Text readyText;
@@ -36,6 +38,9 @@ public class LobbyManager : MonoBehaviourPunCallbacks
     public TMP_Text killRewardSettingText;
     public TMP_Text deathRetainSettingText;
     public TMP_Text timeUpRetainSettingText;
+    public TMP_Text movingObjectsSettingText;
+    public TMP_Text obstacleWeightSettingText;
+    public TMP_Text treasureWeightSettingText;
     public Button roundSettingButton;
     public Button mapSizeSettingButton;
     public Button obstacleSettingButton;
@@ -49,18 +54,44 @@ public class LobbyManager : MonoBehaviourPunCallbacks
     public Button killRewardSettingButton;
     public Button deathRetainSettingButton;
     public Button timeUpRetainSettingButton;
+    public Button movingObjectsSettingButton;
+    public Button obstacleWeightSettingButton;
+    public Button treasureWeightSettingButton;
 
     bool isReady = false;
+    bool hasRecordedCurrentRound = false;
+
+    CanvasGroup EnsureCanvasGroup()
+    {
+        CanvasGroup cg = GetComponent<CanvasGroup>();
+        if (cg == null)
+        {
+            cg = gameObject.AddComponent<CanvasGroup>();
+        }
+
+        return cg;
+    }
 
     void Start()
     {
         PlayerMovement.gameStarted = false;
         PlayerShooting.gameStarted = false;
 
-        ShowLobby();
         EnsurePlayerStatusListExists();
         EnsureHostSettingsUiExists();
-        EnsureDefaultRoomSettings();
+
+        if (PhotonNetwork.InRoom)
+        {
+            ShowLobby();
+            EnsureDefaultRoomSettings();
+        }
+        else
+        {
+            CanvasGroup cg = EnsureCanvasGroup();
+            cg.alpha = 0;
+            cg.interactable = false;
+            cg.blocksRaycasts = false;
+        }
 
         if (readyText != null)
         {
@@ -92,6 +123,7 @@ public class LobbyManager : MonoBehaviourPunCallbacks
 
     public override void OnJoinedRoom()
     {
+        hasRecordedCurrentRound = false;
         ShowLobby();
         EnsurePlayerStatusListExists();
         EnsureHostSettingsUiExists();
@@ -143,7 +175,10 @@ public class LobbyManager : MonoBehaviourPunCallbacks
             changedProps.ContainsKey(RoomSettings.DeathTimerPenaltyKey) ||
             changedProps.ContainsKey(RoomSettings.KillRewardPercentKey) ||
             changedProps.ContainsKey(RoomSettings.DeathRetainPercentKey) ||
-            changedProps.ContainsKey(RoomSettings.TimeUpRetainPercentKey))
+            changedProps.ContainsKey(RoomSettings.TimeUpRetainPercentKey) ||
+            changedProps.ContainsKey(RoomSettings.MovingObjectsEnabledKey) ||
+            changedProps.ContainsKey(RoomSettings.ObstacleWeightFactorKey) ||
+            changedProps.ContainsKey(RoomSettings.TreasureWeightFactorKey))
         {
             RefreshHostSettingsUi();
         }
@@ -206,7 +241,10 @@ public class LobbyManager : MonoBehaviourPunCallbacks
             propertiesThatChanged.ContainsKey(RoomSettings.DeathTimerPenaltyKey) ||
             propertiesThatChanged.ContainsKey(RoomSettings.KillRewardPercentKey) ||
             propertiesThatChanged.ContainsKey(RoomSettings.DeathRetainPercentKey) ||
-            propertiesThatChanged.ContainsKey(RoomSettings.TimeUpRetainPercentKey))
+            propertiesThatChanged.ContainsKey(RoomSettings.TimeUpRetainPercentKey) ||
+            propertiesThatChanged.ContainsKey(RoomSettings.MovingObjectsEnabledKey) ||
+            propertiesThatChanged.ContainsKey(RoomSettings.ObstacleWeightFactorKey) ||
+            propertiesThatChanged.ContainsKey(RoomSettings.TreasureWeightFactorKey))
         {
             RefreshHostSettingsUi();
         }
@@ -224,12 +262,18 @@ public class LobbyManager : MonoBehaviourPunCallbacks
         {
             Debug.Log("GAME STARTED (ROOM PROP)");
             HideLobby();
+            if (!hasRecordedCurrentRound)
+            {
+                hasRecordedCurrentRound = true;
+                _ = RecordStartedGameAsync();
+            }
         }
         else
         {
             Debug.Log("GAME RESET TO LOBBY");
             PlayerMovement.gameStarted = false;
             PlayerShooting.gameStarted = false;
+            hasRecordedCurrentRound = false;
             ShowLobby();
             SetReady(false);
             RefreshPlayerStatusList();
@@ -242,34 +286,18 @@ public class LobbyManager : MonoBehaviourPunCallbacks
         PlayerMovement.gameStarted = true;
         PlayerShooting.gameStarted = true;
 
-        CanvasGroup cg = GetComponent<CanvasGroup>();
-
-        if (cg != null)
-        {
-            cg.alpha = 0;
-            cg.interactable = false;
-            cg.blocksRaycasts = false;
-        }
-        else
-        {
-            gameObject.SetActive(false);
-        }
+        CanvasGroup cg = EnsureCanvasGroup();
+        cg.alpha = 0;
+        cg.interactable = false;
+        cg.blocksRaycasts = false;
     }
 
     void ShowLobby()
     {
-        CanvasGroup cg = GetComponent<CanvasGroup>();
-
-        if (cg != null)
-        {
-            cg.alpha = 1;
-            cg.interactable = true;
-            cg.blocksRaycasts = true;
-        }
-        else
-        {
-            gameObject.SetActive(true);
-        }
+        CanvasGroup cg = EnsureCanvasGroup();
+        cg.alpha = 1;
+        cg.interactable = true;
+        cg.blocksRaycasts = true;
     }
 
     void EnsurePlayerStatusListExists()
@@ -299,7 +327,7 @@ public class LobbyManager : MonoBehaviourPunCallbacks
         playerStatusListText.fontSize = 22f;
         playerStatusListText.fontStyle = FontStyles.Bold;
         playerStatusListText.alignment = TextAlignmentOptions.TopLeft;
-        playerStatusListText.enableWordWrapping = false;
+        playerStatusListText.textWrappingMode = TextWrappingModes.NoWrap;
         playerStatusListText.color = new Color(0.94f, 0.97f, 1f, 1f);
         playerStatusListText.text = string.Empty;
     }
@@ -319,6 +347,9 @@ public class LobbyManager : MonoBehaviourPunCallbacks
         killRewardSettingButton = EnsureSettingButton(ref killRewardSettingText, killRewardSettingButton, "KillRewardSettingButton", "KillRewardSettingText", new Vector2(-205f, -478f), CycleKillRewardPercent);
         deathRetainSettingButton = EnsureSettingButton(ref deathRetainSettingText, deathRetainSettingButton, "DeathRetainSettingButton", "DeathRetainSettingText", new Vector2(205f, -478f), CycleDeathRetainPercent);
         timeUpRetainSettingButton = EnsureSettingButton(ref timeUpRetainSettingText, timeUpRetainSettingButton, "TimeUpRetainSettingButton", "TimeUpRetainSettingText", new Vector2(0f, -532f), CycleTimeUpRetainPercent);
+        movingObjectsSettingButton = EnsureSettingButton(ref movingObjectsSettingText, movingObjectsSettingButton, "MovingObjectsSettingButton", "MovingObjectsSettingText", new Vector2(-205f, -586f), CycleMovingObjectsEnabled);
+        obstacleWeightSettingButton = EnsureSettingButton(ref obstacleWeightSettingText, obstacleWeightSettingButton, "ObstacleWeightSettingButton", "ObstacleWeightSettingText", new Vector2(205f, -586f), CycleObstacleWeightFactor);
+        treasureWeightSettingButton = EnsureSettingButton(ref treasureWeightSettingText, treasureWeightSettingButton, "TreasureWeightSettingButton", "TreasureWeightSettingText", new Vector2(0f, -640f), CycleTreasureWeightFactor);
     }
 
     void RefreshPlayerStatusList()
@@ -351,6 +382,17 @@ public class LobbyManager : MonoBehaviourPunCallbacks
         }
 
         playerStatusListText.text = builder.ToString().TrimEnd();
+    }
+
+    public void ForceRefreshUi()
+    {
+        RefreshPlayerStatusList();
+        RefreshHostSettingsUi();
+    }
+
+    async Task RecordStartedGameAsync()
+    {
+        await PlayerProfileService.Instance.RecordGameStartedAsync();
     }
 
     void EnsureDefaultRoomSettings()
@@ -439,6 +481,24 @@ public class LobbyManager : MonoBehaviourPunCallbacks
             changed = true;
         }
 
+        if (!PhotonNetwork.CurrentRoom.CustomProperties.ContainsKey(RoomSettings.MovingObjectsEnabledKey))
+        {
+            props[RoomSettings.MovingObjectsEnabledKey] = RoomSettings.DefaultMovingObjectsEnabled;
+            changed = true;
+        }
+
+        if (!PhotonNetwork.CurrentRoom.CustomProperties.ContainsKey(RoomSettings.ObstacleWeightFactorKey))
+        {
+            props[RoomSettings.ObstacleWeightFactorKey] = RoomSettings.DefaultObstacleWeightFactor;
+            changed = true;
+        }
+
+        if (!PhotonNetwork.CurrentRoom.CustomProperties.ContainsKey(RoomSettings.TreasureWeightFactorKey))
+        {
+            props[RoomSettings.TreasureWeightFactorKey] = RoomSettings.DefaultTreasureWeightFactor;
+            changed = true;
+        }
+
         if (changed)
         {
             PhotonNetwork.CurrentRoom.SetCustomProperties(props);
@@ -507,7 +567,7 @@ public class LobbyManager : MonoBehaviourPunCallbacks
             textField.fontStyle = FontStyles.Bold;
             textField.alignment = TextAlignmentOptions.Center;
             textField.color = Color.white;
-            textField.enableWordWrapping = true;
+            textField.textWrappingMode = TextWrappingModes.Normal;
         }
 
         return button;
@@ -643,6 +703,27 @@ public class LobbyManager : MonoBehaviourPunCallbacks
         CycleIntSetting(RoomSettings.TimeUpRetainPercentKey, TimeUpPercentOptions, GetTimeUpRetainPercent(), RoomSettings.DefaultTimeUpRetainPercent);
     }
 
+    void CycleMovingObjectsEnabled()
+    {
+        if (!PhotonNetwork.IsMasterClient || PhotonNetwork.CurrentRoom == null)
+            return;
+
+        Hashtable props = new Hashtable();
+        props[RoomSettings.MovingObjectsEnabledKey] = !AreMovingObjectsEnabled();
+        PhotonNetwork.CurrentRoom.SetCustomProperties(props);
+        RefreshHostSettingsUi();
+    }
+
+    void CycleObstacleWeightFactor()
+    {
+        CycleIntSetting(RoomSettings.ObstacleWeightFactorKey, WeightFactorOptions, GetObstacleWeightFactor(), RoomSettings.DefaultObstacleWeightFactor);
+    }
+
+    void CycleTreasureWeightFactor()
+    {
+        CycleIntSetting(RoomSettings.TreasureWeightFactorKey, WeightFactorOptions, GetTreasureWeightFactor(), RoomSettings.DefaultTreasureWeightFactor);
+    }
+
     void CycleIntSetting(string key, int[] options, int current, int fallbackIndexValue)
     {
         if (!PhotonNetwork.IsMasterClient || PhotonNetwork.CurrentRoom == null)
@@ -726,6 +807,15 @@ public class LobbyManager : MonoBehaviourPunCallbacks
         if (timeUpRetainSettingText != null)
             timeUpRetainSettingText.text = "END ROUND KEEP: " + GetTimeUpRetainPercent() + "%";
 
+        if (movingObjectsSettingText != null)
+            movingObjectsSettingText.text = "MOVING OBJECTS: " + (AreMovingObjectsEnabled() ? "ON" : "OFF");
+
+        if (obstacleWeightSettingText != null)
+            obstacleWeightSettingText.text = "OBSTACLE MASS: " + RoomSettings.GetMassLabel(GetObstacleWeightFactor());
+
+        if (treasureWeightSettingText != null)
+            treasureWeightSettingText.text = "TREASURE MASS: " + RoomSettings.GetMassLabel(GetTreasureWeightFactor());
+
         SetSettingButtonState(roundSettingButton, isHost);
         SetSettingButtonState(mapSizeSettingButton, isHost);
         SetSettingButtonState(obstacleSettingButton, isHost);
@@ -739,6 +829,9 @@ public class LobbyManager : MonoBehaviourPunCallbacks
         SetSettingButtonState(killRewardSettingButton, isHost);
         SetSettingButtonState(deathRetainSettingButton, isHost);
         SetSettingButtonState(timeUpRetainSettingButton, isHost);
+        SetSettingButtonState(movingObjectsSettingButton, isHost);
+        SetSettingButtonState(obstacleWeightSettingButton, isHost);
+        SetSettingButtonState(treasureWeightSettingButton, isHost);
     }
 
     void SetSettingButtonState(Button button, bool interactable)
@@ -827,6 +920,21 @@ public class LobbyManager : MonoBehaviourPunCallbacks
     int GetTimeUpRetainPercent()
     {
         return RoomSettings.GetTimeUpRetainPercent();
+    }
+
+    bool AreMovingObjectsEnabled()
+    {
+        return RoomSettings.AreMovingObjectsEnabled();
+    }
+
+    int GetObstacleWeightFactor()
+    {
+        return RoomSettings.GetObstacleWeightFactor();
+    }
+
+    int GetTreasureWeightFactor()
+    {
+        return RoomSettings.GetTreasureWeightFactor();
     }
 
     string GetDensitySetting(string key)

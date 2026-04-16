@@ -3,6 +3,7 @@ using Photon.Pun;
 
 public class Treasure : MonoBehaviourPun
 {
+    public const float CollectRange = 2.2f;
     public int value;
 
     private SpriteRenderer sr;
@@ -22,6 +23,17 @@ public class Treasure : MonoBehaviourPun
             sr.color = Color.white;
             originalColor = Color.white;
         }
+
+        MovingSpaceObject movingObject = GetComponent<MovingSpaceObject>();
+        if (movingObject == null)
+        {
+            movingObject = gameObject.AddComponent<MovingSpaceObject>();
+        }
+
+        string stableId = photonView != null
+            ? "treasure_" + photonView.ViewID
+            : "treasure_" + gameObject.name;
+        movingObject.Configure(stableId, MovingSpaceObject.SpaceObjectType.Treasure);
     }
 
     public void Highlight()

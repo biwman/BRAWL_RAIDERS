@@ -152,6 +152,7 @@ public class ObstacleSpawner : MonoBehaviour
     void ApplyObstacleLayout(string layout)
     {
         string[] entries = layout.Split(';');
+        int obstacleIndex = 0;
 
         foreach (string entry in entries)
         {
@@ -168,8 +169,24 @@ public class ObstacleSpawner : MonoBehaviour
             if (!float.TryParse(parts[1], NumberStyles.Float, CultureInfo.InvariantCulture, out float y))
                 continue;
 
-            Instantiate(obstaclePrefab, new Vector2(x, y), Quaternion.identity);
+            GameObject obstacle = Instantiate(obstaclePrefab, new Vector2(x, y), Quaternion.identity);
+            ConfigureMovingObstacle(obstacle, obstacleIndex);
+            obstacleIndex++;
         }
+    }
+
+    void ConfigureMovingObstacle(GameObject obstacle, int obstacleIndex)
+    {
+        if (obstacle == null)
+            return;
+
+        MovingSpaceObject movingObject = obstacle.GetComponent<MovingSpaceObject>();
+        if (movingObject == null)
+        {
+            movingObject = obstacle.AddComponent<MovingSpaceObject>();
+        }
+
+        movingObject.Configure("obstacle_" + obstacleIndex, MovingSpaceObject.SpaceObjectType.Obstacle);
     }
 
     bool IsFarEnoughFromOtherObstacles(Vector2 candidate, List<Vector2> positions)

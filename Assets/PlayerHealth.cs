@@ -224,7 +224,7 @@ public class PlayerHealth : MonoBehaviourPun
     [PunRPC]
     void PlayDeathExplosion()
     {
-        AudioManager.Instance.PlayExplosion();
+        AudioManager.Instance.PlayExplosionAt(transform.position);
     }
 
     [PunRPC]

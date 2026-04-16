@@ -11,7 +11,7 @@ public class GameVisualTheme : MonoBehaviour
 {
     const float PlayerTargetSize = 1.04f;
     const float TreasureTargetSize = 1.5f;
-    const float TreasureTriggerSizeMultiplier = 1.2f;
+    const float TreasureColliderSizeMultiplier = 0.9f;
     const float PlayerBodyColliderWidthFactor = 0.46f;
     const float PlayerBodyColliderHeightFactor = 0.62f;
     const float PlayerPickupRadiusFactor = 0.8f;
@@ -238,6 +238,7 @@ public class GameVisualTheme : MonoBehaviour
         {
             collider.offset = Vector2.zero;
             collider.size = size;
+            collider.sharedMaterial = MovingSpaceObject.GetSharedBouncyMaterial();
         }
 
         wall.transform.localScale = horizontal
@@ -250,7 +251,7 @@ public class GameVisualTheme : MonoBehaviour
         if (shipSprites == null || shipSprites.Length == 0)
             return;
 
-        PlayerHealth[] players = FindObjectsByType<PlayerHealth>(FindObjectsSortMode.None);
+        PlayerHealth[] players = FindObjectsByType<PlayerHealth>(FindObjectsInactive.Exclude);
         foreach (PlayerHealth player in players)
         {
             if (player == null)
@@ -262,7 +263,8 @@ public class GameVisualTheme : MonoBehaviour
             if (view == null || renderer == null || view.Owner == null)
                 continue;
 
-            int shipIndex = Mathf.Abs(view.Owner.ActorNumber - 1) % shipSprites.Length;
+            int fallbackIndex = Mathf.Abs(view.Owner.ActorNumber - 1) % shipSprites.Length;
+            int shipIndex = RoomSettings.GetPlayerShipSkin(view.Owner, fallbackIndex) % shipSprites.Length;
             Sprite sprite = shipSprites[shipIndex];
             if (sprite == null)
                 continue;
@@ -290,7 +292,7 @@ public class GameVisualTheme : MonoBehaviour
         if (treasureSprite == null)
             return;
 
-        Treasure[] treasures = FindObjectsByType<Treasure>(FindObjectsSortMode.None);
+        Treasure[] treasures = FindObjectsByType<Treasure>(FindObjectsInactive.Exclude);
         foreach (Treasure treasure in treasures)
         {
             if (treasure == null)
@@ -311,8 +313,9 @@ public class GameVisualTheme : MonoBehaviour
             if (triggerCollider != null)
             {
                 Vector2 spriteWorldSize = GetSpriteWorldSize(renderer);
-                Vector2 expandedSize = spriteWorldSize * TreasureTriggerSizeMultiplier;
-                SetWorldBoxSize(triggerCollider, expandedSize);
+                Vector2 colliderSize = spriteWorldSize * TreasureColliderSizeMultiplier;
+                triggerCollider.isTrigger = false;
+                SetWorldBoxSize(triggerCollider, colliderSize);
             }
         }
     }
@@ -322,7 +325,7 @@ public class GameVisualTheme : MonoBehaviour
         if (obstacleSprite == null)
             return;
 
-        SpriteRenderer[] renderers = FindObjectsByType<SpriteRenderer>(FindObjectsSortMode.None);
+        SpriteRenderer[] renderers = FindObjectsByType<SpriteRenderer>(FindObjectsInactive.Exclude);
         foreach (SpriteRenderer renderer in renderers)
         {
             if (renderer == null)
@@ -343,7 +346,7 @@ public class GameVisualTheme : MonoBehaviour
                 renderer.sprite = obstacleSprite;
                 renderer.color = Color.white;
             }
-            float obstacleSize = ObstacleTargetSize * GetStableObstacleSizeMultiplier(target.transform.position);
+            float obstacleSize = ObstacleTargetSize * GetStableObstacleSizeMultiplier(target);
             FitSpriteToTargetSize(renderer, obstacleSize);
 
             if (polygonCollider == null)
@@ -366,7 +369,7 @@ public class GameVisualTheme : MonoBehaviour
         if (extractionSprite == null)
             return;
 
-        ExtractionZone[] zones = FindObjectsByType<ExtractionZone>(FindObjectsSortMode.None);
+        ExtractionZone[] zones = FindObjectsByType<ExtractionZone>(FindObjectsInactive.Exclude);
         foreach (ExtractionZone zone in zones)
         {
             if (zone == null)
@@ -410,10 +413,19 @@ public class GameVisualTheme : MonoBehaviour
         return new Vector2(bounds.size.x, bounds.size.y);
     }
 
-    float GetStableObstacleSizeMultiplier(Vector3 position)
+    float GetStableObstacleSizeMultiplier(GameObject target)
     {
-        float sampleX = Mathf.Round(position.x * 100f) * 0.0137f + 17.3f;
-        float sampleY = Mathf.Round(position.y * 100f) * 0.0191f + 29.7f;
+        if (target == null)
+            return 1f;
+
+        MovingSpaceObject movingObject = target.GetComponent<MovingSpaceObject>();
+        string stableKey = movingObject != null && !string.IsNullOrWhiteSpace(movingObject.StableId)
+            ? movingObject.StableId
+            : target.name;
+
+        int hash = stableKey.GetHashCode();
+        float sampleX = Mathf.Abs(hash * 0.00013f) + 17.3f;
+        float sampleY = Mathf.Abs(hash * 0.00029f) + 29.7f;
         float noise = Mathf.PerlinNoise(sampleX, sampleY);
         return Mathf.Lerp(0.5f, 1.5f, noise);
     }

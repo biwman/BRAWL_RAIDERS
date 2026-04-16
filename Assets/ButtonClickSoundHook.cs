@@ -35,7 +35,7 @@ public class ButtonClickSoundHook : MonoBehaviour
             label = text.text.ToLowerInvariant();
         }
 
-        if (objectName.Contains("collect") || label.Contains("use"))
+        if (objectName.Contains("collect") || label.Contains("use") || label.Contains("reload"))
             return;
 
         AudioManager.Instance.PlayClick();
