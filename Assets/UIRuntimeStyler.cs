@@ -328,7 +328,7 @@ public class UIRuntimeStyler : MonoBehaviour
             rect.anchorMax = new Vector2(0.5f, 0.5f);
             rect.pivot = new Vector2(0.5f, 0.5f);
             rect.anchoredPosition = new Vector2(0f, 0f);
-            rect.sizeDelta = new Vector2(500f, 516f);
+            rect.sizeDelta = new Vector2(860f, 826f);
         }
 
         GameObject readyTextObject = FindSceneObjectByName("ReadyText");
@@ -354,7 +354,7 @@ public class UIRuntimeStyler : MonoBehaviour
                 buttonRect.anchorMin = new Vector2(0.5f, 0.5f);
                 buttonRect.anchorMax = new Vector2(0.5f, 0.5f);
                 buttonRect.pivot = new Vector2(0.5f, 0.5f);
-                buttonRect.anchoredPosition = new Vector2(0f, -200f);
+                buttonRect.anchoredPosition = new Vector2(0f, -360f);
             }
         }
 
@@ -385,12 +385,19 @@ public class UIRuntimeStyler : MonoBehaviour
             }
         }
 
-        StyleLobbySettingButton("RoundSettingButton", new Vector2(-120f, -208f));
-        StyleLobbySettingButton("ObstacleSettingButton", new Vector2(120f, -208f));
-        StyleLobbySettingButton("TreasureSettingButton", new Vector2(-120f, -262f));
-        StyleLobbySettingButton("ExtractionSettingButton", new Vector2(120f, -262f));
-        StyleLobbySettingButton("BoosterSettingButton", new Vector2(-120f, -316f));
-        StyleLobbySettingButton("AmmoSettingButton", new Vector2(120f, -316f));
+        StyleLobbySettingButton("RoundSettingButton", new Vector2(-205f, -208f));
+        StyleLobbySettingButton("MapSizeSettingButton", new Vector2(205f, -208f));
+        StyleLobbySettingButton("ObstacleSettingButton", new Vector2(-205f, -270f));
+        StyleLobbySettingButton("TreasureSettingButton", new Vector2(205f, -270f));
+        StyleLobbySettingButton("NebulaSettingButton", new Vector2(-205f, -332f));
+        StyleLobbySettingButton("ExtractionSettingButton", new Vector2(205f, -332f));
+        StyleLobbySettingButton("BoosterSettingButton", new Vector2(-205f, -394f));
+        StyleLobbySettingButton("AmmoSettingButton", new Vector2(205f, -394f));
+        StyleLobbySettingButton("BoosterDelaySettingButton", new Vector2(-205f, -456f));
+        StyleLobbySettingButton("DeathTimerSettingButton", new Vector2(205f, -456f));
+        StyleLobbySettingButton("KillRewardSettingButton", new Vector2(-205f, -518f));
+        StyleLobbySettingButton("DeathRetainSettingButton", new Vector2(205f, -518f));
+        StyleLobbySettingButton("TimeUpRetainSettingButton", new Vector2(0f, -580f));
     }
 
     void StyleLobbySettingButton(string objectName, Vector2 anchoredPosition)
@@ -410,7 +417,7 @@ public class UIRuntimeStyler : MonoBehaviour
             rect.anchorMax = new Vector2(0.5f, 1f);
             rect.pivot = new Vector2(0.5f, 1f);
             rect.anchoredPosition = anchoredPosition;
-            rect.sizeDelta = new Vector2(210f, 42f);
+            rect.sizeDelta = new Vector2(280f, 48f);
         }
 
         if (image != null)
@@ -423,12 +430,12 @@ public class UIRuntimeStyler : MonoBehaviour
 
         if (text != null)
         {
-            text.fontSize = 18f;
+            text.fontSize = 16f;
             text.fontStyle = FontStyles.Bold;
             text.alignment = TextAlignmentOptions.Center;
             text.color = new Color(0.95f, 0.97f, 1f, 1f);
             text.margin = new Vector4(8f, 4f, 8f, 4f);
-            text.enableWordWrapping = false;
+            text.enableWordWrapping = true;
         }
     }
 
@@ -497,6 +504,7 @@ public class UIRuntimeStyler : MonoBehaviour
             rect.pivot = new Vector2(0.5f, 1f);
             rect.anchoredPosition = new Vector2(0f, -96f);
             rect.sizeDelta = new Vector2(520f, 84f);
+            rect.SetAsLastSibling();
         }
 
         if (text != null)

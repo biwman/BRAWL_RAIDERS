@@ -317,7 +317,3 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerHealth
   maxHP: 100
-  endScreen: {fileID: 0}
-  endMessage: {fileID: 0}
-  playerListContent: {fileID: 0}
-  playerListItemPrefab: {fileID: 0}

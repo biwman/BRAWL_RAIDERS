@@ -1,39 +1,23 @@
-using UnityEngine;
+﻿using System.Collections;
 using Photon.Pun;
-using TMPro;
-using System.Collections;
-using System.Linq;
+using UnityEngine;
 using UnityEngine.UI;
 
 public class PlayerHealth : MonoBehaviourPun
 {
     public int maxHP = 100;
-    private int currentHP;
 
-    private Slider hpBar;
-    private bool messageShowing = false;
-
-    private string playerName;
-
-    // END SCREEN UI
-    public GameObject endScreen;
-    public TMP_Text endMessage;
-    public Transform playerListContent;
-    public GameObject playerListItemPrefab;
+    int currentHP;
+    Slider hpBar;
+    bool messageShowing;
 
     void Start()
     {
         currentHP = maxHP;
 
-        // przypisz zawsze
         if (photonView.IsMine)
         {
             PhotonNetwork.LocalPlayer.TagObject = gameObject;
-        }
-
-        if (photonView.IsMine)
-        {
-            playerName = PhotonNetwork.NickName;
 
             if (GetComponent<HealthBarUI>() == null)
             {
@@ -44,23 +28,34 @@ public class PlayerHealth : MonoBehaviourPun
             if (barObj != null)
             {
                 hpBar = barObj.GetComponent<Slider>();
-                hpBar.maxValue = maxHP;
-                hpBar.value = currentHP;
+                if (hpBar != null)
+                {
+                    hpBar.maxValue = maxHP;
+                    hpBar.value = currentHP;
+                }
             }
         }
     }
 
-    // DAMAGE liczy tylko MASTER
+    void OnDestroy()
+    {
+        if (photonView != null &&
+            photonView.IsMine &&
+            PhotonNetwork.LocalPlayer != null &&
+            ReferenceEquals(PhotonNetwork.LocalPlayer.TagObject, gameObject))
+        {
+            PhotonNetwork.LocalPlayer.TagObject = null;
+        }
+    }
+
     [PunRPC]
     public void TakeDamage(int dmg, int attackerViewID)
     {
-        if (!PhotonNetwork.IsMasterClient) return;
+        if (!PhotonNetwork.IsMasterClient)
+            return;
 
-        currentHP -= dmg;
-        if (currentHP < 0)
-            currentHP = 0;
-
-        photonView.RPC("SyncHP", RpcTarget.All, currentHP);
+        currentHP = Mathf.Max(0, currentHP - dmg);
+        photonView.RPC(nameof(SyncHP), RpcTarget.All, currentHP);
 
         if (currentHP <= 0)
         {
@@ -81,81 +76,119 @@ public class PlayerHealth : MonoBehaviourPun
 
     void HandleDeath(int attackerViewID)
     {
-        photonView.RPC("ShowDeathMessage", RpcTarget.All);
+        photonView.RPC(nameof(PlayDeathExplosion), RpcTarget.All);
+        photonView.RPC(nameof(ShowDeathMessage), RpcTarget.All);
 
-        PhotonView attackerPV = PhotonView.Find(attackerViewID);
-        TreasureCollector victimTC = GetComponent<TreasureCollector>();
+        int victimScore = GetCurrentScore();
+        int retainedScore = Mathf.FloorToInt(victimScore * (RoomSettings.GetDeathRetainPercent() / 100f));
+        int reward = Mathf.FloorToInt(victimScore * (RoomSettings.GetKillRewardPercent() / 100f));
 
-        if (victimTC != null)
+        PhotonView attackerView = PhotonView.Find(attackerViewID);
+        if (attackerView != null && attackerView != photonView)
         {
-            int victimScore = victimTC.totalScore;
-
-            // killer dostaje 50%
-            int reward = victimScore / 2;
-
-            if (attackerPV != null)
-            {
-                attackerPV.RPC("AddKillScore", attackerPV.Owner, reward);
-            }
-
-            // ofiara traci 75%
-            int loss = (int)(victimScore * 0.75f);
-            victimTC.totalScore -= loss;
-
-            if (victimTC.totalScore < 0)
-                victimTC.totalScore = 0;
-
-            photonView.RPC("RefreshScore", photonView.Owner, victimTC.totalScore);
+            attackerView.RPC(nameof(AddKillScore), attackerView.Owner, reward);
         }
 
-        PhotonNetwork.Destroy(gameObject);
+        photonView.RPC(nameof(SetScoreDirect), photonView.Owner, retainedScore);
+
+        GameTimer timer = FindFirstObjectByType<GameTimer>();
+        if (timer != null && RoomSettings.GetDeathTimerPenalty() > 0)
+        {
+            timer.ReduceTime(RoomSettings.GetDeathTimerPenalty());
+        }
+
+        bool shouldEndGame = GetRemainingPlayersAfterThisDeath() <= 1;
+
+        photonView.RPC(nameof(DestroySelf), photonView.Owner);
+
+        if (shouldEndGame)
+        {
+            GameManager manager = FindFirstObjectByType<GameManager>();
+            if (manager != null)
+            {
+                manager.EndGame();
+            }
+        }
+    }
+
+    int GetRemainingPlayersAfterThisDeath()
+    {
+        int aliveCount = 0;
+        PlayerHealth[] players = FindObjectsByType<PlayerHealth>(FindObjectsSortMode.None);
+
+        foreach (PlayerHealth player in players)
+        {
+            if (player == null || player == this)
+                continue;
+
+            aliveCount++;
+        }
+
+        return aliveCount;
+    }
+
+    int GetCurrentScore()
+    {
+        int propScore = RoomSettings.GetPlayerScore(photonView.Owner);
+        if (propScore > 0)
+            return propScore;
+
+        TreasureCollector collector = GetComponent<TreasureCollector>();
+        if (collector != null)
+            return collector.totalScore;
+
+        return 0;
     }
 
     [PunRPC]
-    void RefreshScore(int newScore)
+    public void SetScoreDirect(int newScore)
     {
-        if (!photonView.IsMine) return;
+        if (!photonView.IsMine)
+            return;
 
-        TreasureCollector tc = GetComponent<TreasureCollector>();
+        ExitGames.Client.Photon.Hashtable props = new ExitGames.Client.Photon.Hashtable();
+        props[RoomSettings.ScoreKey] = Mathf.Max(0, newScore);
+        PhotonNetwork.LocalPlayer.SetCustomProperties(props);
 
-        if (tc != null)
+        TreasureCollector collector = GetComponent<TreasureCollector>();
+        if (collector != null)
         {
-            tc.totalScore = newScore;
-            tc.AddScore(0); // refresh UI
+            collector.totalScore = Mathf.Max(0, newScore);
+            collector.AddScore(0);
         }
     }
 
     [PunRPC]
     public void AddKillScore(int amount)
     {
-        if (!photonView.IsMine) return;
+        if (!photonView.IsMine)
+            return;
 
-        TreasureCollector tc = GetComponent<TreasureCollector>();
-
-        if (tc != null)
+        TreasureCollector collector = GetComponent<TreasureCollector>();
+        if (collector != null)
         {
-            tc.AddScore(amount);
+            collector.AddScore(amount);
         }
     }
 
     [PunRPC]
     public void OnEvacuated(int amount)
     {
-        if (!photonView.IsMine) return;
+        if (!photonView.IsMine)
+            return;
 
-        Debug.Log("EVACUATED");
-
-        TreasureCollector tc = GetComponent<TreasureCollector>();
-        if (tc != null)
+        TreasureCollector collector = GetComponent<TreasureCollector>();
+        if (collector != null)
         {
-            tc.AddScore(amount);
+            collector.AddScore(amount);
         }
     }
 
     [PunRPC]
     public void DestroySelf()
     {
-        if (!photonView.IsMine) return;
+        if (!photonView.IsMine)
+            return;
 
         if (gameObject != null)
         {
@@ -163,14 +196,13 @@ public class PlayerHealth : MonoBehaviourPun
         }
     }
 
-    // DEATH MESSAGE
     [PunRPC]
     void ShowDeathMessage()
     {
-        if (messageShowing) return;
+        if (messageShowing)
+            return;
 
         GameObject obj = FindObjectEvenIfDisabled("DeathMessage");
-
         if (obj != null)
         {
             messageShowing = true;
@@ -183,88 +215,39 @@ public class PlayerHealth : MonoBehaviourPun
     {
         yield return new WaitForSeconds(3f);
 
-        obj.SetActive(false);
+        if (obj != null)
+            obj.SetActive(false);
+
         messageShowing = false;
     }
 
-    // END SCREEN
     [PunRPC]
-    
-
-    void DisplaySortedPlayers()
+    void PlayDeathExplosion()
     {
-        if (playerListContent == null)
-        {
-            GameObject contentObj = FindObjectEvenIfDisabled("PlayerListContent");
-            if (contentObj != null)
-                playerListContent = contentObj.transform;
-        }
-
-        if (playerListItemPrefab == null)
-        {
-            playerListItemPrefab = Resources.Load<GameObject>("PlayerListItem");
-        }
-
-        if (playerListContent == null || playerListItemPrefab == null)
-            return;
-
-        //  usuń stare wpisy
-        foreach (Transform child in playerListContent)
-        {
-            Destroy(child.gameObject);
-        }
-
-        // znajdź wszystkich graczy w scenie
-        var allPlayers = FindObjectsByType<PlayerHealth>(FindObjectsSortMode.None);
-
-        var sorted = allPlayers
-            .OrderByDescending(p =>
-            {
-                TreasureCollector tc = p.GetComponent<TreasureCollector>();
-                return tc != null ? tc.totalScore : 0;
-            })
-            .ToList();
-
-        foreach (var player in sorted)
-        {
-            GameObject item = Instantiate(playerListItemPrefab, playerListContent);
-            TMP_Text text = item.GetComponentInChildren<TMP_Text>();
-
-            string name = player.photonView.Owner.NickName;
-
-            TreasureCollector tc = player.GetComponent<TreasureCollector>();
-            int score = tc != null ? tc.totalScore : 0;
-
-            text.text = name + " - " + score;
-        }
+        AudioManager.Instance.PlayExplosion();
     }
 
-    // TIME UP
     [PunRPC]
     public void OnTimeUp()
     {
-        if (!photonView.IsMine) return;
+        if (!photonView.IsMine)
+            return;
 
-        Debug.Log("💀 TIME UP");
-
-        TreasureCollector tc = GetComponent<TreasureCollector>();
-
-        if (tc != null)
+        TreasureCollector collector = GetComponent<TreasureCollector>();
+        if (collector != null)
         {
-            int newScore = tc.totalScore / 4;
-            tc.totalScore = newScore;
-            tc.AddScore(0);
+            int retainedScore = Mathf.FloorToInt(collector.totalScore * (RoomSettings.GetTimeUpRetainPercent() / 100f));
+            collector.totalScore = retainedScore;
+            collector.AddScore(0);
         }
 
         ShowTimeUpMessage();
-
         StartCoroutine(DieAfterDelay());
     }
 
     void ShowTimeUpMessage()
     {
         GameObject obj = GameObject.Find("TimeUpMessage");
-
         if (obj != null)
         {
             obj.SetActive(true);
@@ -273,7 +256,7 @@ public class PlayerHealth : MonoBehaviourPun
 
     IEnumerator DieAfterDelay()
     {
-        yield return new WaitForSeconds(3f);
+        yield return new WaitForSeconds(1.5f);
 
         if (photonView.IsMine)
         {
@@ -281,12 +264,11 @@ public class PlayerHealth : MonoBehaviourPun
         }
     }
 
-    // znajdzie nawet NIEAKTYWNY obiekt
     GameObject FindObjectEvenIfDisabled(string name)
     {
-        var all = Resources.FindObjectsOfTypeAll<GameObject>();
+        GameObject[] all = Resources.FindObjectsOfTypeAll<GameObject>();
 
-        foreach (var go in all)
+        foreach (GameObject go in all)
         {
             if (go.name == name)
                 return go;

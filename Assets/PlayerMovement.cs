@@ -3,8 +3,6 @@ using Photon.Pun;
 
 public class PlayerMovement : MonoBehaviourPun
 {
-    const string BoosterSlowdownKey = "boosterSlowdownPercent";
-
     public static bool gameStarted = false;
 
     private Rigidbody2D rb;
@@ -25,10 +23,12 @@ public class PlayerMovement : MonoBehaviourPun
     private float boosterCharge = 1f;
     private bool boosterExhausted = false;
     private float targetRotationAngle = 0f;
+    private float boosterRecoveryDelayTimer = 0f;
+    private AudioSource engineAudioSource;
 
     public float BoosterNormalized => boosterCharge;
     public bool IsBoosterDepleted => boosterExhausted;
-    float CurrentDepletedSpeedMultiplier => 1f - GetBoosterSlowdownFraction();
+    float CurrentDepletedSpeedMultiplier => 1f - (RoomSettings.GetBoosterSlowdownPercent() / 100f);
 
     void Start()
     {
@@ -38,6 +38,11 @@ public class PlayerMovement : MonoBehaviourPun
             rb.interpolation = RigidbodyInterpolation2D.Interpolate;
             rb.constraints = RigidbodyConstraints2D.FreezeRotation;
             rb.angularVelocity = 0f;
+        }
+
+        if (GetComponent<HideInNebulaTarget>() == null)
+        {
+            gameObject.AddComponent<HideInNebulaTarget>();
         }
 
         targetRotationAngle = transform.eulerAngles.z;
@@ -57,6 +62,8 @@ public class PlayerMovement : MonoBehaviourPun
         {
             gameObject.AddComponent<BoosterBarUI>();
         }
+
+        SetupEngineAudio();
     }
 
     void Update()
@@ -91,6 +98,7 @@ public class PlayerMovement : MonoBehaviourPun
 
         UpdateBooster(Time.deltaTime);
         UpdateFacingDirection();
+        UpdateEngineAudio();
     }
 
     void FixedUpdate()
@@ -140,13 +148,20 @@ public class PlayerMovement : MonoBehaviourPun
 
     void UpdateBooster(float deltaTime)
     {
-        if (effectiveMoveInput.magnitude >= maxSpeedThreshold && !boosterExhausted)
+        bool usingBooster = effectiveMoveInput.magnitude >= maxSpeedThreshold && !boosterExhausted;
+
+        if (usingBooster)
         {
             boosterCharge -= deltaTime / boosterDuration;
+            boosterRecoveryDelayTimer = RoomSettings.GetBoosterRecoveryDelay();
+        }
+        else if (!boosterExhausted || boosterRecoveryDelayTimer <= 0f)
+        {
+            boosterCharge += deltaTime / boosterDuration;
         }
         else
         {
-            boosterCharge += deltaTime / boosterDuration;
+            boosterRecoveryDelayTimer -= deltaTime;
         }
 
         boosterCharge = Mathf.Clamp01(boosterCharge);
@@ -154,6 +169,7 @@ public class PlayerMovement : MonoBehaviourPun
         if (!boosterExhausted && boosterCharge <= 0.001f)
         {
             boosterExhausted = true;
+            boosterRecoveryDelayTimer = RoomSettings.GetBoosterRecoveryDelay();
         }
         else if (boosterExhausted && boosterCharge >= boosterRecoveryThreshold)
         {
@@ -220,18 +236,54 @@ public class PlayerMovement : MonoBehaviourPun
         }
     }
 
-    float GetBoosterSlowdownFraction()
+    void SetupEngineAudio()
     {
-        if (PhotonNetwork.CurrentRoom != null &&
-            PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue(BoosterSlowdownKey, out object value))
-        {
-            if (value is int intValue)
-                return Mathf.Clamp01(intValue / 100f);
+        if (!photonView.IsMine)
+            return;
 
-            if (value is float floatValue)
-                return Mathf.Clamp01(floatValue / 100f);
+        AudioClip engineClip = AudioManager.Instance.EngineClip;
+        if (engineClip == null)
+            return;
+
+        engineAudioSource = GetComponent<AudioSource>();
+        if (engineAudioSource == null)
+        {
+            engineAudioSource = gameObject.AddComponent<AudioSource>();
         }
 
-        return 1f - depletedSpeedMultiplier;
+        engineAudioSource.clip = engineClip;
+        engineAudioSource.loop = true;
+        engineAudioSource.playOnAwake = false;
+        engineAudioSource.spatialBlend = 0f;
+        engineAudioSource.volume = 0f;
+        engineAudioSource.pitch = 0.85f;
+    }
+
+    void UpdateEngineAudio()
+    {
+        if (!photonView.IsMine || engineAudioSource == null)
+            return;
+
+        if (!IsGameStarted())
+        {
+            if (engineAudioSource.isPlaying)
+                engineAudioSource.Stop();
+
+            return;
+        }
+
+        float speedReference = IsBoosterDepleted ? speed * CurrentDepletedSpeedMultiplier : speed;
+        float normalizedSpeed = 0f;
+
+        if (rb != null && speedReference > 0.001f)
+        {
+            normalizedSpeed = Mathf.Clamp01(rb.linearVelocity.magnitude / speedReference);
+        }
+
+        if (!engineAudioSource.isPlaying)
+            engineAudioSource.Play();
+
+        engineAudioSource.volume = Mathf.Lerp(0.12f, 0.42f, normalizedSpeed);
+        engineAudioSource.pitch = Mathf.Lerp(0.88f, 1.24f, normalizedSpeed);
     }
 }

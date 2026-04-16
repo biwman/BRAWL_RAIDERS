@@ -9,34 +9,46 @@ using System.Text;
 
 public class LobbyManager : MonoBehaviourPunCallbacks
 {
-    const string RoundDurationKey = "roundDuration";
-    const string ObstacleDensityKey = "obstacleDensity";
-    const string TreasureDensityKey = "treasureDensity";
-    const string ExtractionCountKey = "extractionCount";
-    const string BoosterSlowdownKey = "boosterSlowdownPercent";
-    const string AmmoCountKey = "ammoCount";
-
     static readonly float[] RoundDurationOptions = { 60f, 90f, 120f, 150f, 180f, 210f, 240f };
     static readonly string[] DensityOptions = { "low", "medium", "high" };
+    static readonly string[] MapSizeOptions = { "small", "medium", "large", "very_large", "super_large" };
     static readonly int[] ExtractionCountOptions = { 1, 2, 3, 4 };
     static readonly int[] BoosterSlowdownOptions = { 30, 40, 50, 60, 70, 80, 90, 100 };
     static readonly int[] AmmoCountOptions = { 5, 10, 15, 20, 25, 30 };
+    static readonly int[] BoosterRecoveryDelayOptions = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
+    static readonly int[] DeathTimerPenaltyOptions = { 0, 5, 10, 15, 20, 25, 30 };
+    static readonly int[] PercentOptions = { 0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100 };
+    static readonly int[] TimeUpPercentOptions = { 0, 25, 50, 75, 100 };
 
     public Button readyButton;
     public TMP_Text readyText;
     public TMP_Text playerStatusListText;
     public TMP_Text roundSettingText;
+    public TMP_Text mapSizeSettingText;
     public TMP_Text obstacleSettingText;
     public TMP_Text treasureSettingText;
+    public TMP_Text nebulaSettingText;
     public TMP_Text extractionSettingText;
     public TMP_Text boosterSettingText;
     public TMP_Text ammoSettingText;
+    public TMP_Text boosterDelaySettingText;
+    public TMP_Text deathTimerSettingText;
+    public TMP_Text killRewardSettingText;
+    public TMP_Text deathRetainSettingText;
+    public TMP_Text timeUpRetainSettingText;
     public Button roundSettingButton;
+    public Button mapSizeSettingButton;
     public Button obstacleSettingButton;
     public Button treasureSettingButton;
+    public Button nebulaSettingButton;
     public Button extractionSettingButton;
     public Button boosterSettingButton;
     public Button ammoSettingButton;
+    public Button boosterDelaySettingButton;
+    public Button deathTimerSettingButton;
+    public Button killRewardSettingButton;
+    public Button deathRetainSettingButton;
+    public Button timeUpRetainSettingButton;
 
     bool isReady = false;
 
@@ -119,12 +131,19 @@ public class LobbyManager : MonoBehaviourPunCallbacks
             CheckAllReady();
         }
 
-        if (changedProps.ContainsKey(RoundDurationKey) ||
-            changedProps.ContainsKey(ObstacleDensityKey) ||
-            changedProps.ContainsKey(TreasureDensityKey) ||
-            changedProps.ContainsKey(ExtractionCountKey) ||
-            changedProps.ContainsKey(BoosterSlowdownKey) ||
-            changedProps.ContainsKey(AmmoCountKey))
+        if (changedProps.ContainsKey(RoomSettings.RoundDurationKey) ||
+            changedProps.ContainsKey(RoomSettings.MapSizeKey) ||
+            changedProps.ContainsKey(RoomSettings.ObstacleDensityKey) ||
+            changedProps.ContainsKey(RoomSettings.TreasureDensityKey) ||
+            changedProps.ContainsKey(RoomSettings.NebulaDensityKey) ||
+            changedProps.ContainsKey(RoomSettings.ExtractionCountKey) ||
+            changedProps.ContainsKey(RoomSettings.BoosterSlowdownKey) ||
+            changedProps.ContainsKey(RoomSettings.AmmoCountKey) ||
+            changedProps.ContainsKey(RoomSettings.BoosterRecoveryDelayKey) ||
+            changedProps.ContainsKey(RoomSettings.DeathTimerPenaltyKey) ||
+            changedProps.ContainsKey(RoomSettings.KillRewardPercentKey) ||
+            changedProps.ContainsKey(RoomSettings.DeathRetainPercentKey) ||
+            changedProps.ContainsKey(RoomSettings.TimeUpRetainPercentKey))
         {
             RefreshHostSettingsUi();
         }
@@ -175,12 +194,19 @@ public class LobbyManager : MonoBehaviourPunCallbacks
 
     public override void OnRoomPropertiesUpdate(Hashtable propertiesThatChanged)
     {
-        if (propertiesThatChanged.ContainsKey(RoundDurationKey) ||
-            propertiesThatChanged.ContainsKey(ObstacleDensityKey) ||
-            propertiesThatChanged.ContainsKey(TreasureDensityKey) ||
-            propertiesThatChanged.ContainsKey(ExtractionCountKey) ||
-            propertiesThatChanged.ContainsKey(BoosterSlowdownKey) ||
-            propertiesThatChanged.ContainsKey(AmmoCountKey))
+        if (propertiesThatChanged.ContainsKey(RoomSettings.RoundDurationKey) ||
+            propertiesThatChanged.ContainsKey(RoomSettings.MapSizeKey) ||
+            propertiesThatChanged.ContainsKey(RoomSettings.ObstacleDensityKey) ||
+            propertiesThatChanged.ContainsKey(RoomSettings.TreasureDensityKey) ||
+            propertiesThatChanged.ContainsKey(RoomSettings.NebulaDensityKey) ||
+            propertiesThatChanged.ContainsKey(RoomSettings.ExtractionCountKey) ||
+            propertiesThatChanged.ContainsKey(RoomSettings.BoosterSlowdownKey) ||
+            propertiesThatChanged.ContainsKey(RoomSettings.AmmoCountKey) ||
+            propertiesThatChanged.ContainsKey(RoomSettings.BoosterRecoveryDelayKey) ||
+            propertiesThatChanged.ContainsKey(RoomSettings.DeathTimerPenaltyKey) ||
+            propertiesThatChanged.ContainsKey(RoomSettings.KillRewardPercentKey) ||
+            propertiesThatChanged.ContainsKey(RoomSettings.DeathRetainPercentKey) ||
+            propertiesThatChanged.ContainsKey(RoomSettings.TimeUpRetainPercentKey))
         {
             RefreshHostSettingsUi();
         }
@@ -280,12 +306,19 @@ public class LobbyManager : MonoBehaviourPunCallbacks
 
     void EnsureHostSettingsUiExists()
     {
-        roundSettingButton = EnsureSettingButton(ref roundSettingText, roundSettingButton, "RoundSettingButton", "RoundSettingText", new Vector2(-120f, -208f), CycleRoundDuration);
-        obstacleSettingButton = EnsureSettingButton(ref obstacleSettingText, obstacleSettingButton, "ObstacleSettingButton", "ObstacleSettingText", new Vector2(120f, -208f), CycleObstacleDensity);
-        treasureSettingButton = EnsureSettingButton(ref treasureSettingText, treasureSettingButton, "TreasureSettingButton", "TreasureSettingText", new Vector2(-120f, -262f), CycleTreasureDensity);
-        extractionSettingButton = EnsureSettingButton(ref extractionSettingText, extractionSettingButton, "ExtractionSettingButton", "ExtractionSettingText", new Vector2(120f, -262f), CycleExtractionCount);
-        boosterSettingButton = EnsureSettingButton(ref boosterSettingText, boosterSettingButton, "BoosterSettingButton", "BoosterSettingText", new Vector2(-120f, -316f), CycleBoosterSlowdown);
-        ammoSettingButton = EnsureSettingButton(ref ammoSettingText, ammoSettingButton, "AmmoSettingButton", "AmmoSettingText", new Vector2(120f, -316f), CycleAmmoCount);
+        roundSettingButton = EnsureSettingButton(ref roundSettingText, roundSettingButton, "RoundSettingButton", "RoundSettingText", new Vector2(-205f, -208f), CycleRoundDuration);
+        mapSizeSettingButton = EnsureSettingButton(ref mapSizeSettingText, mapSizeSettingButton, "MapSizeSettingButton", "MapSizeSettingText", new Vector2(205f, -208f), CycleMapSize);
+        obstacleSettingButton = EnsureSettingButton(ref obstacleSettingText, obstacleSettingButton, "ObstacleSettingButton", "ObstacleSettingText", new Vector2(-205f, -262f), CycleObstacleDensity);
+        treasureSettingButton = EnsureSettingButton(ref treasureSettingText, treasureSettingButton, "TreasureSettingButton", "TreasureSettingText", new Vector2(205f, -262f), CycleTreasureDensity);
+        nebulaSettingButton = EnsureSettingButton(ref nebulaSettingText, nebulaSettingButton, "NebulaSettingButton", "NebulaSettingText", new Vector2(-205f, -316f), CycleNebulaDensity);
+        extractionSettingButton = EnsureSettingButton(ref extractionSettingText, extractionSettingButton, "ExtractionSettingButton", "ExtractionSettingText", new Vector2(205f, -316f), CycleExtractionCount);
+        boosterSettingButton = EnsureSettingButton(ref boosterSettingText, boosterSettingButton, "BoosterSettingButton", "BoosterSettingText", new Vector2(-205f, -370f), CycleBoosterSlowdown);
+        ammoSettingButton = EnsureSettingButton(ref ammoSettingText, ammoSettingButton, "AmmoSettingButton", "AmmoSettingText", new Vector2(205f, -370f), CycleAmmoCount);
+        boosterDelaySettingButton = EnsureSettingButton(ref boosterDelaySettingText, boosterDelaySettingButton, "BoosterDelaySettingButton", "BoosterDelaySettingText", new Vector2(-205f, -424f), CycleBoosterRecoveryDelay);
+        deathTimerSettingButton = EnsureSettingButton(ref deathTimerSettingText, deathTimerSettingButton, "DeathTimerSettingButton", "DeathTimerSettingText", new Vector2(205f, -424f), CycleDeathTimerPenalty);
+        killRewardSettingButton = EnsureSettingButton(ref killRewardSettingText, killRewardSettingButton, "KillRewardSettingButton", "KillRewardSettingText", new Vector2(-205f, -478f), CycleKillRewardPercent);
+        deathRetainSettingButton = EnsureSettingButton(ref deathRetainSettingText, deathRetainSettingButton, "DeathRetainSettingButton", "DeathRetainSettingText", new Vector2(205f, -478f), CycleDeathRetainPercent);
+        timeUpRetainSettingButton = EnsureSettingButton(ref timeUpRetainSettingText, timeUpRetainSettingButton, "TimeUpRetainSettingButton", "TimeUpRetainSettingText", new Vector2(0f, -532f), CycleTimeUpRetainPercent);
     }
 
     void RefreshPlayerStatusList()
@@ -328,39 +361,81 @@ public class LobbyManager : MonoBehaviourPunCallbacks
         Hashtable props = new Hashtable();
         bool changed = false;
 
-        if (!PhotonNetwork.CurrentRoom.CustomProperties.ContainsKey(RoundDurationKey))
+        if (!PhotonNetwork.CurrentRoom.CustomProperties.ContainsKey(RoomSettings.RoundDurationKey))
         {
-            props[RoundDurationKey] = 180f;
+            props[RoomSettings.RoundDurationKey] = RoomSettings.DefaultRoundDuration;
             changed = true;
         }
 
-        if (!PhotonNetwork.CurrentRoom.CustomProperties.ContainsKey(ObstacleDensityKey))
+        if (!PhotonNetwork.CurrentRoom.CustomProperties.ContainsKey(RoomSettings.ObstacleDensityKey))
         {
-            props[ObstacleDensityKey] = "medium";
+            props[RoomSettings.ObstacleDensityKey] = "medium";
             changed = true;
         }
 
-        if (!PhotonNetwork.CurrentRoom.CustomProperties.ContainsKey(TreasureDensityKey))
+        if (!PhotonNetwork.CurrentRoom.CustomProperties.ContainsKey(RoomSettings.MapSizeKey))
         {
-            props[TreasureDensityKey] = "medium";
+            props[RoomSettings.MapSizeKey] = RoomSettings.DefaultMapSize;
             changed = true;
         }
 
-        if (!PhotonNetwork.CurrentRoom.CustomProperties.ContainsKey(ExtractionCountKey))
+        if (!PhotonNetwork.CurrentRoom.CustomProperties.ContainsKey(RoomSettings.TreasureDensityKey))
         {
-            props[ExtractionCountKey] = 3;
+            props[RoomSettings.TreasureDensityKey] = "medium";
             changed = true;
         }
 
-        if (!PhotonNetwork.CurrentRoom.CustomProperties.ContainsKey(BoosterSlowdownKey))
+        if (!PhotonNetwork.CurrentRoom.CustomProperties.ContainsKey(RoomSettings.NebulaDensityKey))
         {
-            props[BoosterSlowdownKey] = 30;
+            props[RoomSettings.NebulaDensityKey] = "medium";
             changed = true;
         }
 
-        if (!PhotonNetwork.CurrentRoom.CustomProperties.ContainsKey(AmmoCountKey))
+        if (!PhotonNetwork.CurrentRoom.CustomProperties.ContainsKey(RoomSettings.ExtractionCountKey))
         {
-            props[AmmoCountKey] = 10;
+            props[RoomSettings.ExtractionCountKey] = RoomSettings.DefaultExtractionCount;
+            changed = true;
+        }
+
+        if (!PhotonNetwork.CurrentRoom.CustomProperties.ContainsKey(RoomSettings.BoosterSlowdownKey))
+        {
+            props[RoomSettings.BoosterSlowdownKey] = RoomSettings.DefaultBoosterSlowdownPercent;
+            changed = true;
+        }
+
+        if (!PhotonNetwork.CurrentRoom.CustomProperties.ContainsKey(RoomSettings.AmmoCountKey))
+        {
+            props[RoomSettings.AmmoCountKey] = RoomSettings.DefaultAmmoCount;
+            changed = true;
+        }
+
+        if (!PhotonNetwork.CurrentRoom.CustomProperties.ContainsKey(RoomSettings.BoosterRecoveryDelayKey))
+        {
+            props[RoomSettings.BoosterRecoveryDelayKey] = RoomSettings.DefaultBoosterRecoveryDelay;
+            changed = true;
+        }
+
+        if (!PhotonNetwork.CurrentRoom.CustomProperties.ContainsKey(RoomSettings.DeathTimerPenaltyKey))
+        {
+            props[RoomSettings.DeathTimerPenaltyKey] = RoomSettings.DefaultDeathTimerPenalty;
+            changed = true;
+        }
+
+        if (!PhotonNetwork.CurrentRoom.CustomProperties.ContainsKey(RoomSettings.KillRewardPercentKey))
+        {
+            props[RoomSettings.KillRewardPercentKey] = RoomSettings.DefaultKillRewardPercent;
+            changed = true;
+        }
+
+        if (!PhotonNetwork.CurrentRoom.CustomProperties.ContainsKey(RoomSettings.DeathRetainPercentKey))
+        {
+            props[RoomSettings.DeathRetainPercentKey] = RoomSettings.DefaultDeathRetainPercent;
+            changed = true;
+        }
+
+        if (!PhotonNetwork.CurrentRoom.CustomProperties.ContainsKey(RoomSettings.TimeUpRetainPercentKey))
+        {
+            props[RoomSettings.TimeUpRetainPercentKey] = RoomSettings.DefaultTimeUpRetainPercent;
             changed = true;
         }
 
@@ -394,7 +469,7 @@ public class LobbyManager : MonoBehaviourPunCallbacks
             rect.anchorMax = new Vector2(0.5f, 1f);
             rect.pivot = new Vector2(0.5f, 1f);
             rect.anchoredPosition = anchoredPosition;
-            rect.sizeDelta = new Vector2(210f, 42f);
+            rect.sizeDelta = new Vector2(280f, 42f);
         }
 
         button.onClick.RemoveListener(callback);
@@ -428,11 +503,11 @@ public class LobbyManager : MonoBehaviourPunCallbacks
             textRect.offsetMax = Vector2.zero;
 
             textField = textObject.GetComponent<TextMeshProUGUI>();
-            textField.fontSize = 20f;
+            textField.fontSize = 17f;
             textField.fontStyle = FontStyles.Bold;
             textField.alignment = TextAlignmentOptions.Center;
             textField.color = Color.white;
-            textField.enableWordWrapping = false;
+            textField.enableWordWrapping = true;
         }
 
         return button;
@@ -451,19 +526,42 @@ public class LobbyManager : MonoBehaviourPunCallbacks
         int nextIndex = (index + 1) % RoundDurationOptions.Length;
 
         Hashtable props = new Hashtable();
-        props[RoundDurationKey] = RoundDurationOptions[nextIndex];
+        props[RoomSettings.RoundDurationKey] = RoundDurationOptions[nextIndex];
         PhotonNetwork.CurrentRoom.SetCustomProperties(props);
         RefreshHostSettingsUi();
     }
 
     void CycleObstacleDensity()
     {
-        CycleDensitySetting(ObstacleDensityKey, GetObstacleDensity());
+        CycleDensitySetting(RoomSettings.ObstacleDensityKey, GetObstacleDensity());
+    }
+
+    void CycleMapSize()
+    {
+        if (!PhotonNetwork.IsMasterClient || PhotonNetwork.CurrentRoom == null)
+            return;
+
+        string current = GetMapSize();
+        int index = System.Array.IndexOf(MapSizeOptions, current);
+        if (index < 0)
+            index = 1;
+
+        int nextIndex = (index + 1) % MapSizeOptions.Length;
+
+        Hashtable props = new Hashtable();
+        props[RoomSettings.MapSizeKey] = MapSizeOptions[nextIndex];
+        PhotonNetwork.CurrentRoom.SetCustomProperties(props);
+        RefreshHostSettingsUi();
     }
 
     void CycleTreasureDensity()
     {
-        CycleDensitySetting(TreasureDensityKey, GetTreasureDensity());
+        CycleDensitySetting(RoomSettings.TreasureDensityKey, GetTreasureDensity());
+    }
+
+    void CycleNebulaDensity()
+    {
+        CycleDensitySetting(RoomSettings.NebulaDensityKey, GetNebulaDensity());
     }
 
     void CycleExtractionCount()
@@ -479,7 +577,7 @@ public class LobbyManager : MonoBehaviourPunCallbacks
         int nextIndex = (index + 1) % ExtractionCountOptions.Length;
 
         Hashtable props = new Hashtable();
-        props[ExtractionCountKey] = ExtractionCountOptions[nextIndex];
+        props[RoomSettings.ExtractionCountKey] = ExtractionCountOptions[nextIndex];
         PhotonNetwork.CurrentRoom.SetCustomProperties(props);
         RefreshHostSettingsUi();
     }
@@ -497,7 +595,7 @@ public class LobbyManager : MonoBehaviourPunCallbacks
         int nextIndex = (index + 1) % BoosterSlowdownOptions.Length;
 
         Hashtable props = new Hashtable();
-        props[BoosterSlowdownKey] = BoosterSlowdownOptions[nextIndex];
+        props[RoomSettings.BoosterSlowdownKey] = BoosterSlowdownOptions[nextIndex];
         PhotonNetwork.CurrentRoom.SetCustomProperties(props);
         RefreshHostSettingsUi();
     }
@@ -515,7 +613,53 @@ public class LobbyManager : MonoBehaviourPunCallbacks
         int nextIndex = (index + 1) % AmmoCountOptions.Length;
 
         Hashtable props = new Hashtable();
-        props[AmmoCountKey] = AmmoCountOptions[nextIndex];
+        props[RoomSettings.AmmoCountKey] = AmmoCountOptions[nextIndex];
+        PhotonNetwork.CurrentRoom.SetCustomProperties(props);
+        RefreshHostSettingsUi();
+    }
+
+    void CycleBoosterRecoveryDelay()
+    {
+        CycleIntSetting(RoomSettings.BoosterRecoveryDelayKey, BoosterRecoveryDelayOptions, GetBoosterRecoveryDelay(), 0);
+    }
+
+    void CycleDeathTimerPenalty()
+    {
+        CycleIntSetting(RoomSettings.DeathTimerPenaltyKey, DeathTimerPenaltyOptions, GetDeathTimerPenalty(), 0);
+    }
+
+    void CycleKillRewardPercent()
+    {
+        CycleIntSetting(RoomSettings.KillRewardPercentKey, PercentOptions, GetKillRewardPercent(), RoomSettings.DefaultKillRewardPercent);
+    }
+
+    void CycleDeathRetainPercent()
+    {
+        CycleIntSetting(RoomSettings.DeathRetainPercentKey, PercentOptions, GetDeathRetainPercent(), RoomSettings.DefaultDeathRetainPercent);
+    }
+
+    void CycleTimeUpRetainPercent()
+    {
+        CycleIntSetting(RoomSettings.TimeUpRetainPercentKey, TimeUpPercentOptions, GetTimeUpRetainPercent(), RoomSettings.DefaultTimeUpRetainPercent);
+    }
+
+    void CycleIntSetting(string key, int[] options, int current, int fallbackIndexValue)
+    {
+        if (!PhotonNetwork.IsMasterClient || PhotonNetwork.CurrentRoom == null)
+            return;
+
+        int index = System.Array.IndexOf(options, current);
+        if (index < 0)
+        {
+            index = System.Array.IndexOf(options, fallbackIndexValue);
+            if (index < 0)
+                index = 0;
+        }
+
+        int nextIndex = (index + 1) % options.Length;
+
+        Hashtable props = new Hashtable();
+        props[key] = options[nextIndex];
         PhotonNetwork.CurrentRoom.SetCustomProperties(props);
         RefreshHostSettingsUi();
     }
@@ -544,29 +688,57 @@ public class LobbyManager : MonoBehaviourPunCallbacks
         bool isHost = PhotonNetwork.IsMasterClient;
 
         if (roundSettingText != null)
-            roundSettingText.text = "ROUND: " + FormatRoundDuration(GetRoundDuration());
+            roundSettingText.text = "ROUND TIME: " + FormatRoundDuration(GetRoundDuration());
+
+        if (mapSizeSettingText != null)
+            mapSizeSettingText.text = "MAP SIZE: " + FormatMapSize(GetMapSize());
 
         if (obstacleSettingText != null)
-            obstacleSettingText.text = "OBSTACLES: " + FormatDensity(GetObstacleDensity());
+            obstacleSettingText.text = "OBSTACLES DENSITY: " + FormatDensity(GetObstacleDensity());
 
         if (treasureSettingText != null)
-            treasureSettingText.text = "TREASURES: " + FormatDensity(GetTreasureDensity());
+            treasureSettingText.text = "RESOURCES DENSITY: " + FormatDensity(GetTreasureDensity());
+
+        if (nebulaSettingText != null)
+            nebulaSettingText.text = "NEBULA DENSITY: " + FormatDensity(GetNebulaDensity());
 
         if (extractionSettingText != null)
-            extractionSettingText.text = "ZONES: " + GetExtractionCount();
+            extractionSettingText.text = "EXTRACTION ZONES: " + GetExtractionCount();
 
         if (boosterSettingText != null)
-            boosterSettingText.text = "SLOW: " + GetBoosterSlowdownPercent() + "%";
+            boosterSettingText.text = "EMPTY BOOSTER SLOWDOWN: " + GetBoosterSlowdownPercent() + "%";
 
         if (ammoSettingText != null)
             ammoSettingText.text = "AMMO: " + GetAmmoCount();
 
+        if (boosterDelaySettingText != null)
+            boosterDelaySettingText.text = "BOOST COOLDOWN: " + GetBoosterRecoveryDelay() + "s";
+
+        if (deathTimerSettingText != null)
+            deathTimerSettingText.text = "TIMER DEATH JUMP: -" + GetDeathTimerPenalty() + "s";
+
+        if (killRewardSettingText != null)
+            killRewardSettingText.text = "KILL LOOT: " + GetKillRewardPercent() + "%";
+
+        if (deathRetainSettingText != null)
+            deathRetainSettingText.text = "DEATH SAFEPOCKET: " + GetDeathRetainPercent() + "%";
+
+        if (timeUpRetainSettingText != null)
+            timeUpRetainSettingText.text = "END ROUND KEEP: " + GetTimeUpRetainPercent() + "%";
+
         SetSettingButtonState(roundSettingButton, isHost);
+        SetSettingButtonState(mapSizeSettingButton, isHost);
         SetSettingButtonState(obstacleSettingButton, isHost);
         SetSettingButtonState(treasureSettingButton, isHost);
+        SetSettingButtonState(nebulaSettingButton, isHost);
         SetSettingButtonState(extractionSettingButton, isHost);
         SetSettingButtonState(boosterSettingButton, isHost);
         SetSettingButtonState(ammoSettingButton, isHost);
+        SetSettingButtonState(boosterDelaySettingButton, isHost);
+        SetSettingButtonState(deathTimerSettingButton, isHost);
+        SetSettingButtonState(killRewardSettingButton, isHost);
+        SetSettingButtonState(deathRetainSettingButton, isHost);
+        SetSettingButtonState(timeUpRetainSettingButton, isHost);
     }
 
     void SetSettingButtonState(Button button, bool interactable)
@@ -587,73 +759,74 @@ public class LobbyManager : MonoBehaviourPunCallbacks
 
     float GetRoundDuration()
     {
-        if (PhotonNetwork.CurrentRoom != null &&
-            PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue(RoundDurationKey, out object value))
-        {
-            if (value is float floatValue)
-                return floatValue;
-            if (value is int intValue)
-                return intValue;
-            if (value is double doubleValue)
-                return (float)doubleValue;
-        }
-
-        return 180f;
+        return RoomSettings.GetRoundDuration();
     }
 
     string GetObstacleDensity()
     {
-        return GetDensitySetting(ObstacleDensityKey);
+        return GetDensitySetting(RoomSettings.ObstacleDensityKey);
+    }
+
+    string GetMapSize()
+    {
+        if (PhotonNetwork.CurrentRoom != null &&
+            PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue(RoomSettings.MapSizeKey, out object value) &&
+            value is string mode)
+        {
+            return mode;
+        }
+
+        return RoomSettings.DefaultMapSize;
     }
 
     string GetTreasureDensity()
     {
-        return GetDensitySetting(TreasureDensityKey);
+        return GetDensitySetting(RoomSettings.TreasureDensityKey);
+    }
+
+    string GetNebulaDensity()
+    {
+        return GetDensitySetting(RoomSettings.NebulaDensityKey);
     }
 
     int GetExtractionCount()
     {
-        if (PhotonNetwork.CurrentRoom != null &&
-            PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue(ExtractionCountKey, out object value))
-        {
-            if (value is int intValue)
-                return Mathf.Clamp(intValue, 1, 4);
-
-            if (value is float floatValue)
-                return Mathf.Clamp(Mathf.RoundToInt(floatValue), 1, 4);
-        }
-
-        return 3;
+        return RoomSettings.GetExtractionCount();
     }
 
     int GetBoosterSlowdownPercent()
     {
-        if (PhotonNetwork.CurrentRoom != null &&
-            PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue(BoosterSlowdownKey, out object value))
-        {
-            if (value is int intValue)
-                return Mathf.Clamp(intValue, 30, 100);
-
-            if (value is float floatValue)
-                return Mathf.Clamp(Mathf.RoundToInt(floatValue), 30, 100);
-        }
-
-        return 30;
+        return RoomSettings.GetBoosterSlowdownPercent();
     }
 
     int GetAmmoCount()
     {
-        if (PhotonNetwork.CurrentRoom != null &&
-            PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue(AmmoCountKey, out object value))
-        {
-            if (value is int intValue)
-                return Mathf.Clamp(intValue, 5, 30);
+        return RoomSettings.GetAmmoCount();
+    }
 
-            if (value is float floatValue)
-                return Mathf.Clamp(Mathf.RoundToInt(floatValue), 5, 30);
-        }
+    int GetBoosterRecoveryDelay()
+    {
+        return RoomSettings.GetBoosterRecoveryDelay();
+    }
 
-        return 10;
+    int GetDeathTimerPenalty()
+    {
+        return RoomSettings.GetDeathTimerPenalty();
+    }
+
+    int GetKillRewardPercent()
+    {
+        return RoomSettings.GetKillRewardPercent();
+    }
+
+    int GetDeathRetainPercent()
+    {
+        return RoomSettings.GetDeathRetainPercent();
+    }
+
+    int GetTimeUpRetainPercent()
+    {
+        return RoomSettings.GetTimeUpRetainPercent();
     }
 
     string GetDensitySetting(string key)
@@ -678,6 +851,19 @@ public class LobbyManager : MonoBehaviourPunCallbacks
     string FormatDensity(string density)
     {
         return density.ToUpperInvariant();
+    }
+
+    string FormatMapSize(string mapSize)
+    {
+        switch (mapSize)
+        {
+            case "very_large":
+                return "VERY LARGE";
+            case "super_large":
+                return "SUPER LARGE";
+            default:
+                return mapSize.ToUpperInvariant();
+        }
     }
 
     string GetDisplayName(Player player)

@@ -6,32 +6,37 @@ public class CameraFollow : MonoBehaviour
     public float mapSizeX = 25f;
     public float mapSizeY = 25f;
 
-    private float camHalfWidth;
-    private float camHalfHeight;
+    float camHalfWidth;
+    float camHalfHeight;
 
     void Start()
     {
-        camHalfHeight = Camera.main.orthographicSize;
-        camHalfWidth = camHalfHeight * Screen.width / Screen.height;
+        Camera cam = Camera.main;
+        if (cam != null)
+        {
+            camHalfHeight = cam.orthographicSize;
+            camHalfWidth = camHalfHeight * Screen.width / Screen.height;
+        }
     }
 
     void LateUpdate()
     {
-        // zabezpieczenie przed errorem
-        if (target == null) return;
+        Vector2 mapSize = RoomSettings.GetMapDimensions();
+        mapSizeX = mapSize.x;
+        mapSizeY = mapSize.y;
 
-        float minX = -mapSizeX / 2 + camHalfWidth;
-        float maxX = mapSizeX / 2 - camHalfWidth;
+        if (target == null)
+            return;
 
-        float minY = -mapSizeY / 2 + camHalfHeight;
-        float maxY = mapSizeY / 2 - camHalfHeight;
+        float minX = -mapSizeX / 2f + camHalfWidth;
+        float maxX = mapSizeX / 2f - camHalfWidth;
+        float minY = -mapSizeY / 2f + camHalfHeight;
+        float maxY = mapSizeY / 2f - camHalfHeight;
 
         float clampedX = Mathf.Clamp(target.position.x, minX, maxX);
         float clampedY = Mathf.Clamp(target.position.y, minY, maxY);
+        Vector3 targetPos = new Vector3(clampedX, clampedY, -10f);
 
-        Vector3 targetPos = new Vector3(clampedX, clampedY, -10);
-
-        // płynne podążanie (opcjonalne)
         transform.position = Vector3.Lerp(transform.position, targetPos, Time.deltaTime * 5f);
     }
 }

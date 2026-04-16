@@ -10,8 +10,10 @@ public class TreasureSpawner : MonoBehaviourPun
     const string TreasureDensityKey = "treasureDensity";
     const string ObstacleLayoutKey = "obstacleLayout";
     const string ExtractionLayoutKey = "extractionLayout";
+    const string NebulaLayoutKey = "nebulaLayout";
     const float MinDistanceFromExtraction = 3f;
     const float MinDistanceFromObstacle = 2.6f;
+    const float MinDistanceFromNebula = 2.8f;
 
     public int treasureCount = 10;
     public float mapSizeX = 25f;
@@ -19,6 +21,10 @@ public class TreasureSpawner : MonoBehaviourPun
 
     void Start()
     {
+        Vector2 mapSize = RoomSettings.GetMapDimensions();
+        mapSizeX = mapSize.x;
+        mapSizeY = mapSize.y;
+
         Debug.Log("TreasureSpawner Start");
         StartCoroutine(SpawnWhenRoundStarts());
     }
@@ -31,7 +37,7 @@ public class TreasureSpawner : MonoBehaviourPun
         while (!IsRoundStarted())
             yield return null;
 
-        while (!HasExtractionLayout() || !HasObstacleLayout())
+        while (!HasExtractionLayout() || !HasObstacleLayout() || !HasNebulaLayout())
             yield return null;
 
         if (!PhotonNetwork.IsMasterClient)
@@ -43,11 +49,16 @@ public class TreasureSpawner : MonoBehaviourPun
 
     void SpawnTreasures()
     {
+        Vector2 mapSize = RoomSettings.GetMapDimensions();
+        mapSizeX = mapSize.x;
+        mapSizeY = mapSize.y;
+
         List<Vector2> obstaclePositions = ParseLayout(ObstacleLayoutKey);
         List<Vector2> extractionPositions = ParseLayout(ExtractionLayoutKey);
+        List<Vector2> nebulaPositions = ParseLayout(NebulaLayoutKey);
         int spawned = 0;
         int attempts = 0;
-        int targetCount = Mathf.Max(1, Mathf.RoundToInt(treasureCount * GetDensityMultiplier()));
+        int targetCount = Mathf.Max(1, Mathf.RoundToInt(treasureCount * GetDensityMultiplier() * RoomSettings.GetMapAreaMultiplier()));
 
         while (spawned < targetCount && attempts < 300)
         {
@@ -62,6 +73,9 @@ public class TreasureSpawner : MonoBehaviourPun
                 continue;
 
             if (!IsFarEnough(pos2D, obstaclePositions, MinDistanceFromObstacle))
+                continue;
+
+            if (!IsFarEnough(pos2D, nebulaPositions, MinDistanceFromNebula))
                 continue;
 
             Collider2D hit = Physics2D.OverlapCircle(pos2D, 1f);
@@ -156,6 +170,14 @@ public class TreasureSpawner : MonoBehaviourPun
     {
         return PhotonNetwork.CurrentRoom != null &&
                PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue(ObstacleLayoutKey, out object value) &&
+               value is string layout &&
+               !string.IsNullOrWhiteSpace(layout);
+    }
+
+    bool HasNebulaLayout()
+    {
+        return PhotonNetwork.CurrentRoom != null &&
+               PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue(NebulaLayoutKey, out object value) &&
                value is string layout &&
                !string.IsNullOrWhiteSpace(layout);
     }

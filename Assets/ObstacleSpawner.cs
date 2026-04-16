@@ -27,10 +27,14 @@ public class ObstacleSpawner : MonoBehaviour
     public float minObstacleDistance = 3.25f;
 
     bool layoutApplied = false;
-    int ResolvedObstacleCount => Mathf.Max(1, Mathf.RoundToInt(obstacleCount * GetDensityMultiplier()));
+    int ResolvedObstacleCount => Mathf.Max(1, Mathf.RoundToInt(obstacleCount * GetDensityMultiplier() * RoomSettings.GetMapAreaMultiplier()));
 
     void Start()
     {
+        Vector2 mapSize = RoomSettings.GetMapDimensions();
+        mapSizeX = mapSize.x;
+        mapSizeY = mapSize.y;
+
         Debug.Log("ObstacleSpawner Start");
         StartCoroutine(InitializeWhenRoundStarts());
     }
@@ -100,6 +104,10 @@ public class ObstacleSpawner : MonoBehaviour
 
     string BuildObstacleLayout(int seed)
     {
+        Vector2 mapSize = RoomSettings.GetMapDimensions();
+        mapSizeX = mapSize.x;
+        mapSizeY = mapSize.y;
+
         Random.State previousState = Random.state;
         Random.InitState(seed);
 

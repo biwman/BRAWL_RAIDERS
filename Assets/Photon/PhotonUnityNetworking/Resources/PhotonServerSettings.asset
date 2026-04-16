@@ -60,6 +60,10 @@ MonoBehaviour:
   - ShowEndScreen
   - ShowEndScreenForAll
   - DisplaySortedPlayers
+  - SetScoreDirect
+  - PlayDeathExplosion
+  - StartAlarmLoop
+  - StopAlarmLoop
   DisableAutoOpenWizard: 1
   ShowSettings: 1
   DevRegionSetOnce: 1

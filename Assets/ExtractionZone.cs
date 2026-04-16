@@ -43,6 +43,12 @@ public class ExtractionZone : MonoBehaviourPun
     IEnumerator UseRoutine(PhotonView playerView)
     {
         isBeingUsed = true;
+        bool startingActivation = !isActive;
+
+        if (startingActivation)
+        {
+            photonView.RPC(nameof(StartAlarmLoop), RpcTarget.All);
+        }
 
         float timer = 0f;
 
@@ -62,6 +68,11 @@ public class ExtractionZone : MonoBehaviourPun
         else
         {
             EvacuatePlayers();
+        }
+
+        if (startingActivation)
+        {
+            photonView.RPC(nameof(StopAlarmLoop), RpcTarget.All);
         }
 
         isBeingUsed = false;
@@ -194,6 +205,7 @@ public class ExtractionZone : MonoBehaviourPun
         isActive = false;
         isBeingUsed = false;
         isEvacuating = false;
+        StopAlarmLoop();
 
         if (blinkRoutine != null)
             StopCoroutine(blinkRoutine);
@@ -210,6 +222,12 @@ public class ExtractionZone : MonoBehaviourPun
 
         if (obj != null)
         {
+            RectTransform rect = obj.GetComponent<RectTransform>();
+            if (rect != null)
+            {
+                rect.SetAsLastSibling();
+            }
+
             TMP_Text text = obj.GetComponent<TMP_Text>();
             if (text == null)
                 text = obj.GetComponentInChildren<TMP_Text>(true);
@@ -247,5 +265,17 @@ public class ExtractionZone : MonoBehaviourPun
         }
 
         return null;
+    }
+
+    [PunRPC]
+    void StartAlarmLoop()
+    {
+        AudioManager.Instance.StartAlarmLoop();
+    }
+
+    [PunRPC]
+    void StopAlarmLoop()
+    {
+        AudioManager.Instance.StopAlarmLoop();
     }
 }

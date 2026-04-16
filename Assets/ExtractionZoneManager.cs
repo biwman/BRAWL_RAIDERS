@@ -12,8 +12,6 @@ public class ExtractionZoneManager : MonoBehaviourPunCallbacks
     const string GameStartedKey = "gameStarted";
     const string ExtractionCountKey = "extractionCount";
     const string ExtractionLayoutKey = "extractionLayout";
-    const float MapSizeX = 25f;
-    const float MapSizeY = 25f;
     const float Margin = 3.5f;
     const float MinZoneDistance = 8f;
 
@@ -165,6 +163,7 @@ public class ExtractionZoneManager : MonoBehaviourPunCallbacks
 
     string BuildLayout(int count)
     {
+        Vector2 mapSize = RoomSettings.GetMapDimensions();
         List<Vector2> positions = new List<Vector2>();
         int attempts = 0;
 
@@ -172,8 +171,8 @@ public class ExtractionZoneManager : MonoBehaviourPunCallbacks
         {
             attempts++;
 
-            float x = Random.Range(-MapSizeX / 2f + Margin, MapSizeX / 2f - Margin);
-            float y = Random.Range(-MapSizeY / 2f + Margin, MapSizeY / 2f - Margin);
+            float x = Random.Range(-mapSize.x / 2f + Margin, mapSize.x / 2f - Margin);
+            float y = Random.Range(-mapSize.y / 2f + Margin, mapSize.y / 2f - Margin);
             Vector2 candidate = new Vector2(x, y);
 
             bool farEnough = true;

@@ -9,6 +9,7 @@ public class Bullet : MonoBehaviourPun
     public float rangeMultiplier = 15f;
     public float fallbackPlayerLength = 1f;
     public float safetyLifetime = 10f;
+    public float minimumWorldRadius = 0.12f;
 
     Vector2 spawnPosition;
     float maxTravelDistance;
@@ -17,6 +18,28 @@ public class Bullet : MonoBehaviourPun
     {
         spawnPosition = transform.position;
         maxTravelDistance = GetOwnerLength() * rangeMultiplier;
+
+        if (GetComponent<HideInNebulaTarget>() == null)
+        {
+            gameObject.AddComponent<HideInNebulaTarget>();
+        }
+
+        Rigidbody2D rb = GetComponent<Rigidbody2D>();
+        if (rb != null)
+        {
+            rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+            rb.interpolation = RigidbodyInterpolation2D.Interpolate;
+        }
+
+        CircleCollider2D collider2D = GetComponent<CircleCollider2D>();
+        if (collider2D != null)
+        {
+            float worldRadius = GetWorldRadius(collider2D);
+            if (worldRadius < minimumWorldRadius)
+            {
+                SetWorldRadius(collider2D, minimumWorldRadius);
+            }
+        }
 
         if (maxTravelDistance <= 0f)
         {
@@ -107,5 +130,22 @@ public class Bullet : MonoBehaviourPun
         }
 
         return fallbackPlayerLength;
+    }
+
+    float GetWorldRadius(CircleCollider2D collider2D)
+    {
+        Vector3 scale = collider2D.transform.lossyScale;
+        float maxScale = Mathf.Max(Mathf.Abs(scale.x), Mathf.Abs(scale.y));
+        return collider2D.radius * maxScale;
+    }
+
+    void SetWorldRadius(CircleCollider2D collider2D, float worldRadius)
+    {
+        Vector3 scale = collider2D.transform.lossyScale;
+        float maxScale = Mathf.Max(Mathf.Abs(scale.x), Mathf.Abs(scale.y));
+        if (maxScale <= 0.0001f)
+            maxScale = 1f;
+
+        collider2D.radius = worldRadius / maxScale;
     }
 }

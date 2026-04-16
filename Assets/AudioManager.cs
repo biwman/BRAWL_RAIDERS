@@ -1,0 +1,200 @@
+using System.Collections.Generic;
+using Photon.Pun;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+using UnityEngine.UI;
+
+public class AudioManager : MonoBehaviour
+{
+    static AudioManager instance;
+
+    AudioClip laserClip;
+    AudioClip drillingClip;
+    AudioClip clickClip;
+    AudioClip engineClip;
+    AudioClip alarmClip;
+    AudioClip explosionClip;
+
+    AudioSource oneShotSource;
+    AudioSource drillingLoopSource;
+    AudioSource alarmLoopSource;
+    readonly HashSet<int> hookedButtons = new HashSet<int>();
+
+    public static AudioManager Instance
+    {
+        get
+        {
+            EnsureInstance();
+            return instance;
+        }
+    }
+
+    public AudioClip EngineClip => engineClip;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+    static void Bootstrap()
+    {
+        EnsureInstance();
+    }
+
+    static void EnsureInstance()
+    {
+        if (instance != null)
+            return;
+
+        GameObject root = new GameObject("AudioManager");
+        instance = root.AddComponent<AudioManager>();
+        DontDestroyOnLoad(root);
+    }
+
+    void Awake()
+    {
+        if (instance != null && instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+
+        instance = this;
+        DontDestroyOnLoad(gameObject);
+        LoadClips();
+        EnsureSources();
+        SceneManager.sceneLoaded += OnSceneLoaded;
+    }
+
+    void OnDestroy()
+    {
+        SceneManager.sceneLoaded -= OnSceneLoaded;
+
+        if (instance == this)
+            instance = null;
+    }
+
+    void Start()
+    {
+        HookSceneButtons();
+    }
+
+    void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        HookSceneButtons();
+        StopDrillingLoop();
+        StopAlarmLoop();
+    }
+
+    void LoadClips()
+    {
+        laserClip = Resources.Load<AudioClip>("Audio/laser");
+        drillingClip = Resources.Load<AudioClip>("Audio/drilling");
+        clickClip = Resources.Load<AudioClip>("Audio/click");
+        engineClip = Resources.Load<AudioClip>("Audio/silnik");
+        alarmClip = Resources.Load<AudioClip>("Audio/alarm");
+        explosionClip = Resources.Load<AudioClip>("Audio/explosion");
+    }
+
+    void EnsureSources()
+    {
+        oneShotSource = CreateChildSource("OneShotSource", false, false, 0.9f);
+        drillingLoopSource = CreateChildSource("DrillingLoopSource", true, false, 0.455f);
+        alarmLoopSource = CreateChildSource("AlarmLoopSource", true, false, 0.55f);
+
+        drillingLoopSource.clip = drillingClip;
+        alarmLoopSource.clip = alarmClip;
+    }
+
+    AudioSource CreateChildSource(string name, bool loop, bool playOnAwake, float volume)
+    {
+        Transform existing = transform.Find(name);
+        GameObject go = existing != null ? existing.gameObject : new GameObject(name);
+        go.transform.SetParent(transform, false);
+
+        AudioSource source = go.GetComponent<AudioSource>();
+        if (source == null)
+            source = go.AddComponent<AudioSource>();
+
+        source.loop = loop;
+        source.playOnAwake = playOnAwake;
+        source.spatialBlend = 0f;
+        source.volume = volume;
+        return source;
+    }
+
+    void HookSceneButtons()
+    {
+        foreach (Button button in Resources.FindObjectsOfTypeAll<Button>())
+        {
+            if (button == null || !button.gameObject.scene.IsValid())
+                continue;
+
+            int id = button.GetInstanceID();
+            if (hookedButtons.Contains(id))
+                continue;
+
+            if (button.GetComponent<ButtonClickSoundHook>() == null)
+            {
+                button.gameObject.AddComponent<ButtonClickSoundHook>();
+            }
+
+            hookedButtons.Add(id);
+        }
+    }
+
+    public void PlayClick()
+    {
+        PlayOneShot(clickClip, 0.8f);
+    }
+
+    public void PlayLaser()
+    {
+        PlayOneShot(laserClip, 0.55f);
+    }
+
+    public void PlayExplosion()
+    {
+        PlayOneShot(explosionClip, 0.75f);
+    }
+
+    public void StartDrillingLoop()
+    {
+        if (drillingClip == null || drillingLoopSource == null)
+            return;
+
+        if (drillingLoopSource.clip != drillingClip)
+            drillingLoopSource.clip = drillingClip;
+
+        if (!drillingLoopSource.isPlaying)
+            drillingLoopSource.Play();
+    }
+
+    public void StopDrillingLoop()
+    {
+        if (drillingLoopSource != null && drillingLoopSource.isPlaying)
+            drillingLoopSource.Stop();
+    }
+
+    public void StartAlarmLoop()
+    {
+        if (alarmClip == null || alarmLoopSource == null)
+            return;
+
+        if (alarmLoopSource.clip != alarmClip)
+            alarmLoopSource.clip = alarmClip;
+
+        if (!alarmLoopSource.isPlaying)
+            alarmLoopSource.Play();
+    }
+
+    public void StopAlarmLoop()
+    {
+        if (alarmLoopSource != null && alarmLoopSource.isPlaying)
+            alarmLoopSource.Stop();
+    }
+
+    void PlayOneShot(AudioClip clip, float volumeScale)
+    {
+        if (clip == null || oneShotSource == null)
+            return;
+
+        oneShotSource.PlayOneShot(clip, volumeScale);
+    }
+}

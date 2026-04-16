@@ -11,9 +11,13 @@ public class GameVisualTheme : MonoBehaviour
 {
     const float PlayerTargetSize = 1.04f;
     const float TreasureTargetSize = 1.5f;
-    const float TreasureTriggerSizeMultiplier = 1.12f;
+    const float TreasureTriggerSizeMultiplier = 1.2f;
+    const float PlayerBodyColliderWidthFactor = 0.46f;
+    const float PlayerBodyColliderHeightFactor = 0.62f;
+    const float PlayerPickupRadiusFactor = 0.8f;
     const float ObstacleTargetSize = 3.0f;
     const float ExtractionTargetSize = 4.3f;
+    const float BackgroundTileWorldSize = 8f;
     const float RefreshInterval = 0.75f;
 
     static GameVisualTheme instance;
@@ -166,12 +170,17 @@ public class GameVisualTheme : MonoBehaviour
         treasureSprite = LoadSpriteFromProjectOrResources("asteroida_treasure.png", "Visuals/Treasures/asteroid_treasure_resource");
         obstacleSprite = LoadSpriteFromProjectOrResources("asteroida_obstacle.png", "Visuals/Obstacles/asteroid_obstacle_resource");
         extractionSprite = LoadSpriteFromProjectOrResources("baza1.png", "Visuals/Bases/base1_resource");
-        backgroundSprite = LoadSpriteFromProjectOrResources("tło5.png", "Visuals/Backgrounds/background5_resource");
+        backgroundSprite = Resources.Load<Sprite>("Visuals/Backgrounds/background5_resource");
+        if (backgroundSprite == null)
+        {
+            backgroundSprite = LoadSpriteFromProjectOrResources("tło5.png", "Visuals/Backgrounds/background5_resource");
+        }
     }
 
     void ApplyTheme()
     {
         ApplyGroundBackground();
+        ApplyMapBounds();
         ApplyPlayerSprites();
         ApplyTreasureSprites();
         ApplyObstacleSprites();
@@ -183,6 +192,8 @@ public class GameVisualTheme : MonoBehaviour
         if (backgroundSprite == null)
             return;
 
+        Vector2 mapSize = RoomSettings.GetMapDimensions();
+
         GameObject ground = GameObject.Find("Ground");
         if (ground == null)
             return;
@@ -193,8 +204,45 @@ public class GameVisualTheme : MonoBehaviour
 
         renderer.sprite = backgroundSprite;
         renderer.color = Color.white;
-        renderer.drawMode = SpriteDrawMode.Sliced;
-        renderer.size = new Vector2(25f, 25f);
+        renderer.drawMode = SpriteDrawMode.Tiled;
+        renderer.tileMode = SpriteTileMode.Continuous;
+        renderer.size = mapSize;
+    }
+
+    void ApplyMapBounds()
+    {
+        Vector2 mapSize = RoomSettings.GetMapDimensions();
+        UpdateWall("WallTop", new Vector2(0f, mapSize.y / 2f), new Vector2(mapSize.x, 1f), true);
+        UpdateWall("WallBottom", new Vector2(0f, -mapSize.y / 2f), new Vector2(mapSize.x, 1f), true);
+        UpdateWall("WallLeft", new Vector2(-mapSize.x / 2f, 0f), new Vector2(1f, mapSize.y), false);
+        UpdateWall("WallRight", new Vector2(mapSize.x / 2f, 0f), new Vector2(1f, mapSize.y), false);
+    }
+
+    void UpdateWall(string wallName, Vector2 position, Vector2 size, bool horizontal)
+    {
+        GameObject wall = GameObject.Find(wallName);
+        if (wall == null)
+            return;
+
+        wall.transform.position = new Vector3(position.x, position.y, wall.transform.position.z);
+
+        SpriteRenderer renderer = wall.GetComponent<SpriteRenderer>();
+        if (renderer != null)
+        {
+            renderer.drawMode = SpriteDrawMode.Sliced;
+            renderer.size = size;
+        }
+
+        BoxCollider2D collider = wall.GetComponent<BoxCollider2D>();
+        if (collider != null)
+        {
+            collider.offset = Vector2.zero;
+            collider.size = size;
+        }
+
+        wall.transform.localScale = horizontal
+            ? new Vector3(1f, wall.transform.localScale.y, 1f)
+            : new Vector3(wall.transform.localScale.x, 1f, 1f);
     }
 
     void ApplyPlayerSprites()
@@ -221,8 +269,6 @@ public class GameVisualTheme : MonoBehaviour
 
             BoxCollider2D bodyCollider = player.GetComponent<BoxCollider2D>();
             CircleCollider2D pickupCollider = player.GetComponent<CircleCollider2D>();
-            Vector2 bodyWorldSize = GetWorldBoxSize(bodyCollider);
-            float pickupWorldRadius = GetWorldCircleRadius(pickupCollider);
 
             if (renderer.sprite != sprite)
             {
@@ -230,8 +276,12 @@ public class GameVisualTheme : MonoBehaviour
                 renderer.color = Color.white;
             }
             FitSpriteToTargetSize(renderer, PlayerTargetSize);
-            SetWorldBoxSize(bodyCollider, bodyWorldSize);
-            SetWorldCircleRadius(pickupCollider, pickupWorldRadius);
+
+            Vector2 spriteWorldSize = GetSpriteWorldSize(renderer);
+            SetWorldBoxSize(bodyCollider, new Vector2(
+                spriteWorldSize.x * PlayerBodyColliderWidthFactor,
+                spriteWorldSize.y * PlayerBodyColliderHeightFactor));
+            SetWorldCircleRadius(pickupCollider, Mathf.Max(spriteWorldSize.x, spriteWorldSize.y) * PlayerPickupRadiusFactor);
         }
     }
 
@@ -422,17 +472,20 @@ public class GameVisualTheme : MonoBehaviour
             byte[] bytes = File.ReadAllBytes(filePath);
             Texture2D texture = new Texture2D(2, 2, TextureFormat.RGBA32, false);
             texture.LoadImage(bytes, false);
-            texture.wrapMode = TextureWrapMode.Clamp;
-            texture.filterMode = FilterMode.Bilinear;
+            texture.wrapMode = TextureWrapMode.Repeat;
+            texture.filterMode = FilterMode.Trilinear;
 
-            float pixelsPerUnit = Mathf.Max(texture.width, texture.height);
+            float pixelsPerUnit = Mathf.Max(1f, Mathf.Max(texture.width, texture.height) / BackgroundTileWorldSize);
             return Sprite.Create(
                 texture,
                 new Rect(0f, 0f, texture.width, texture.height),
                 new Vector2(0.5f, 0.5f),
-                pixelsPerUnit);
+                pixelsPerUnit,
+                0,
+                SpriteMeshType.FullRect);
         }
 
         return Resources.Load<Sprite>(resourcesPath);
     }
 }
+

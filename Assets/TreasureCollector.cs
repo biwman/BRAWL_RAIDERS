@@ -40,6 +40,7 @@ public class TreasureCollector : MonoBehaviourPun
         {
             scoreText.text = "Score: 0";
         }
+        SyncScoreProperty();
         // BUTTON
         if (collectButton == null)
         {
@@ -167,6 +168,7 @@ public class TreasureCollector : MonoBehaviourPun
         if (currentTreasure != null && !isCollecting)
         {
             isCollecting = true;
+            AudioManager.Instance.StartDrillingLoop();
             StartCoroutine(CollectRoutine());
         }
     }
@@ -183,6 +185,8 @@ public class TreasureCollector : MonoBehaviourPun
             isCollecting = false;
         }
 
+        AudioManager.Instance.StopDrillingLoop();
+
         // extraction NIE przerywamy (bo leci po stronie Mastera)
 
         if (movement != null) movement.enabled = true;
@@ -196,6 +200,7 @@ public class TreasureCollector : MonoBehaviourPun
         if (currentTreasure == null)
         {
             isCollecting = false;
+            AudioManager.Instance.StopDrillingLoop();
             yield break;
         }
 
@@ -205,6 +210,7 @@ public class TreasureCollector : MonoBehaviourPun
         if (treasureToCollect.isBeingCollected)
         {
             isCollecting = false;
+            AudioManager.Instance.StopDrillingLoop();
             yield break;
         }
 
@@ -222,6 +228,7 @@ public class TreasureCollector : MonoBehaviourPun
             if (!isCollecting)
             {
                 treasureToCollect.isBeingCollected = false;
+                AudioManager.Instance.StopDrillingLoop();
                 yield break;
             }
 
@@ -252,6 +259,7 @@ public class TreasureCollector : MonoBehaviourPun
         // reset stanu
         treasureToCollect.isBeingCollected = false;
         isCollecting = false;
+        AudioManager.Instance.StopDrillingLoop();
 
         if (movement != null) movement.enabled = true;
         if (shooting != null) shooting.enabled = true;
@@ -305,7 +313,7 @@ public class TreasureCollector : MonoBehaviourPun
             return;
 
         ExitGames.Client.Photon.Hashtable props = new ExitGames.Client.Photon.Hashtable();
-        props["score"] = totalScore;
+        props[RoomSettings.ScoreKey] = totalScore;
         PhotonNetwork.LocalPlayer.SetCustomProperties(props);
     }
 }

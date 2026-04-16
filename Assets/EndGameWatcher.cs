@@ -175,6 +175,7 @@ public class EndGameWatcher : MonoBehaviour
         GameObject restartButton = FindObjectEvenIfDisabled("RestartButton");
         if (restartButton != null)
         {
+            restartButton.SetActive(true);
             RectTransform rect = restartButton.GetComponent<RectTransform>();
             if (rect != null)
             {
@@ -315,10 +316,9 @@ public class EndGameWatcher : MonoBehaviour
 
     int GetPlayerScore(Player player)
     {
-        if (player.CustomProperties.TryGetValue("score", out object value) && value is int score)
-        {
+        int score = RoomSettings.GetPlayerScore(player);
+        if (score > 0)
             return score;
-        }
 
         if (player.TagObject is GameObject go && go != null)
         {

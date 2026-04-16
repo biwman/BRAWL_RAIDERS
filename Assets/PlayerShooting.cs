@@ -3,8 +3,6 @@ using Photon.Pun;
 
 public class PlayerShooting : MonoBehaviourPun
 {
-    const string AmmoCountKey = "ammoCount";
-
     public Joystick shootJoystick;
     public GameObject bulletPrefab;
     public float bulletSpeed = 10f;
@@ -134,6 +132,8 @@ public class PlayerShooting : MonoBehaviourPun
         {
             Physics2D.IgnoreCollision(bulletCollider, playerCollider);
         }
+
+        AudioManager.Instance.PlayLaser();
     }
 
     void ConsumeAmmo()
@@ -203,16 +203,6 @@ public class PlayerShooting : MonoBehaviourPun
 
     int GetConfiguredMaxAmmo()
     {
-        if (PhotonNetwork.CurrentRoom != null &&
-            PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue(AmmoCountKey, out object value))
-        {
-            if (value is int intValue)
-                return Mathf.Clamp(intValue, 5, 30);
-
-            if (value is float floatValue)
-                return Mathf.Clamp(Mathf.RoundToInt(floatValue), 5, 30);
-        }
-
-        return maxAmmo;
+        return RoomSettings.GetAmmoCount();
     }
 }

@@ -5,15 +5,16 @@ using ExitGames.Client.Photon;
 
 public class GameTimer : MonoBehaviourPun
 {
-    const string RoundDurationKey = "roundDuration";
     const string ObstacleLayoutKey = "obstacleLayout";
     const string ExtractionLayoutKey = "extractionLayout";
+    const string NebulaLayoutKey = "nebulaLayout";
     const string MapSeedKey = "mapSeed";
 
     public float roundTime = 180f;
 
     private TMP_Text timerText;
     private double startTime;
+    bool isEndingRound;
 
     void Start()
     {
@@ -53,7 +54,7 @@ public class GameTimer : MonoBehaviourPun
 
         if (remaining <= 0f && PhotonNetwork.IsMasterClient)
         {
-            EndGame();
+            StartRoundTimeout();
         }
     }
 
@@ -67,11 +68,17 @@ public class GameTimer : MonoBehaviourPun
         }
     }
 
-    void EndGame()
+    void StartRoundTimeout()
     {
-        if (!IsGameStarted())
+        if (!IsGameStarted() || isEndingRound)
             return;
 
+        isEndingRound = true;
+        StartCoroutine(EndGameAfterTimeUpSync());
+    }
+
+    System.Collections.IEnumerator EndGameAfterTimeUpSync()
+    {
         Debug.Log("KONIEC GRY");
 
         var players = FindObjectsByType<PlayerHealth>(FindObjectsSortMode.None);
@@ -84,16 +91,7 @@ public class GameTimer : MonoBehaviourPun
             }
         }
 
-        EndScreenUI ui = FindFirstObjectByType<EndScreenUI>();
-        if (ui != null)
-        {
-            Debug.Log("CALLING UI");
-            ui.Show();
-        }
-        else
-        {
-            Debug.LogError("EndScreenUI NOT FOUND");
-        }
+        yield return new WaitForSeconds(0.35f);
 
         PlayerMovement.gameStarted = false;
         PlayerShooting.gameStarted = false;
@@ -102,8 +100,10 @@ public class GameTimer : MonoBehaviourPun
         props["gameStarted"] = false;
         props[ObstacleLayoutKey] = string.Empty;
         props[ExtractionLayoutKey] = string.Empty;
+        props[NebulaLayoutKey] = string.Empty;
         props[MapSeedKey] = -1;
         PhotonNetwork.CurrentRoom.SetCustomProperties(props);
+        isEndingRound = false;
     }
 
     public static void StartGame()
@@ -150,17 +150,6 @@ public class GameTimer : MonoBehaviourPun
 
     float GetConfiguredRoundTime()
     {
-        if (PhotonNetwork.CurrentRoom != null &&
-            PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue(RoundDurationKey, out object value))
-        {
-            if (value is float floatValue)
-                return floatValue;
-            if (value is int intValue)
-                return intValue;
-            if (value is double doubleValue)
-                return (float)doubleValue;
-        }
-
-        return roundTime;
+        return RoomSettings.GetRoundDuration();
     }
 }

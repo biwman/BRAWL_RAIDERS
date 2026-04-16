@@ -1,6 +1,7 @@
 using Photon.Pun;
 using Photon.Realtime;
 using UnityEngine;
+using ExitGames.Client.Photon;
 
 public class NetworkManager : MonoBehaviourPunCallbacks
 {
@@ -50,6 +51,10 @@ public class NetworkManager : MonoBehaviourPunCallbacks
             PhotonNetwork.NickName = "Player " + PhotonNetwork.LocalPlayer.ActorNumber;
         }
 
+        Hashtable props = new Hashtable();
+        props[RoomSettings.ScoreKey] = 0;
+        PhotonNetwork.LocalPlayer.SetCustomProperties(props);
+
         RestoreRoomStateAfterSceneLoad();
     }
 
@@ -57,7 +62,7 @@ public class NetworkManager : MonoBehaviourPunCallbacks
     {
         Debug.Log("Spawning player...");
 
-        Vector3 spawnPos = new Vector3(Random.Range(-3, 3), Random.Range(-3, 3), 0);
+        Vector3 spawnPos = GetSpawnPosition();
         PhotonNetwork.Instantiate("Player", spawnPos, Quaternion.identity);
     }
 
@@ -77,8 +82,13 @@ public class NetworkManager : MonoBehaviourPunCallbacks
         if (!PhotonNetwork.InRoom)
             return;
 
-        if (PhotonNetwork.LocalPlayer.TagObject is GameObject taggedObject && taggedObject != null)
-            return;
+        if (PhotonNetwork.LocalPlayer.TagObject is GameObject taggedObject)
+        {
+            if (taggedObject != null && taggedObject.scene.IsValid())
+                return;
+
+            PhotonNetwork.LocalPlayer.TagObject = null;
+        }
 
         PlayerHealth[] players = FindObjectsByType<PlayerHealth>(FindObjectsSortMode.None);
         foreach (PlayerHealth player in players)
@@ -93,17 +103,64 @@ public class NetworkManager : MonoBehaviourPunCallbacks
         SpawnPlayer();
     }
 
+    Vector3 GetSpawnPosition()
+    {
+        Vector2 mapSize = RoomSettings.GetMapDimensions();
+        float spawnX = Mathf.Max(3f, mapSize.x * 0.34f);
+        float spawnY = Mathf.Max(3f, mapSize.y * 0.34f);
+        Vector2[] spawnCorners =
+        {
+            new Vector2(-spawnX, -spawnY),
+            new Vector2(spawnX, spawnY),
+            new Vector2(-spawnX, spawnY),
+            new Vector2(spawnX, -spawnY)
+        };
+
+        int actorIndex = Mathf.Max(0, PhotonNetwork.LocalPlayer.ActorNumber - 1);
+        int rotationOffset = 0;
+
+        if (PhotonNetwork.CurrentRoom != null && !string.IsNullOrWhiteSpace(PhotonNetwork.CurrentRoom.Name))
+        {
+            rotationOffset = Mathf.Abs(PhotonNetwork.CurrentRoom.Name.GetHashCode()) % spawnCorners.Length;
+        }
+
+        Vector2 baseCorner = spawnCorners[(actorIndex + rotationOffset) % spawnCorners.Length];
+        int jitterSeed = actorIndex * 97 + rotationOffset * 31 + 11;
+        float maxJitterX = Mathf.Min(2.2f, mapSize.x * 0.06f);
+        float maxJitterY = Mathf.Min(2.2f, mapSize.y * 0.06f);
+        float jitterX = Mathf.Lerp(-maxJitterX, maxJitterX, Mathf.PerlinNoise(jitterSeed, 0.17f));
+        float jitterY = Mathf.Lerp(-maxJitterY, maxJitterY, Mathf.PerlinNoise(0.31f, jitterSeed));
+
+        return new Vector3(baseCorner.x + jitterX, baseCorner.y + jitterY, 0f);
+    }
+
     void EnsureTreasureSpawnerExists()
     {
         if (!PhotonNetwork.IsMasterClient)
             return;
 
         if (FindFirstObjectByType<TreasureSpawner>() != null)
+        {
+            EnsureNebulaSpawnerExists();
             return;
+        }
 
         Debug.Log("Tworze TreasureSpawner");
 
         GameObject spawner = new GameObject("TreasureSpawner");
         spawner.AddComponent<TreasureSpawner>();
+        EnsureNebulaSpawnerExists();
+    }
+
+    void EnsureNebulaSpawnerExists()
+    {
+        if (!PhotonNetwork.IsMasterClient)
+            return;
+
+        if (FindFirstObjectByType<NebulaSpawner>() != null)
+            return;
+
+        GameObject spawner = new GameObject("NebulaSpawner");
+        spawner.AddComponent<NebulaSpawner>();
     }
 }
