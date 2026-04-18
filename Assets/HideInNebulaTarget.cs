@@ -6,7 +6,7 @@ using System.Collections.Generic;
 [DisallowMultipleComponent]
 public class HideInNebulaTarget : MonoBehaviour
 {
-    SpriteRenderer[] renderers;
+    Renderer[] renderers;
     PhotonView photonView;
     PlayerHealth playerHealth;
     Coroutine damageRoutine;
@@ -47,7 +47,7 @@ public class HideInNebulaTarget : MonoBehaviour
     {
         if (renderers == null || renderers.Length == 0)
         {
-            renderers = GetComponentsInChildren<SpriteRenderer>(true);
+            renderers = GetComponentsInChildren<Renderer>(true);
         }
     }
 
@@ -64,7 +64,8 @@ public class HideInNebulaTarget : MonoBehaviour
             }
         }
 
-        bool shouldBeVisible = !shouldHide;
+        bool keepLocallyVisible = photonView != null && photonView.IsMine;
+        bool shouldBeVisible = !shouldHide || keepLocallyVisible;
 
         for (int i = 0; i < renderers.Length; i++)
         {

@@ -9,12 +9,14 @@ public class GameTimer : MonoBehaviourPun
     const string ExtractionLayoutKey = "extractionLayout";
     const string NebulaLayoutKey = "nebulaLayout";
     const string MapSeedKey = "mapSeed";
+    const string LoneShipModeStartTimeKey = "loneShipModeStartTime";
 
     public float roundTime = 180f;
 
     private TMP_Text timerText;
     private double startTime;
     bool isEndingRound;
+    bool hasSeenMultipleActivePlayers;
 
     void Start()
     {
@@ -33,7 +35,10 @@ public class GameTimer : MonoBehaviourPun
     void Update()
     {
         if (!IsGameStarted())
+        {
+            hasSeenMultipleActivePlayers = false;
             return;
+        }
 
         roundTime = GetConfiguredRoundTime();
 
@@ -46,7 +51,12 @@ public class GameTimer : MonoBehaviourPun
             return;
         }
 
-        double elapsed = PhotonNetwork.Time - startTime;
+        if (PhotonNetwork.IsMasterClient)
+        {
+            UpdateLoneShipTimerMode();
+        }
+
+        double elapsed = GetElapsedRoundTime();
         float remaining = roundTime - (float)elapsed;
         remaining = Mathf.Max(0f, remaining);
 
@@ -81,28 +91,32 @@ public class GameTimer : MonoBehaviourPun
     {
         Debug.Log("KONIEC GRY");
 
-        var players = FindObjectsByType<PlayerHealth>(FindObjectsInactive.Exclude);
-        foreach (var p in players)
+        PlayerHealth[] players = FindObjectsByType<PlayerHealth>(FindObjectsInactive.Exclude);
+        foreach (PlayerHealth p in players)
         {
+            if (p == null || p.IsWreck)
+                continue;
+
             PhotonView pv = p.photonView;
             if (pv != null)
             {
+                if (!p.IsBotControlled)
+                {
+                    int currentScore = RoundResultsTracker.GetKnownScore(pv.Owner, p.gameObject);
+                    RoundResultsTracker.RecordOutcome(pv.Owner, currentScore, "time_up");
+                }
                 pv.RPC("OnTimeUp", pv.Owner);
             }
         }
 
-        yield return new WaitForSeconds(0.35f);
+        yield return new WaitForSeconds(1.8f);
 
-        PlayerMovement.gameStarted = false;
-        PlayerShooting.gameStarted = false;
+        GameManager manager = FindFirstObjectByType<GameManager>();
+        if (manager != null)
+        {
+            manager.EndGame("time_up");
+        }
 
-        Hashtable props = new Hashtable();
-        props["gameStarted"] = false;
-        props[ObstacleLayoutKey] = string.Empty;
-        props[ExtractionLayoutKey] = string.Empty;
-        props[NebulaLayoutKey] = string.Empty;
-        props[MapSeedKey] = -1;
-        PhotonNetwork.CurrentRoom.SetCustomProperties(props);
         isEndingRound = false;
     }
 
@@ -114,7 +128,69 @@ public class GameTimer : MonoBehaviourPun
         Hashtable props = new Hashtable();
         props["gameStarted"] = true;
         props["startTime"] = PhotonNetwork.Time;
+        props[LoneShipModeStartTimeKey] = -1d;
+        props[RoomSettings.RoundResultsKey] = string.Empty;
+        props[RoomSettings.RoundEndReasonKey] = string.Empty;
         PhotonNetwork.CurrentRoom.SetCustomProperties(props);
+        RoundResultsTracker.ResetForCurrentRoom();
+    }
+
+    void UpdateLoneShipTimerMode()
+    {
+        if (PhotonNetwork.CurrentRoom == null)
+            return;
+
+        int activePlayers = CountActivePlayers();
+        if (activePlayers >= 2)
+        {
+            hasSeenMultipleActivePlayers = true;
+        }
+
+        if (PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue(LoneShipModeStartTimeKey, out object existingValue) &&
+            existingValue is double existingStartTime &&
+            existingStartTime >= 0d)
+        {
+            return;
+        }
+
+        if (!hasSeenMultipleActivePlayers || activePlayers > 1)
+            return;
+
+        Hashtable props = new Hashtable();
+        props[LoneShipModeStartTimeKey] = PhotonNetwork.Time;
+        PhotonNetwork.CurrentRoom.SetCustomProperties(props);
+    }
+
+    double GetElapsedRoundTime()
+    {
+        if (PhotonNetwork.CurrentRoom == null)
+            return PhotonNetwork.Time - startTime;
+
+        if (PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue(LoneShipModeStartTimeKey, out object value) &&
+            value is double loneShipModeStartTime &&
+            loneShipModeStartTime >= 0d)
+        {
+            double elapsedBefore = loneShipModeStartTime - startTime;
+            double elapsedAfter = (PhotonNetwork.Time - loneShipModeStartTime) * RoomSettings.GetLastShipTimerMultiplier();
+            return elapsedBefore + elapsedAfter;
+        }
+
+        return PhotonNetwork.Time - startTime;
+    }
+
+    int CountActivePlayers()
+    {
+        int count = 0;
+        PlayerHealth[] players = FindObjectsByType<PlayerHealth>(FindObjectsInactive.Exclude);
+        for (int i = 0; i < players.Length; i++)
+        {
+            if (players[i] == null || players[i].IsWreck || players[i].IsBotControlled)
+                continue;
+
+            count++;
+        }
+
+        return count;
     }
 
     bool IsGameStarted()

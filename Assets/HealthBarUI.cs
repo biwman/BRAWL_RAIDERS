@@ -17,6 +17,7 @@ public class HealthBarUI : MonoBehaviourPun
     Image handleImage;
     TextMeshProUGUI labelText;
     TextMeshProUGUI valueText;
+    bool isVisible = true;
 
     void Start()
     {
@@ -32,6 +33,7 @@ public class HealthBarUI : MonoBehaviourPun
 
     void Update()
     {
+        UpdateVisibility();
         RefreshVisuals();
     }
 
@@ -107,6 +109,33 @@ public class HealthBarUI : MonoBehaviourPun
                 ? new Color(0.96f, 0.38f, 0.4f, 1f)
                 : new Color(0.6f, 0.64f, 0.7f, 1f);
         }
+    }
+
+    void UpdateVisibility()
+    {
+        if (hpBar == null)
+            return;
+
+        bool shouldBeVisible = IsGameplayHudVisible();
+        if (isVisible == shouldBeVisible)
+            return;
+
+        isVisible = shouldBeVisible;
+        hpBar.gameObject.SetActive(shouldBeVisible);
+    }
+
+    bool IsGameplayHudVisible()
+    {
+        if (PhotonNetwork.CurrentRoom == null)
+            return false;
+
+        if (PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue("gameStarted", out object value) &&
+            value is bool started)
+        {
+            return started;
+        }
+
+        return false;
     }
 
     TextMeshProUGUI GetOrCreateText(string objectName, Vector2 anchoredPosition, TextAlignmentOptions alignment, string initialText)

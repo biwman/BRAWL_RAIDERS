@@ -13,10 +13,13 @@ public class PlayerProfileService : MonoBehaviour
     const string CloudNicknameKey = "profile_nickname";
     const string CloudShipSkinKey = "profile_ship_skin";
     const string CloudGamesPlayedKey = "profile_games_played";
+    const string CloudTotalXpKey = "profile_total_xp";
+    const string CloudInventoryKey = "profile_inventory";
 
     static PlayerProfileService instance;
     Task initializationTask;
     bool initialized;
+    readonly HashSet<string> awardedMatchTokens = new HashSet<string>();
 
     public static PlayerProfileService Instance
     {
@@ -117,41 +120,50 @@ public class PlayerProfileService : MonoBehaviour
 
     async Task LoadProfileAsync()
     {
-        var keys = new HashSet<string> { CloudNicknameKey, CloudShipSkinKey, CloudGamesPlayedKey };
+        var keys = new HashSet<string>
+        {
+            CloudNicknameKey,
+            CloudShipSkinKey,
+            CloudGamesPlayedKey,
+            CloudTotalXpKey,
+            CloudInventoryKey
+        };
         Dictionary<string, Item> data = await CloudSaveService.Instance.Data.Player.LoadAsync(keys);
 
         string nickname = null;
         int shipSkinIndex = 0;
         int gamesPlayed = 0;
+        int totalXp = 0;
+        PlayerInventoryData inventory = PlayerInventoryData.Default();
 
         if (data != null)
         {
             if (data.TryGetValue(CloudNicknameKey, out Item nicknameItem) && nicknameItem?.Value != null)
-            {
                 nickname = nicknameItem.Value.GetAsString();
-            }
 
             if (data.TryGetValue(CloudShipSkinKey, out Item skinItem) && skinItem?.Value != null)
-            {
                 shipSkinIndex = Mathf.Clamp(skinItem.Value.GetAs<int>(), 0, 2);
-            }
 
             if (data.TryGetValue(CloudGamesPlayedKey, out Item gamesItem) && gamesItem?.Value != null)
-            {
                 gamesPlayed = Mathf.Max(0, gamesItem.Value.GetAs<int>());
-            }
+
+            if (data.TryGetValue(CloudTotalXpKey, out Item totalXpItem) && totalXpItem?.Value != null)
+                totalXp = Mathf.Max(0, totalXpItem.Value.GetAs<int>());
+
+            if (data.TryGetValue(CloudInventoryKey, out Item inventoryItem) && inventoryItem?.Value != null)
+                inventory = DeserializeInventory(inventoryItem.Value.GetAsString());
         }
 
         if (string.IsNullOrWhiteSpace(nickname))
-        {
             nickname = BuildFallbackProfile().Nickname;
-        }
 
         CurrentProfile = new PlayerProfileData
         {
             Nickname = SanitizeNickname(nickname),
             ShipSkinIndex = Mathf.Clamp(shipSkinIndex, 0, 2),
-            GamesPlayed = gamesPlayed
+            GamesPlayed = gamesPlayed,
+            TotalXp = totalXp,
+            Inventory = inventory
         };
 
         ApplyProfileToPhoton();
@@ -170,14 +182,18 @@ public class PlayerProfileService : MonoBehaviour
             {
                 Nickname = SanitizeNickname(nickname),
                 ShipSkinIndex = Mathf.Clamp(shipSkinIndex, 0, 2),
-                GamesPlayed = CurrentProfile != null ? CurrentProfile.GamesPlayed : 0
+                GamesPlayed = CurrentProfile != null ? CurrentProfile.GamesPlayed : 0,
+                TotalXp = CurrentProfile != null ? CurrentProfile.TotalXp : 0,
+                Inventory = CurrentProfile != null && CurrentProfile.Inventory != null ? CurrentProfile.Inventory.Clone() : PlayerInventoryData.Default()
             };
 
             var data = new Dictionary<string, object>
             {
                 [CloudNicknameKey] = CurrentProfile.Nickname,
                 [CloudShipSkinKey] = CurrentProfile.ShipSkinIndex,
-                [CloudGamesPlayedKey] = CurrentProfile.GamesPlayed
+                [CloudGamesPlayedKey] = CurrentProfile.GamesPlayed,
+                [CloudTotalXpKey] = CurrentProfile.TotalXp,
+                [CloudInventoryKey] = SerializeInventory(CurrentProfile.Inventory)
             };
 
             await CloudSaveService.Instance.Data.Player.SaveAsync(data);
@@ -201,16 +217,17 @@ public class PlayerProfileService : MonoBehaviour
             return;
 
         if (!string.IsNullOrWhiteSpace(CurrentProfile.Nickname))
-        {
             PhotonNetwork.NickName = CurrentProfile.Nickname;
-        }
 
         if (PhotonNetwork.LocalPlayer == null)
             return;
 
+        EnsureInventory();
+
         var props = new ExitGames.Client.Photon.Hashtable
         {
-            [RoomSettings.ShipSkinKey] = CurrentProfile.ShipSkinIndex
+            [RoomSettings.ShipSkinKey] = CurrentProfile.ShipSkinIndex,
+            [RoomSettings.ShipInventoryStateKey] = SerializeShipInventorySlots(CurrentProfile.Inventory.ShipSlots)
         };
 
         PhotonNetwork.LocalPlayer.SetCustomProperties(props);
@@ -243,6 +260,203 @@ public class PlayerProfileService : MonoBehaviour
         }
     }
 
+    public async Task RecordRoundXpAsync(int roundXp, string matchToken)
+    {
+        await EnsureInitializedAsync();
+
+        int normalizedXp = Mathf.Max(0, roundXp);
+        if (normalizedXp <= 0)
+            return;
+
+        string token = string.IsNullOrWhiteSpace(matchToken)
+            ? "match_" + DateTime.UtcNow.Ticks
+            : matchToken;
+
+        if (awardedMatchTokens.Contains(token))
+            return;
+
+        try
+        {
+            IsBusy = true;
+            awardedMatchTokens.Add(token);
+            CurrentProfile.TotalXp = Mathf.Max(0, CurrentProfile.TotalXp + normalizedXp);
+
+            var data = new Dictionary<string, object>
+            {
+                [CloudTotalXpKey] = CurrentProfile.TotalXp
+            };
+
+            await CloudSaveService.Instance.Data.Player.SaveAsync(data);
+            NotifyProfileChanged();
+        }
+        catch (Exception ex)
+        {
+            awardedMatchTokens.Remove(token);
+            Debug.LogError("PlayerProfileService XP save failed: " + ex);
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    public bool HasFreeShipInventorySlot()
+    {
+        EnsureInventory();
+        return CurrentProfile.Inventory.GetFirstEmptyShipSlot() >= 0;
+    }
+
+    public async Task ReplaceShipInventoryAsync(string[] newShipSlots)
+    {
+        await EnsureInitializedAsync();
+        EnsureInventory();
+        CurrentProfile.Inventory.SetShipSlots(newShipSlots);
+        await SaveInventoryOnlyAsync();
+    }
+
+    public async Task<bool> MoveInventoryItemAsync(bool fromShipInventory, int sourceIndex)
+    {
+        await EnsureInitializedAsync();
+        EnsureInventory();
+
+        string movedItem = fromShipInventory
+            ? CurrentProfile.Inventory.RemoveFromShip(sourceIndex)
+            : CurrentProfile.Inventory.RemoveFromPlayer(sourceIndex);
+
+        if (string.IsNullOrWhiteSpace(movedItem))
+            return false;
+
+        bool moved = fromShipInventory
+            ? CurrentProfile.Inventory.TryAddToPlayer(movedItem)
+            : CurrentProfile.Inventory.TryAddToShip(movedItem);
+
+        if (!moved)
+        {
+            if (fromShipInventory)
+                CurrentProfile.Inventory.RestoreShip(sourceIndex, movedItem);
+            else
+                CurrentProfile.Inventory.RestorePlayer(sourceIndex, movedItem);
+
+            return false;
+        }
+
+        await SaveInventoryOnlyAsync();
+        return true;
+    }
+
+    public async Task<bool> AddItemToShipAsync(string itemId)
+    {
+        await EnsureInitializedAsync();
+        EnsureInventory();
+
+        if (!CurrentProfile.Inventory.TryAddToShip(itemId))
+            return false;
+
+        await SaveInventoryOnlyAsync();
+        return true;
+    }
+
+    public async Task<string> RemoveShipItemAtAsync(int index)
+    {
+        await EnsureInitializedAsync();
+        EnsureInventory();
+
+        string removedItem = CurrentProfile.Inventory.RemoveFromShip(index);
+        if (string.IsNullOrWhiteSpace(removedItem))
+            return null;
+
+        await SaveInventoryOnlyAsync();
+        return removedItem;
+    }
+
+    public async Task RestoreShipItemAtAsync(int index, string itemId)
+    {
+        await EnsureInitializedAsync();
+        EnsureInventory();
+
+        if (string.IsNullOrWhiteSpace(itemId))
+            return;
+
+        CurrentProfile.Inventory.RestoreShip(index, itemId);
+        await SaveInventoryOnlyAsync();
+    }
+
+    async Task SaveInventoryOnlyAsync()
+    {
+        try
+        {
+            IsBusy = true;
+
+            var data = new Dictionary<string, object>
+            {
+                [CloudInventoryKey] = SerializeInventory(CurrentProfile.Inventory)
+            };
+
+            await CloudSaveService.Instance.Data.Player.SaveAsync(data);
+            ApplyProfileToPhoton();
+            NotifyProfileChanged();
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError("PlayerProfileService inventory save failed: " + ex);
+            throw;
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    public static bool PlayerHasFreeShipInventorySlot(Photon.Realtime.Player player)
+    {
+        string[] slots = GetPlayerShipInventorySlots(player);
+        for (int i = 0; i < slots.Length; i++)
+        {
+            if (string.IsNullOrWhiteSpace(slots[i]))
+                return true;
+        }
+
+        return false;
+    }
+
+    public static string[] GetPlayerShipInventorySlots(Photon.Realtime.Player player)
+    {
+        if (player != null &&
+            player.CustomProperties.TryGetValue(RoomSettings.ShipInventoryStateKey, out object value) &&
+            value is string raw)
+        {
+            return DeserializeShipInventorySlots(raw);
+        }
+
+        return new string[PlayerInventoryData.ShipSlotCount];
+    }
+
+    public static string SerializeShipInventorySlots(string[] slots)
+    {
+        ShipInventorySnapshot snapshot = new ShipInventorySnapshot
+        {
+            slots = NormalizeShipSlots(slots)
+        };
+        return JsonUtility.ToJson(snapshot);
+    }
+
+    public static string[] DeserializeShipInventorySlots(string raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+            return new string[PlayerInventoryData.ShipSlotCount];
+
+        try
+        {
+            ShipInventorySnapshot snapshot = JsonUtility.FromJson<ShipInventorySnapshot>(raw);
+            return NormalizeShipSlots(snapshot != null ? snapshot.slots : null);
+        }
+        catch (Exception ex)
+        {
+            Debug.LogWarning("Failed to deserialize ship inventory snapshot: " + ex.Message);
+            return new string[PlayerInventoryData.ShipSlotCount];
+        }
+    }
+
     PlayerProfileData BuildFallbackProfile()
     {
         string suffix = "0000";
@@ -257,7 +471,9 @@ public class PlayerProfileService : MonoBehaviour
         {
             Nickname = "Pilot " + suffix.ToUpperInvariant(),
             ShipSkinIndex = 0,
-            GamesPlayed = 0
+            GamesPlayed = 0,
+            TotalXp = 0,
+            Inventory = PlayerInventoryData.Default()
         };
     }
 
@@ -277,6 +493,60 @@ public class PlayerProfileService : MonoBehaviour
     {
         ProfileChanged?.Invoke(CurrentProfile);
     }
+
+    void EnsureInventory()
+    {
+        if (CurrentProfile == null)
+            CurrentProfile = PlayerProfileData.Default();
+
+        if (CurrentProfile.Inventory == null)
+            CurrentProfile.Inventory = PlayerInventoryData.Default();
+
+        CurrentProfile.Inventory.Normalize();
+    }
+
+    string SerializeInventory(PlayerInventoryData inventory)
+    {
+        PlayerInventoryData normalized = inventory != null ? inventory.Clone() : PlayerInventoryData.Default();
+        normalized.Normalize();
+        return JsonUtility.ToJson(normalized);
+    }
+
+    PlayerInventoryData DeserializeInventory(string json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+            return PlayerInventoryData.Default();
+
+        try
+        {
+            PlayerInventoryData inventory = JsonUtility.FromJson<PlayerInventoryData>(json);
+            if (inventory == null)
+                return PlayerInventoryData.Default();
+
+            inventory.Normalize();
+            return inventory;
+        }
+        catch (Exception ex)
+        {
+            Debug.LogWarning("Failed to deserialize inventory: " + ex.Message);
+            return PlayerInventoryData.Default();
+        }
+    }
+
+    static string[] NormalizeShipSlots(string[] source)
+    {
+        string[] normalized = new string[PlayerInventoryData.ShipSlotCount];
+        if (source == null)
+            return normalized;
+
+        int count = Math.Min(source.Length, normalized.Length);
+        for (int i = 0; i < count; i++)
+        {
+            normalized[i] = source[i];
+        }
+
+        return normalized;
+    }
 }
 
 [Serializable]
@@ -285,6 +555,8 @@ public class PlayerProfileData
     public string Nickname;
     public int ShipSkinIndex;
     public int GamesPlayed;
+    public int TotalXp;
+    public PlayerInventoryData Inventory;
 
     public static PlayerProfileData Default()
     {
@@ -292,7 +564,160 @@ public class PlayerProfileData
         {
             Nickname = "Pilot",
             ShipSkinIndex = 0,
-            GamesPlayed = 0
+            GamesPlayed = 0,
+            TotalXp = 0,
+            Inventory = PlayerInventoryData.Default()
         };
+    }
+}
+
+[Serializable]
+public class ShipInventorySnapshot
+{
+    public string[] slots;
+}
+
+[Serializable]
+public class PlayerInventoryData
+{
+    public const int PlayerSlotCount = 50;
+    public const int ShipSlotCount = 10;
+    public string[] PlayerSlots;
+    public string[] ShipSlots;
+
+    public static PlayerInventoryData Default()
+    {
+        return new PlayerInventoryData
+        {
+            PlayerSlots = new string[PlayerSlotCount],
+            ShipSlots = new string[ShipSlotCount]
+        };
+    }
+
+    public PlayerInventoryData Clone()
+    {
+        Normalize();
+        return new PlayerInventoryData
+        {
+            PlayerSlots = (string[])PlayerSlots.Clone(),
+            ShipSlots = (string[])ShipSlots.Clone()
+        };
+    }
+
+    public void Normalize()
+    {
+        if (PlayerSlots == null || PlayerSlots.Length != PlayerSlotCount)
+        {
+            string[] old = PlayerSlots;
+            PlayerSlots = new string[PlayerSlotCount];
+            CopyInto(old, PlayerSlots);
+        }
+
+        if (ShipSlots == null || ShipSlots.Length != ShipSlotCount)
+        {
+            string[] old = ShipSlots;
+            ShipSlots = new string[ShipSlotCount];
+            CopyInto(old, ShipSlots);
+        }
+    }
+
+    public int GetFirstEmptyPlayerSlot()
+    {
+        Normalize();
+        return FindFirstEmpty(PlayerSlots);
+    }
+
+    public int GetFirstEmptyShipSlot()
+    {
+        Normalize();
+        return FindFirstEmpty(ShipSlots);
+    }
+
+    public bool TryAddToPlayer(string itemId)
+    {
+        Normalize();
+        int slot = GetFirstEmptyPlayerSlot();
+        if (slot < 0)
+            return false;
+
+        PlayerSlots[slot] = itemId;
+        return true;
+    }
+
+    public bool TryAddToShip(string itemId)
+    {
+        Normalize();
+        int slot = GetFirstEmptyShipSlot();
+        if (slot < 0)
+            return false;
+
+        ShipSlots[slot] = itemId;
+        return true;
+    }
+
+    public string RemoveFromPlayer(int index)
+    {
+        Normalize();
+        if (index < 0 || index >= PlayerSlots.Length)
+            return null;
+
+        string item = PlayerSlots[index];
+        PlayerSlots[index] = null;
+        return item;
+    }
+
+    public string RemoveFromShip(int index)
+    {
+        Normalize();
+        if (index < 0 || index >= ShipSlots.Length)
+            return null;
+
+        string item = ShipSlots[index];
+        ShipSlots[index] = null;
+        return item;
+    }
+
+    public void RestorePlayer(int index, string itemId)
+    {
+        Normalize();
+        if (index >= 0 && index < PlayerSlots.Length)
+            PlayerSlots[index] = itemId;
+    }
+
+    public void RestoreShip(int index, string itemId)
+    {
+        Normalize();
+        if (index >= 0 && index < ShipSlots.Length)
+            ShipSlots[index] = itemId;
+    }
+
+    public void SetShipSlots(string[] source)
+    {
+        Normalize();
+        ShipSlots = new string[ShipSlotCount];
+        CopyInto(source, ShipSlots);
+    }
+
+    static int FindFirstEmpty(string[] slots)
+    {
+        for (int i = 0; i < slots.Length; i++)
+        {
+            if (string.IsNullOrWhiteSpace(slots[i]))
+                return i;
+        }
+
+        return -1;
+    }
+
+    static void CopyInto(string[] source, string[] destination)
+    {
+        if (source == null)
+            return;
+
+        int count = Math.Min(source.Length, destination.Length);
+        for (int i = 0; i < count; i++)
+        {
+            destination[i] = source[i];
+        }
     }
 }

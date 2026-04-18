@@ -19,11 +19,13 @@ public class MovingSpaceObject : MonoBehaviour
     const float MinCruiseSpeedFactor = 0.78f;
     const float MinAngularSpeed = 12f;
     const float MaxAngularSpeed = 38f;
+    const float MaxCollisionAngularSpeed = 55f;
+    const float MaxBoundaryAngularSpeed = 48f;
     const float CollisionSpinFlipThreshold = 0.85f;
     const float CollisionSpinFlipChance = 0.45f;
-    const float SnapshotInterval = 0.08f;
-    const float RemoteSmoothing = 10f;
-    const float ImpulseRequestCooldown = 0.09f;
+    const float SnapshotInterval = 0.045f;
+    const float RemoteSmoothing = 16f;
+    const float ImpulseRequestCooldown = 0.05f;
 
     static readonly Dictionary<string, MovingSpaceObject> ObjectsById = new Dictionary<string, MovingSpaceObject>();
     static PhysicsMaterial2D sharedBouncyMaterial;
@@ -171,7 +173,8 @@ public class MovingSpaceObject : MonoBehaviour
             if (Mathf.Abs(torqueDirection) < 0.1f)
                 torqueDirection = Random.value < 0.5f ? -1f : 1f;
 
-            rb.angularVelocity += torqueDirection * Mathf.Lerp(10f, 26f, Mathf.Clamp01(impulse.magnitude / 3f));
+            float addedAngular = torqueDirection * Mathf.Lerp(4f, 12f, Mathf.Clamp01(impulse.magnitude / 3f));
+            rb.angularVelocity = Mathf.Clamp(rb.angularVelocity + addedAngular, -MaxCollisionAngularSpeed, MaxCollisionAngularSpeed);
         }
     }
 
@@ -206,6 +209,8 @@ public class MovingSpaceObject : MonoBehaviour
         rb.constraints = RigidbodyConstraints2D.None;
         rb.interpolation = RigidbodyInterpolation2D.Interpolate;
         rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+        rb.sleepMode = RigidbodySleepMode2D.NeverSleep;
+        rb.useFullKinematicContacts = true;
 
         Collider2D[] colliders = GetComponents<Collider2D>();
         PhysicsMaterial2D material = GetSharedBouncyMaterial();
@@ -250,8 +255,18 @@ public class MovingSpaceObject : MonoBehaviour
         }
         else
         {
-            rb.bodyType = RigidbodyType2D.Kinematic;
-            rb.linearVelocity = Vector2.zero;
+            if (movingEnabled)
+            {
+                rb.bodyType = RigidbodyType2D.Kinematic;
+                rb.linearVelocity = Vector2.zero;
+                rb.angularVelocity = 0f;
+            }
+            else
+            {
+                rb.bodyType = RigidbodyType2D.Kinematic;
+                rb.linearVelocity = Vector2.zero;
+                rb.angularVelocity = 0f;
+            }
         }
     }
 
@@ -296,6 +311,8 @@ public class MovingSpaceObject : MonoBehaviour
             float angularStep = Mathf.Sign(baseAngularSpeed) * 22f * Time.fixedDeltaTime;
             rb.angularVelocity += angularStep;
         }
+
+        KeepInsideMapBounds();
     }
 
     void BroadcastSnapshotIfNeeded()
@@ -314,11 +331,17 @@ public class MovingSpaceObject : MonoBehaviour
 
         Vector2 predictedPosition = networkPosition + networkVelocity * SnapshotInterval;
         float smoothing = 1f - Mathf.Exp(-RemoteSmoothing * Time.fixedDeltaTime);
+
+        if (Vector2.Distance(rb.position, predictedPosition) > 1.6f)
+        {
+            rb.position = predictedPosition;
+            rb.rotation = networkRotation;
+        }
+
         Vector2 nextPosition = Vector2.Lerp(rb.position, predictedPosition, smoothing);
-        rb.MovePosition(nextPosition);
         float nextRotation = Mathf.LerpAngle(rb.rotation, networkRotation, smoothing);
+        rb.MovePosition(nextPosition);
         rb.MoveRotation(nextRotation);
-        rb.angularVelocity = networkAngularVelocity;
     }
 
     void TryFlipSpinOnCollision(Collision2D collision)
@@ -331,9 +354,10 @@ public class MovingSpaceObject : MonoBehaviour
             return;
 
         float currentAngular = Mathf.Abs(rb.angularVelocity) > 0.1f ? rb.angularVelocity : baseAngularSpeed;
-        float flippedAngular = -currentAngular * Mathf.Lerp(0.9f, 1.15f, Mathf.Clamp01(relativeSpeed / 4f));
+        float flippedAngular = -currentAngular * Mathf.Lerp(0.7f, 0.95f, Mathf.Clamp01(relativeSpeed / 4f));
+        flippedAngular = Mathf.Clamp(flippedAngular, -MaxCollisionAngularSpeed, MaxCollisionAngularSpeed);
         rb.angularVelocity = flippedAngular;
-        baseAngularSpeed = Mathf.Sign(flippedAngular) * Mathf.Abs(baseAngularSpeed);
+        baseAngularSpeed = Mathf.Sign(flippedAngular) * Mathf.Min(Mathf.Abs(baseAngularSpeed), MaxAngularSpeed);
     }
 
     float GetBaseSpeed()
@@ -347,5 +371,81 @@ public class MovingSpaceObject : MonoBehaviour
         return objectType == SpaceObjectType.Obstacle
             ? RoomSettings.GetObstacleWeightFactor()
             : RoomSettings.GetTreasureWeightFactor();
+    }
+
+    void KeepInsideMapBounds()
+    {
+        if (rb == null)
+            return;
+
+        Vector2 mapSize = RoomSettings.GetMapDimensions();
+        float halfX = mapSize.x * 0.5f;
+        float halfY = mapSize.y * 0.5f;
+        float boundsRadius = GetBoundsRadius();
+
+        Vector2 position = rb.position;
+        Vector2 velocity = rb.linearVelocity;
+        bool reflected = false;
+
+        if (position.x > halfX - boundsRadius)
+        {
+            position.x = halfX - boundsRadius;
+            velocity.x = -Mathf.Abs(velocity.x);
+            reflected = true;
+        }
+        else if (position.x < -halfX + boundsRadius)
+        {
+            position.x = -halfX + boundsRadius;
+            velocity.x = Mathf.Abs(velocity.x);
+            reflected = true;
+        }
+
+        if (position.y > halfY - boundsRadius)
+        {
+            position.y = halfY - boundsRadius;
+            velocity.y = -Mathf.Abs(velocity.y);
+            reflected = true;
+        }
+        else if (position.y < -halfY + boundsRadius)
+        {
+            position.y = -halfY + boundsRadius;
+            velocity.y = Mathf.Abs(velocity.y);
+            reflected = true;
+        }
+
+        if (!reflected)
+            return;
+
+        rb.position = position;
+        rb.linearVelocity = velocity;
+
+        if (velocity.sqrMagnitude > 0.0001f)
+        {
+            cruiseDirection = velocity.normalized;
+        }
+
+        if (Random.value < CollisionSpinFlipChance)
+        {
+            rb.angularVelocity = Mathf.Clamp(-rb.angularVelocity * 0.6f, -MaxBoundaryAngularSpeed, MaxBoundaryAngularSpeed);
+            baseAngularSpeed *= -1f;
+        }
+    }
+
+    float GetBoundsRadius()
+    {
+        Collider2D[] colliders = GetComponents<Collider2D>();
+        float maxExtent = 0.5f;
+
+        for (int i = 0; i < colliders.Length; i++)
+        {
+            Collider2D current = colliders[i];
+            if (current == null || !current.enabled)
+                continue;
+
+            Bounds bounds = current.bounds;
+            maxExtent = Mathf.Max(maxExtent, bounds.extents.x, bounds.extents.y);
+        }
+
+        return maxExtent;
     }
 }

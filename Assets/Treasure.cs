@@ -24,6 +24,14 @@ public class Treasure : MonoBehaviourPun
             originalColor = Color.white;
         }
 
+        BoxCollider2D bodyCollider = GetComponent<BoxCollider2D>();
+        if (bodyCollider == null)
+        {
+            bodyCollider = gameObject.AddComponent<BoxCollider2D>();
+        }
+
+        bodyCollider.isTrigger = false;
+
         MovingSpaceObject movingObject = GetComponent<MovingSpaceObject>();
         if (movingObject == null)
         {

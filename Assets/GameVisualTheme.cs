@@ -23,8 +23,9 @@ public class GameVisualTheme : MonoBehaviour
     static GameVisualTheme instance;
 
     Sprite[] shipSprites;
+    Sprite enemyBotSprite;
     Sprite treasureSprite;
-    Sprite obstacleSprite;
+    Sprite[] obstacleSprites;
     Sprite extractionSprite;
     Sprite backgroundSprite;
     float nextRefreshTime;
@@ -166,9 +167,17 @@ public class GameVisualTheme : MonoBehaviour
             LoadSpriteFromProjectOrResources("ship2.png", "Visuals/Ships/ship2_resource"),
             LoadSpriteFromProjectOrResources("ship3.png", "Visuals/Ships/ship3_resource")
         };
+        enemyBotSprite = LoadSpriteFromProjectOrResources("droid1.png", "droid1_resource");
 
         treasureSprite = LoadSpriteFromProjectOrResources("asteroida_treasure.png", "Visuals/Treasures/asteroid_treasure_resource");
-        obstacleSprite = LoadSpriteFromProjectOrResources("asteroida_obstacle.png", "Visuals/Obstacles/asteroid_obstacle_resource");
+        obstacleSprites = new[]
+        {
+            LoadObstacleSprite("asteroida_1_clean.png", "asteroida_1.png"),
+            LoadObstacleSprite("asteroida_2_clean.png", "asteroida_2.png"),
+            LoadObstacleSprite("asteroida_3_clean.png", "asteroida_3.png"),
+            LoadObstacleSprite("asteroida_podluzna_1_clean.png", "asteroida_podluzna_1.png"),
+            LoadObstacleSprite("asteroida_podluzna_2_clean.png", "asteroida_podluzna_2.png")
+        };
         extractionSprite = LoadSpriteFromProjectOrResources("baza1.png", "Visuals/Bases/base1_resource");
         backgroundSprite = Resources.Load<Sprite>("Visuals/Backgrounds/background5_resource");
         if (backgroundSprite == null)
@@ -263,9 +272,18 @@ public class GameVisualTheme : MonoBehaviour
             if (view == null || renderer == null || view.Owner == null)
                 continue;
 
-            int fallbackIndex = Mathf.Abs(view.Owner.ActorNumber - 1) % shipSprites.Length;
-            int shipIndex = RoomSettings.GetPlayerShipSkin(view.Owner, fallbackIndex) % shipSprites.Length;
-            Sprite sprite = shipSprites[shipIndex];
+            Sprite sprite;
+            if (player.IsBotControlled && enemyBotSprite != null)
+            {
+                sprite = enemyBotSprite;
+            }
+            else
+            {
+                int fallbackIndex = Mathf.Abs(view.Owner.ActorNumber - 1) % shipSprites.Length;
+                int shipIndex = RoomSettings.GetPlayerShipSkin(view.Owner, fallbackIndex) % shipSprites.Length;
+                sprite = shipSprites[shipIndex];
+            }
+
             if (sprite == null)
                 continue;
 
@@ -322,7 +340,7 @@ public class GameVisualTheme : MonoBehaviour
 
     void ApplyObstacleSprites()
     {
-        if (obstacleSprite == null)
+        if (obstacleSprites == null || obstacleSprites.Length == 0)
             return;
 
         SpriteRenderer[] renderers = FindObjectsByType<SpriteRenderer>(FindObjectsInactive.Exclude);
@@ -340,6 +358,10 @@ public class GameVisualTheme : MonoBehaviour
 
             PolygonCollider2D polygonCollider = target.GetComponent<PolygonCollider2D>();
             BoxCollider2D boxCollider = target.GetComponent<BoxCollider2D>();
+
+            Sprite obstacleSprite = GetStableObstacleSprite(target);
+            if (obstacleSprite == null)
+                continue;
 
             if (renderer.sprite != obstacleSprite)
             {
@@ -430,6 +452,21 @@ public class GameVisualTheme : MonoBehaviour
         return Mathf.Lerp(0.5f, 1.5f, noise);
     }
 
+    Sprite GetStableObstacleSprite(GameObject target)
+    {
+        if (target == null || obstacleSprites == null || obstacleSprites.Length == 0)
+            return null;
+
+        MovingSpaceObject movingObject = target.GetComponent<MovingSpaceObject>();
+        string stableKey = movingObject != null && !string.IsNullOrWhiteSpace(movingObject.StableId)
+            ? movingObject.StableId
+            : target.name;
+
+        int hash = stableKey.GetHashCode();
+        int index = Mathf.Abs(hash) % obstacleSprites.Length;
+        return obstacleSprites[index];
+    }
+
     Vector2 GetWorldBoxSize(BoxCollider2D collider2D)
     {
         if (collider2D == null)
@@ -498,6 +535,15 @@ public class GameVisualTheme : MonoBehaviour
         }
 
         return Resources.Load<Sprite>(resourcesPath);
+    }
+
+    Sprite LoadObstacleSprite(string cleanedProjectFileName, string fallbackProjectFileName)
+    {
+        Sprite sprite = LoadSpriteFromProjectOrResources(cleanedProjectFileName, "Visuals/Obstacles/asteroid_obstacle_resource");
+        if (sprite != null)
+            return sprite;
+
+        return LoadSpriteFromProjectOrResources(fallbackProjectFileName, "Visuals/Obstacles/asteroid_obstacle_resource");
     }
 }
 

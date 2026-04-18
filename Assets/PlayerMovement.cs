@@ -1,5 +1,6 @@
 using UnityEngine;
 using Photon.Pun;
+using UnityEngine.Rendering;
 
 public class PlayerMovement : MonoBehaviourPun
 {
@@ -26,6 +27,9 @@ public class PlayerMovement : MonoBehaviourPun
     private float boosterRecoveryDelayTimer = 0f;
     private AudioSource engineAudioSource;
     private Vector3 lastAudioPosition;
+    const float AccelerationResponsiveness = 18f;
+    const float LowSpeedBrakeResponsiveness = 7.4f;
+    const float HighSpeedBrakeResponsiveness = 1.15f;
 
     public float BoosterNormalized => boosterCharge;
     public bool IsBoosterDepleted => boosterExhausted;
@@ -46,10 +50,18 @@ public class PlayerMovement : MonoBehaviourPun
             gameObject.AddComponent<HideInNebulaTarget>();
         }
 
+        if (GetComponent<EngineThrusterVFX>() == null)
+        {
+            gameObject.AddComponent<EngineThrusterVFX>();
+        }
+
         targetRotationAngle = transform.eulerAngles.z;
 
         SetupEngineAudio();
         lastAudioPosition = transform.position;
+
+        if (GetComponent<EnemyBot>() != null)
+            return;
 
         if (!photonView.IsMine)
             return;
@@ -66,10 +78,21 @@ public class PlayerMovement : MonoBehaviourPun
         {
             gameObject.AddComponent<BoosterBarUI>();
         }
+
+        if (GetComponent<ShipInventoryHudUI>() == null)
+        {
+            gameObject.AddComponent<ShipInventoryHudUI>();
+        }
     }
 
     void Update()
     {
+        if (GetComponent<EnemyBot>() != null)
+        {
+            UpdateEngineAudio();
+            return;
+        }
+
         if (photonView.IsMine)
         {
             if (!IsGameStarted())
@@ -107,6 +130,9 @@ public class PlayerMovement : MonoBehaviourPun
 
     void FixedUpdate()
     {
+        if (GetComponent<EnemyBot>() != null)
+            return;
+
         if (!photonView.IsMine)
             return;
 
@@ -123,7 +149,8 @@ public class PlayerMovement : MonoBehaviourPun
         float currentSpeed = IsBoosterDepleted ? speed * CurrentDepletedSpeedMultiplier : speed;
         if (rb != null)
         {
-            rb.linearVelocity = effectiveMoveInput * currentSpeed;
+            ApplyVelocity(currentSpeed);
+            ClampExcessCollisionBoost(currentSpeed);
             rb.angularVelocity = 0f;
             rb.MoveRotation(targetRotationAngle);
         }
@@ -135,6 +162,21 @@ public class PlayerMovement : MonoBehaviourPun
             return;
 
         Debug.Log("DOTKNALEM: " + other.name);
+    }
+
+    void ClampExcessCollisionBoost(float currentSpeed)
+    {
+        if (rb == null)
+            return;
+
+        float expectedTopSpeed = currentSpeed * Mathf.Max(1f, GetMaxInputSpeedBoostMultiplier());
+        float hardCap = expectedTopSpeed * 1.55f;
+        float currentMagnitude = rb.linearVelocity.magnitude;
+
+        if (currentMagnitude <= hardCap || currentMagnitude <= 0.001f)
+            return;
+
+        rb.linearVelocity = rb.linearVelocity.normalized * hardCap;
     }
 
     bool IsGameStarted()
@@ -187,9 +229,45 @@ public class PlayerMovement : MonoBehaviourPun
             return Vector2.zero;
 
         if (rawInput.magnitude >= fullSpeedSnapThreshold)
-            return rawInput.normalized;
+            return rawInput.normalized * GetMaxInputSpeedBoostMultiplier();
 
         return rawInput;
+    }
+
+    float GetMaxInputSpeedBoostMultiplier()
+    {
+        return 1f + (RoomSettings.GetMaxInputBoostPercent() / 100f);
+    }
+
+    void ApplyVelocity(float currentSpeed)
+    {
+        Vector2 targetVelocity = effectiveMoveInput * currentSpeed;
+
+        if (!RoomSettings.IsShipDriftEnabled())
+        {
+            rb.linearVelocity = targetVelocity;
+            return;
+        }
+
+        Vector2 currentVelocity = rb.linearVelocity;
+        float currentMagnitude = currentVelocity.magnitude;
+        float targetMagnitude = targetVelocity.magnitude;
+        float speedRatio = Mathf.Clamp01(currentMagnitude / Mathf.Max(currentSpeed, 0.001f));
+
+        bool braking = targetMagnitude + 0.01f < currentMagnitude || effectiveMoveInput == Vector2.zero;
+
+        if (braking)
+        {
+            float driftWeight = speedRatio * speedRatio;
+            float brakeResponsiveness = Mathf.Lerp(LowSpeedBrakeResponsiveness, HighSpeedBrakeResponsiveness, driftWeight);
+            float releaseDriftMultiplier = effectiveMoveInput == Vector2.zero ? 0.86f : 1f;
+            float maxDelta = brakeResponsiveness * speed * releaseDriftMultiplier * Time.fixedDeltaTime;
+            rb.linearVelocity = Vector2.MoveTowards(currentVelocity, targetVelocity, maxDelta);
+            return;
+        }
+
+        float accelerationDelta = AccelerationResponsiveness * speed * Time.fixedDeltaTime;
+        rb.linearVelocity = Vector2.MoveTowards(currentVelocity, targetVelocity, accelerationDelta);
     }
 
     void UpdateFacingDirection()
@@ -303,5 +381,125 @@ public class PlayerMovement : MonoBehaviourPun
             : 0f;
         lastAudioPosition = transform.position;
         return Mathf.Clamp01(delta / speedReference);
+    }
+}
+
+[RequireComponent(typeof(Rigidbody2D))]
+[RequireComponent(typeof(SpriteRenderer))]
+public class EngineThrusterVFX : MonoBehaviour
+{
+    const string ThrusterRootName = "EngineVFX";
+    const string TrailObjectName = "EngineTrail";
+
+    Rigidbody2D rb;
+    SpriteRenderer shipRenderer;
+    TrailRenderer trailRenderer;
+    float referenceSpeed = 5f;
+
+    void Start()
+    {
+        rb = GetComponent<Rigidbody2D>();
+        shipRenderer = GetComponent<SpriteRenderer>();
+        PlayerMovement movement = GetComponent<PlayerMovement>();
+        referenceSpeed = Mathf.Max(1f, movement != null ? movement.speed : 5f);
+
+        CreateThrusterObjects();
+        UpdateVisuals(0f);
+    }
+
+    void Update()
+    {
+        if (rb == null)
+            return;
+
+        float speedNormalized = Mathf.InverseLerp(0.02f, referenceSpeed, rb.linearVelocity.magnitude);
+        UpdateVisuals(speedNormalized);
+    }
+
+    void CreateThrusterObjects()
+    {
+        Transform existing = transform.Find(ThrusterRootName);
+        GameObject rootObject = existing != null ? existing.gameObject : new GameObject(ThrusterRootName);
+        rootObject.transform.SetParent(transform, false);
+
+        for (int i = rootObject.transform.childCount - 1; i >= 0; i--)
+        {
+            Destroy(rootObject.transform.GetChild(i).gameObject);
+        }
+
+        float shipHeight = shipRenderer != null ? shipRenderer.bounds.size.y : 1f;
+        rootObject.transform.localPosition = new Vector3(0f, -shipHeight * 0.46f, 0f);
+        rootObject.transform.localRotation = Quaternion.Euler(0f, 0f, 180f);
+
+        GameObject trailObject = new GameObject(TrailObjectName);
+        trailObject.transform.SetParent(rootObject.transform, false);
+        trailObject.transform.localPosition = new Vector3(0f, 0.02f, 0f);
+        trailRenderer = trailObject.AddComponent<TrailRenderer>();
+        ConfigureTrail(trailRenderer);
+    }
+
+    void ConfigureTrail(TrailRenderer trail)
+    {
+        trail.time = 0.42f;
+        trail.minVertexDistance = 0.01f;
+        trail.widthMultiplier = 0.08f;
+        trail.shadowCastingMode = ShadowCastingMode.Off;
+        trail.receiveShadows = false;
+        trail.alignment = LineAlignment.View;
+        trail.textureMode = LineTextureMode.Stretch;
+        trail.numCapVertices = 12;
+        trail.numCornerVertices = 8;
+        trail.material = CreateSpritesMaterial();
+        trail.generateLightingData = false;
+
+        Gradient gradient = new Gradient();
+        gradient.SetKeys(
+            new[]
+            {
+                new GradientColorKey(new Color(1f, 1f, 1f), 0f),
+                new GradientColorKey(new Color(0.64f, 0.97f, 1f), 0.14f),
+                new GradientColorKey(new Color(0.2f, 0.8f, 1f), 0.45f),
+                new GradientColorKey(new Color(0.03f, 0.18f, 0.86f), 1f)
+            },
+            new[]
+            {
+                new GradientAlphaKey(0.95f, 0f),
+                new GradientAlphaKey(0.66f, 0.2f),
+                new GradientAlphaKey(0.26f, 0.62f),
+                new GradientAlphaKey(0f, 1f)
+            });
+        trail.colorGradient = gradient;
+        trail.widthCurve = new AnimationCurve(
+            new Keyframe(0f, 1f),
+            new Keyframe(0.12f, 0.82f),
+            new Keyframe(0.6f, 0.3f),
+            new Keyframe(1f, 0f));
+
+        if (shipRenderer != null)
+        {
+            trail.sortingLayerID = shipRenderer.sortingLayerID;
+            trail.sortingOrder = shipRenderer.sortingOrder - 2;
+        }
+    }
+
+    void UpdateVisuals(float speedNormalized)
+    {
+        float clamped = Mathf.Clamp01(speedNormalized);
+        float intensity = Mathf.Lerp(0.18f, 1f, clamped);
+
+        if (trailRenderer != null)
+        {
+            trailRenderer.time = Mathf.Lerp(0.22f, 0.82f, intensity);
+            trailRenderer.widthMultiplier = Mathf.Lerp(0.03f, 0.16f, intensity);
+            trailRenderer.emitting = clamped > 0.04f;
+        }
+    }
+
+    Material CreateSpritesMaterial()
+    {
+        Shader shader = Shader.Find("Sprites/Default");
+        Material material = new Material(shader);
+        material.name = "EngineThrusterVFXMaterial";
+        return material;
     }
 }

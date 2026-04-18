@@ -39,6 +39,9 @@ public class PlayerShooting : MonoBehaviourPun
         maxAmmo = GetConfiguredMaxAmmo();
         currentAmmo = maxAmmo;
 
+        if (GetComponent<EnemyBot>() != null)
+            return;
+
         if (!photonView.IsMine)
             return;
 
@@ -59,6 +62,13 @@ public class PlayerShooting : MonoBehaviourPun
     {
         if (!IsGameStarted())
             return;
+
+        if (GetComponent<EnemyBot>() != null)
+        {
+            UpdateReload();
+            SyncAmmoSetting();
+            return;
+        }
 
         if (!photonView.IsMine)
             return;
@@ -142,6 +152,26 @@ public class PlayerShooting : MonoBehaviourPun
         }
 
         photonView.RPC(nameof(PlayLaserSfx), RpcTarget.All);
+    }
+
+    public bool TryFireBot(Vector2 direction)
+    {
+        if (GetComponent<EnemyBot>() == null)
+            return false;
+
+        if (!photonView.IsMine || !IsGameStarted())
+            return false;
+
+        SyncAmmoSetting();
+        UpdateReload();
+
+        if (isReloading || currentAmmo <= 0 || Time.time < nextFireTime || direction.sqrMagnitude < 0.04f)
+            return false;
+
+        Shoot(direction.normalized);
+        ConsumeAmmo();
+        nextFireTime = Time.time + fireRate;
+        return true;
     }
 
     void ConsumeAmmo()
@@ -303,7 +333,7 @@ public class ReloadButtonUI : MonoBehaviourPun
         rect.anchorMin = joystickRect.anchorMin;
         rect.anchorMax = joystickRect.anchorMax;
         rect.pivot = new Vector2(0.5f, 0.5f);
-        rect.anchoredPosition = joystickRect.anchoredPosition + new Vector2(0f, 208f);
+        rect.anchoredPosition = joystickRect.anchoredPosition + new Vector2(0f, 216f);
         rect.sizeDelta = new Vector2(176f, 62f);
 
         backgroundImage = buttonObject.GetComponent<Image>();

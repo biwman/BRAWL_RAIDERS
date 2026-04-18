@@ -133,7 +133,7 @@ public class ExtractionZone : MonoBehaviourPun
         Debug.Log("EVACUATION!");
 
         PlayerHealth[] playersBeforeEvacuation = FindObjectsByType<PlayerHealth>(FindObjectsInactive.Exclude);
-        Collider2D[] hits = Physics2D.OverlapCircleAll(transform.position, 1.0f);
+        Collider2D[] hits = GetPlayersInsideZone();
 
         HashSet<int> processedPlayers = new HashSet<int>();
 
@@ -141,7 +141,7 @@ public class ExtractionZone : MonoBehaviourPun
         {
             PlayerHealth p = hit.GetComponentInParent<PlayerHealth>();
 
-            if (p != null)
+            if (p != null && !p.IsWreck && !p.IsBotControlled)
             {
                 PhotonView pv = p.photonView;
 
@@ -151,6 +151,8 @@ public class ExtractionZone : MonoBehaviourPun
                 processedPlayers.Add(pv.ViewID);
 
                 Debug.Log("Evacuating: " + pv.Owner.NickName);
+                int finalScore = RoundResultsTracker.GetKnownScore(pv.Owner, pv.gameObject) + 5;
+                RoundResultsTracker.RecordOutcome(pv.Owner, finalScore, "evacuated");
 
                 // punkt tylko dla właściciela
                 pv.RPC("OnEvacuated", pv.Owner, 5);
@@ -178,25 +180,58 @@ public class ExtractionZone : MonoBehaviourPun
         }
 
         // KLUCZOWE — KONIEC GRY
-        GameManager gm = FindAnyObjectByType<GameManager>();
-        bool anyPlayerRemaining = false;
-
-        foreach (PlayerHealth player in playersBeforeEvacuation)
+        if (anyPlayerEvacuated)
         {
-            if (player == null || player.photonView == null)
-                continue;
+            bool anyPlayerRemaining = false;
 
-            if (!processedPlayers.Contains(player.photonView.ViewID))
+            for (int i = 0; i < playersBeforeEvacuation.Length; i++)
             {
-                anyPlayerRemaining = true;
-                break;
+                PlayerHealth player = playersBeforeEvacuation[i];
+                if (player == null || player.IsWreck || player.photonView == null)
+                    continue;
+
+                if (!processedPlayers.Contains(player.photonView.ViewID))
+                {
+                    anyPlayerRemaining = true;
+                    break;
+                }
+            }
+
+            if (!anyPlayerRemaining)
+            {
+                GameManager gm = FindAnyObjectByType<GameManager>();
+                if (gm != null)
+                {
+                    gm.EndGame("evacuation");
+                }
             }
         }
+    }
 
-        if (gm != null && anyPlayerEvacuated && !anyPlayerRemaining)
+    Collider2D[] GetPlayersInsideZone()
+    {
+        Collider2D zoneCollider = GetComponent<Collider2D>();
+        if (zoneCollider == null)
         {
-            gm.EndGame();
+            return Physics2D.OverlapCircleAll(transform.position, 1.0f);
         }
+
+        ContactFilter2D filter = new ContactFilter2D
+        {
+            useLayerMask = false,
+            useTriggers = true
+        };
+
+        Collider2D[] buffer = new Collider2D[32];
+        int count = zoneCollider.Overlap(filter, buffer);
+        if (count <= 0)
+        {
+            return System.Array.Empty<Collider2D>();
+        }
+
+        Collider2D[] hits = new Collider2D[count];
+        System.Array.Copy(buffer, hits, count);
+        return hits;
     }
 
     [PunRPC]

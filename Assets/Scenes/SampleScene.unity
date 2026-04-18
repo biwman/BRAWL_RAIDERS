@@ -402,7 +402,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: 'Score: 0'
+  m_text: 'XP: 0'
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -672,7 +672,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 860, y: 826}
+  m_SizeDelta: {x: 920, y: 1110}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &290314944
 MonoBehaviour:
@@ -736,10 +736,12 @@ MonoBehaviour:
   boosterSettingText: {fileID: 0}
   ammoSettingText: {fileID: 0}
   boosterDelaySettingText: {fileID: 0}
+  maxInputBoostSettingText: {fileID: 0}
+  shipDriftSettingText: {fileID: 0}
   deathTimerSettingText: {fileID: 0}
-  killRewardSettingText: {fileID: 0}
-  deathRetainSettingText: {fileID: 0}
-  timeUpRetainSettingText: {fileID: 0}
+  movingObjectsSettingText: {fileID: 0}
+  obstacleWeightSettingText: {fileID: 0}
+  treasureWeightSettingText: {fileID: 0}
   roundSettingButton: {fileID: 0}
   mapSizeSettingButton: {fileID: 0}
   obstacleSettingButton: {fileID: 0}
@@ -749,10 +751,12 @@ MonoBehaviour:
   boosterSettingButton: {fileID: 0}
   ammoSettingButton: {fileID: 0}
   boosterDelaySettingButton: {fileID: 0}
+  maxInputBoostSettingButton: {fileID: 0}
+  shipDriftSettingButton: {fileID: 0}
   deathTimerSettingButton: {fileID: 0}
-  killRewardSettingButton: {fileID: 0}
-  deathRetainSettingButton: {fileID: 0}
-  timeUpRetainSettingButton: {fileID: 0}
+  movingObjectsSettingButton: {fileID: 0}
+  obstacleWeightSettingButton: {fileID: 0}
+  treasureWeightSettingButton: {fileID: 0}
 --- !u!114 &290314947
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1740,7 +1744,7 @@ BoxCollider2D:
   m_Enabled: 1
   serializedVersion: 3
   m_Density: 1
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 2019430813}
   m_IncludeLayers:
     serializedVersion: 2
     m_Bits: 0
@@ -1887,7 +1891,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: -360}
+  m_AnchoredPosition: {x: 0, y: -502}
   m_SizeDelta: {x: 220, y: 62}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &922154094
@@ -2051,7 +2055,7 @@ BoxCollider2D:
   m_Enabled: 1
   serializedVersion: 3
   m_Density: 1
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 2019430813}
   m_IncludeLayers:
     serializedVersion: 2
     m_Bits: 0
@@ -2734,7 +2738,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
   m_AnchoredPosition: {x: 200, y: 180}
-  m_SizeDelta: {x: 285, y: 285}
+  m_SizeDelta: {x: 430, y: 430}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1130682800
 MonoBehaviour:
@@ -2833,7 +2837,7 @@ BoxCollider2D:
   m_Enabled: 1
   serializedVersion: 3
   m_Density: 1
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 2019430813}
   m_IncludeLayers:
     serializedVersion: 2
     m_Bits: 0
@@ -3528,7 +3532,7 @@ RectTransform:
   m_AnchorMin: {x: 1, y: 0}
   m_AnchorMax: {x: 1, y: 0}
   m_AnchoredPosition: {x: -200, y: 180}
-  m_SizeDelta: {x: 285, y: 285}
+  m_SizeDelta: {x: 430, y: 430}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1437756230
 MonoBehaviour:
@@ -3875,7 +3879,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 135, y: 135}
+  m_SizeDelta: {x: 145, y: 145}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1695922303
 MonoBehaviour:
@@ -4268,7 +4272,7 @@ BoxCollider2D:
   m_Enabled: 1
   serializedVersion: 3
   m_Density: 1
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 2019430813}
   m_IncludeLayers:
     serializedVersion: 2
     m_Bits: 0
@@ -4457,6 +4461,18 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!62 &2019430813
+PhysicsMaterial2D:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: MovingSpaceObjectBouncy
+  serializedVersion: 2
+  friction: 0
+  bounciness: 1
+  m_FrictionCombine: 1
+  m_BounceCombine: 4
 --- !u!1 &2091593305
 GameObject:
   m_ObjectHideFlags: 0
@@ -4493,7 +4509,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 135, y: 135}
+  m_SizeDelta: {x: 145, y: 145}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &2091593307
 MonoBehaviour:

@@ -11,7 +11,9 @@ public static class RoomSettings
     public const string BoosterSlowdownKey = "boosterSlowdownPercent";
     public const string AmmoCountKey = "ammoCount";
     public const string BoosterRecoveryDelayKey = "boosterRecoveryDelay";
-    public const string DeathTimerPenaltyKey = "deathTimerPenalty";
+    public const string MaxInputBoostPercentKey = "maxInputBoostPercent";
+    public const string ShipDriftEnabledKey = "shipDriftEnabled";
+    public const string LastShipTimerMultiplierKey = "lastShipTimerMultiplier";
     public const string KillRewardPercentKey = "killRewardPercent";
     public const string DeathRetainPercentKey = "deathRetainPercent";
     public const string TimeUpRetainPercentKey = "timeUpRetainPercent";
@@ -19,20 +21,26 @@ public static class RoomSettings
     public const string MovingObjectsEnabledKey = "movingObjectsEnabled";
     public const string ObstacleWeightFactorKey = "obstacleWeightFactor";
     public const string TreasureWeightFactorKey = "treasureWeightFactor";
+    public const string RoundResultsKey = "roundResultsSnapshot";
+    public const string RoundEndReasonKey = "roundEndReason";
     public const string ShipSkinKey = "shipSkinIndex";
+    public const string ShipInventoryStateKey = "shipInventoryState";
     public const string ScoreKey = "score";
 
     public const float DefaultRoundDuration = 180f;
+    public const string DefaultObstacleDensity = "high";
     public const int DefaultExtractionCount = 3;
     public const int DefaultBoosterSlowdownPercent = 30;
-    public const int DefaultAmmoCount = 10;
-    public const int DefaultBoosterRecoveryDelay = 0;
-    public const int DefaultDeathTimerPenalty = 30;
+    public const int DefaultAmmoCount = 15;
+    public const int DefaultBoosterRecoveryDelay = 5;
+    public const int DefaultMaxInputBoostPercent = 20;
+    public const bool DefaultShipDriftEnabled = true;
+    public const int DefaultLastShipTimerMultiplier = 3;
     public const int DefaultKillRewardPercent = 50;
     public const int DefaultDeathRetainPercent = 25;
     public const int DefaultTimeUpRetainPercent = 25;
     public const string DefaultMapSize = "medium";
-    public const bool DefaultMovingObjectsEnabled = false;
+    public const bool DefaultMovingObjectsEnabled = true;
     public const int DefaultObstacleWeightFactor = 6;
     public const int DefaultTreasureWeightFactor = 6;
 
@@ -64,9 +72,26 @@ public static class RoomSettings
         return GetInt(BoosterRecoveryDelayKey, DefaultBoosterRecoveryDelay, 0, 10);
     }
 
-    public static int GetDeathTimerPenalty()
+    public static int GetMaxInputBoostPercent()
     {
-        return GetInt(DeathTimerPenaltyKey, DefaultDeathTimerPenalty, 0, 30);
+        return GetInt(MaxInputBoostPercentKey, DefaultMaxInputBoostPercent, 0, 50);
+    }
+
+    public static bool IsShipDriftEnabled()
+    {
+        if (PhotonNetwork.CurrentRoom != null &&
+            PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue(ShipDriftEnabledKey, out object value) &&
+            value is bool enabled)
+        {
+            return enabled;
+        }
+
+        return DefaultShipDriftEnabled;
+    }
+
+    public static int GetLastShipTimerMultiplier()
+    {
+        return GetInt(LastShipTimerMultiplierKey, DefaultLastShipTimerMultiplier, 1, 5);
     }
 
     public static int GetKillRewardPercent()
@@ -171,6 +196,11 @@ public static class RoomSettings
         }
 
         return 0;
+    }
+
+    public static int GetPlayerRoundXp(Photon.Realtime.Player player)
+    {
+        return GetPlayerScore(player);
     }
 
     public static int GetPlayerShipSkin(Photon.Realtime.Player player, int fallback)

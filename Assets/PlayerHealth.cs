@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using Photon.Pun;
 using UnityEngine;
 using UnityEngine.UI;
@@ -11,11 +11,14 @@ public class PlayerHealth : MonoBehaviourPun
     Slider hpBar;
     bool messageShowing;
 
+    public bool IsWreck { get; private set; }
+    public bool IsBotControlled => GetComponent<EnemyBot>() != null;
+
     void Start()
     {
         currentHP = maxHP;
 
-        if (photonView.IsMine)
+        if (photonView.IsMine && !IsBotControlled)
         {
             PhotonNetwork.LocalPlayer.TagObject = gameObject;
 
@@ -51,7 +54,7 @@ public class PlayerHealth : MonoBehaviourPun
     [PunRPC]
     public void TakeDamage(int dmg, int attackerViewID)
     {
-        if (!PhotonNetwork.IsMasterClient)
+        if (!PhotonNetwork.IsMasterClient || IsWreck)
             return;
 
         currentHP = Mathf.Max(0, currentHP - dmg);
@@ -77,59 +80,42 @@ public class PlayerHealth : MonoBehaviourPun
     void HandleDeath(int attackerViewID)
     {
         photonView.RPC(nameof(PlayDeathExplosion), RpcTarget.All);
-        photonView.RPC(nameof(ShowDeathMessage), RpcTarget.All);
+        if (!IsBotControlled)
+        {
+            photonView.RPC(nameof(ShowDeathMessage), RpcTarget.All);
+            int currentRoundXp = GetCurrentRoundXp();
+            RoundResultsTracker.RecordOutcome(photonView.Owner, currentRoundXp, "dead");
+        }
 
-        int victimScore = GetCurrentScore();
-        int retainedScore = Mathf.FloorToInt(victimScore * (RoomSettings.GetDeathRetainPercent() / 100f));
-        int reward = Mathf.FloorToInt(victimScore * (RoomSettings.GetKillRewardPercent() / 100f));
+        if (IsBotControlled)
+        {
+            if (PhotonNetwork.IsConnected && photonView.IsMine)
+                PhotonNetwork.Destroy(gameObject);
+            else if (!PhotonNetwork.IsConnected)
+                Destroy(gameObject);
+
+            return;
+        }
 
         PhotonView attackerView = PhotonView.Find(attackerViewID);
-        if (attackerView != null && attackerView != photonView)
+        bool killedByAnotherPlayer = attackerView != null && attackerView != photonView;
+
+        if (killedByAnotherPlayer)
         {
-            attackerView.RPC(nameof(AddKillScore), attackerView.Owner, reward);
+            string wreckLoot = PlayerProfileService.SerializeShipInventorySlots(PlayerProfileService.GetPlayerShipInventorySlots(photonView.Owner));
+            photonView.RPC(nameof(ClearLocalShipInventoryForWreck), photonView.Owner);
+            photonView.RPC(nameof(BecomeWreck), RpcTarget.All, wreckLoot);
+        }
+        else
+        {
+            photonView.RPC(nameof(DestroySelf), photonView.Owner);
         }
 
-        photonView.RPC(nameof(SetScoreDirect), photonView.Owner, retainedScore);
-
-        GameTimer timer = FindFirstObjectByType<GameTimer>();
-        if (timer != null && RoomSettings.GetDeathTimerPenalty() > 0)
-        {
-            timer.ReduceTime(RoomSettings.GetDeathTimerPenalty());
-        }
-
-        bool shouldEndGame = GetRemainingPlayersAfterThisDeath() <= 1;
-
-        photonView.RPC(nameof(DestroySelf), photonView.Owner);
-
-        if (shouldEndGame)
-        {
-            GameManager manager = FindFirstObjectByType<GameManager>();
-            if (manager != null)
-            {
-                manager.EndGame();
-            }
-        }
     }
 
-    int GetRemainingPlayersAfterThisDeath()
+    int GetCurrentRoundXp()
     {
-        int aliveCount = 0;
-        PlayerHealth[] players = FindObjectsByType<PlayerHealth>(FindObjectsSortMode.None);
-
-        foreach (PlayerHealth player in players)
-        {
-            if (player == null || player == this)
-                continue;
-
-            aliveCount++;
-        }
-
-        return aliveCount;
-    }
-
-    int GetCurrentScore()
-    {
-        int propScore = RoomSettings.GetPlayerScore(photonView.Owner);
+        int propScore = RoomSettings.GetPlayerRoundXp(photonView.Owner);
         if (propScore > 0)
             return propScore;
 
@@ -138,37 +124,6 @@ public class PlayerHealth : MonoBehaviourPun
             return collector.totalScore;
 
         return 0;
-    }
-
-    [PunRPC]
-    public void SetScoreDirect(int newScore)
-    {
-        if (!photonView.IsMine)
-            return;
-
-        ExitGames.Client.Photon.Hashtable props = new ExitGames.Client.Photon.Hashtable();
-        props[RoomSettings.ScoreKey] = Mathf.Max(0, newScore);
-        PhotonNetwork.LocalPlayer.SetCustomProperties(props);
-
-        TreasureCollector collector = GetComponent<TreasureCollector>();
-        if (collector != null)
-        {
-            collector.totalScore = Mathf.Max(0, newScore);
-            collector.AddScore(0);
-        }
-    }
-
-    [PunRPC]
-    public void AddKillScore(int amount)
-    {
-        if (!photonView.IsMine)
-            return;
-
-        TreasureCollector collector = GetComponent<TreasureCollector>();
-        if (collector != null)
-        {
-            collector.AddScore(amount);
-        }
     }
 
     [PunRPC]
@@ -194,6 +149,54 @@ public class PlayerHealth : MonoBehaviourPun
         {
             PhotonNetwork.Destroy(gameObject);
         }
+    }
+
+    [PunRPC]
+    public async void ClearLocalShipInventoryForWreck()
+    {
+        if (!photonView.IsMine)
+            return;
+
+        try
+        {
+            await PlayerProfileService.Instance.ReplaceShipInventoryAsync(new string[PlayerInventoryData.ShipSlotCount]);
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogError("Failed to clear ship inventory for wreck: " + ex);
+        }
+    }
+
+    [PunRPC]
+    void BecomeWreck(string serializedLoot)
+    {
+        IsWreck = true;
+
+        PlayerMovement movement = GetComponent<PlayerMovement>();
+        if (movement != null)
+            movement.enabled = false;
+
+        PlayerShooting shooting = GetComponent<PlayerShooting>();
+        if (shooting != null)
+            shooting.enabled = false;
+
+        TreasureCollector collector = GetComponent<TreasureCollector>();
+        if (collector != null)
+            collector.enabled = false;
+
+        Rigidbody2D body = GetComponent<Rigidbody2D>();
+        if (body != null)
+        {
+            body.linearVelocity = Vector2.zero;
+            body.angularVelocity = 0f;
+            body.bodyType = RigidbodyType2D.Kinematic;
+        }
+
+        ShipWreck wreck = GetComponent<ShipWreck>();
+        if (wreck == null)
+            wreck = gameObject.AddComponent<ShipWreck>();
+
+        wreck.InitializeFromLootJson(serializedLoot);
     }
 
     [PunRPC]
@@ -232,14 +235,6 @@ public class PlayerHealth : MonoBehaviourPun
     {
         if (!photonView.IsMine)
             return;
-
-        TreasureCollector collector = GetComponent<TreasureCollector>();
-        if (collector != null)
-        {
-            int retainedScore = Mathf.FloorToInt(collector.totalScore * (RoomSettings.GetTimeUpRetainPercent() / 100f));
-            collector.totalScore = retainedScore;
-            collector.AddScore(0);
-        }
 
         ShowTimeUpMessage();
         StartCoroutine(DieAfterDelay());

@@ -61,6 +61,7 @@ public class EndGameWatcher : MonoBehaviour
 
         PlayerMovement.gameStarted = false;
         PlayerShooting.gameStarted = false;
+        AwardRoundXpIfNeeded();
 
         GameObject endScreenRoot = FindObjectEvenIfDisabled("EndScreen");
         if (endScreenRoot != null)
@@ -76,6 +77,7 @@ public class EndGameWatcher : MonoBehaviour
             ShowEndScreenUi(ui);
             FixEndScreenLayout(ui);
             EnsureBackButton(ui);
+            DisableRestartButton();
             PopulateScoreboard(ui);
         }
         else
@@ -108,7 +110,7 @@ public class EndGameWatcher : MonoBehaviour
 
         if (ui.endMessage != null)
         {
-            ui.endMessage.text = "Wyniki rundy";
+            ui.endMessage.text = "Round XP";
         }
 
         GameObject listObject = FindObjectEvenIfDisabled("PlayerListContent");
@@ -173,21 +175,6 @@ public class EndGameWatcher : MonoBehaviour
             }
         }
 
-        GameObject restartButton = FindObjectEvenIfDisabled("RestartButton");
-        if (restartButton != null)
-        {
-            restartButton.SetActive(true);
-            RectTransform rect = restartButton.GetComponent<RectTransform>();
-            if (rect != null)
-            {
-                rect.anchorMin = new Vector2(0.5f, 0f);
-                rect.anchorMax = new Vector2(0.5f, 0f);
-                rect.pivot = new Vector2(0.5f, 0f);
-                rect.anchoredPosition = new Vector2(118f, 24f);
-                rect.sizeDelta = new Vector2(220f, 56f);
-            }
-        }
-
         GameObject listObject = FindObjectEvenIfDisabled("PlayerListContent");
         if (listObject != null)
         {
@@ -200,6 +187,15 @@ public class EndGameWatcher : MonoBehaviour
                 rect.offsetMin = new Vector2(40f, 100f);
                 rect.offsetMax = new Vector2(-40f, -100f);
             }
+        }
+    }
+
+    void DisableRestartButton()
+    {
+        GameObject restartButton = FindObjectEvenIfDisabled("RestartButton");
+        if (restartButton != null)
+        {
+            restartButton.SetActive(false);
         }
     }
 
@@ -249,7 +245,7 @@ public class EndGameWatcher : MonoBehaviour
             rect.anchorMin = new Vector2(0.5f, 0f);
             rect.anchorMax = new Vector2(0.5f, 0f);
             rect.pivot = new Vector2(0.5f, 0f);
-            rect.anchoredPosition = new Vector2(-118f, 24f);
+            rect.anchoredPosition = new Vector2(0f, 24f);
             rect.sizeDelta = new Vector2(220f, 56f);
         }
 
@@ -288,19 +284,73 @@ public class EndGameWatcher : MonoBehaviour
             Destroy(child.gameObject);
         }
 
-        var sortedPlayers = PhotonNetwork.PlayerList
-            .OrderByDescending(GetPlayerScore)
-            .ThenBy(GetDisplayName);
-
-        foreach (Player player in sortedPlayers)
+        RoundResultsSnapshotData snapshot = GetSnapshotFromRoom();
+        if (snapshot != null && snapshot.entries != null && snapshot.entries.Length > 0)
         {
-            CreateScoreRow(listParent, GetDisplayName(player) + " - " + GetPlayerScore(player), ui);
+            foreach (RoundResultEntry entry in snapshot.entries.OrderBy(result => result.placement).ThenByDescending(result => result.finalScore))
+            {
+                CreateScoreRow(listParent, entry.nickname + " - " + entry.finalScore + " XP", ui);
+            }
+        }
+        else
+        {
+            var sortedPlayers = PhotonNetwork.PlayerList
+                .OrderByDescending(GetPlayerScore)
+                .ThenBy(GetDisplayName);
+
+            foreach (Player player in sortedPlayers)
+            {
+                CreateScoreRow(listParent, GetDisplayName(player) + " - " + GetPlayerScore(player) + " XP", ui);
+            }
         }
 
         if (ui.endMessage != null)
         {
-            ui.endMessage.text = "Wyniki rundy";
+            ui.endMessage.text = "Round XP";
         }
+    }
+
+    async void AwardRoundXpIfNeeded()
+    {
+        if (PhotonNetwork.LocalPlayer == null || PhotonNetwork.CurrentRoom == null)
+            return;
+
+        int roundXp = 0;
+        RoundResultsSnapshotData snapshot = GetSnapshotFromRoom();
+        if (snapshot != null && snapshot.entries != null)
+        {
+            for (int i = 0; i < snapshot.entries.Length; i++)
+            {
+                if (snapshot.entries[i].actorNumber == PhotonNetwork.LocalPlayer.ActorNumber)
+                {
+                    roundXp = Mathf.Max(0, snapshot.entries[i].finalScore);
+                    break;
+                }
+            }
+        }
+        else
+        {
+            roundXp = Mathf.Max(0, RoomSettings.GetPlayerRoundXp(PhotonNetwork.LocalPlayer));
+        }
+
+        string matchToken = PhotonNetwork.CurrentRoom.Name + "_" +
+                            (PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue("startTime", out object startTime)
+                                ? startTime.ToString()
+                                : "nostart");
+
+        await PlayerProfileService.Instance.RecordRoundXpAsync(roundXp, matchToken);
+    }
+
+    RoundResultsSnapshotData GetSnapshotFromRoom()
+    {
+        if (PhotonNetwork.CurrentRoom == null ||
+            !PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue(RoomSettings.RoundResultsKey, out object value) ||
+            value is not string rawSnapshot)
+        {
+            return null;
+        }
+
+        return RoundResultsTracker.DeserializeSnapshot(rawSnapshot);
     }
 
     Transform ResolveOrCreateScoreboardParent(EndScreenUI ui)
@@ -372,7 +422,7 @@ public class EndGameWatcher : MonoBehaviour
         text.fontSize = 30f;
         text.fontStyle = FontStyles.Bold;
         text.color = new Color(0.14f, 0.17f, 0.23f, 1f);
-        text.enableWordWrapping = false;
+        text.textWrappingMode = TextWrappingModes.NoWrap;
         text.overflowMode = TextOverflowModes.Overflow;
         text.horizontalAlignment = HorizontalAlignmentOptions.Center;
         text.verticalAlignment = VerticalAlignmentOptions.Middle;
@@ -387,7 +437,7 @@ public class EndGameWatcher : MonoBehaviour
 
     int GetPlayerScore(Player player)
     {
-        int score = RoomSettings.GetPlayerScore(player);
+        int score = RoomSettings.GetPlayerRoundXp(player);
         if (score > 0)
             return score;
 

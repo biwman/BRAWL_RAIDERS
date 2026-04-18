@@ -10,6 +10,8 @@ public class GameManager : MonoBehaviourPunCallbacks
     const string ExtractionLayoutKey = "extractionLayout";
     const string NebulaLayoutKey = "nebulaLayout";
     const string MapSeedKey = "mapSeed";
+    const string LoneShipModeStartTimeKey = "loneShipModeStartTime";
+    const float RestartCleanupTimeout = 2.5f;
     bool restartInProgress;
     bool leavingRoomToProfile;
 
@@ -20,8 +22,12 @@ public class GameManager : MonoBehaviourPunCallbacks
         Hashtable props = new Hashtable();
         props["gameStarted"] = true;
         props["startTime"] = PhotonNetwork.Time;
+        props[LoneShipModeStartTimeKey] = -1d;
+        props[RoomSettings.RoundResultsKey] = string.Empty;
+        props[RoomSettings.RoundEndReasonKey] = string.Empty;
 
         PhotonNetwork.CurrentRoom.SetCustomProperties(props);
+        RoundResultsTracker.ResetForCurrentRoom();
     }
 
     public void RestartGame()
@@ -53,11 +59,13 @@ public class GameManager : MonoBehaviourPunCallbacks
         StartCoroutine(RestartAfterCleanup());
     }
 
-    public void EndGame()
+    public void EndGame(string endReason = "generic")
     {
         if (PhotonNetwork.IsConnected && !PhotonNetwork.IsMasterClient) return;
 
         Debug.Log("GAME ENDED");
+
+        RoundResultsSnapshotData snapshot = RoundResultsTracker.BuildSnapshot(endReason);
 
         Hashtable props = new Hashtable();
         props["gameStarted"] = false;
@@ -65,6 +73,9 @@ public class GameManager : MonoBehaviourPunCallbacks
         props[ExtractionLayoutKey] = string.Empty;
         props[NebulaLayoutKey] = string.Empty;
         props[MapSeedKey] = -1;
+        props[LoneShipModeStartTimeKey] = -1d;
+        props[RoomSettings.RoundResultsKey] = RoundResultsTracker.SerializeSnapshot(snapshot);
+        props[RoomSettings.RoundEndReasonKey] = snapshot != null ? snapshot.endReason : endReason;
 
         if (PhotonNetwork.CurrentRoom != null)
         {
@@ -93,6 +104,7 @@ public class GameManager : MonoBehaviourPunCallbacks
             PhotonNetwork.LocalPlayer.TagObject = null;
         }
 
+        RoundResultsTracker.ResetForCurrentRoom();
         PhotonNetwork.Disconnect();
     }
 
@@ -115,6 +127,9 @@ public class GameManager : MonoBehaviourPunCallbacks
         props[ExtractionLayoutKey] = string.Empty;
         props[NebulaLayoutKey] = string.Empty;
         props[MapSeedKey] = -1;
+        props[LoneShipModeStartTimeKey] = -1d;
+        props[RoomSettings.RoundResultsKey] = string.Empty;
+        props[RoomSettings.RoundEndReasonKey] = string.Empty;
 
         if (PhotonNetwork.CurrentRoom != null)
         {
@@ -126,10 +141,14 @@ public class GameManager : MonoBehaviourPunCallbacks
             PhotonNetwork.DestroyAll();
         }
 
-        yield return null;
-        yield return new WaitForSeconds(0.2f);
+        float deadline = Time.time + RestartCleanupTimeout;
+        while (Time.time < deadline && HasRuntimeNetworkObjects())
+        {
+            yield return null;
+        }
 
         PhotonNetwork.LoadLevel(SceneManager.GetActiveScene().name);
+        RoundResultsTracker.ResetForCurrentRoom();
         restartInProgress = false;
     }
 
@@ -145,5 +164,20 @@ public class GameManager : MonoBehaviourPunCallbacks
         }
 
         return true;
+    }
+
+    bool HasRuntimeNetworkObjects()
+    {
+        PhotonView[] views = FindObjectsByType<PhotonView>(FindObjectsInactive.Exclude);
+        for (int i = 0; i < views.Length; i++)
+        {
+            PhotonView view = views[i];
+            if (view == null || view.IsSceneView)
+                continue;
+
+            return true;
+        }
+
+        return false;
     }
 }

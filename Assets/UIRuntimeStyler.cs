@@ -289,6 +289,9 @@ public class UIRuntimeStyler : MonoBehaviour
 
         if (text != null)
         {
+            if (text.text.StartsWith("Score"))
+                text.text = "XP: 0";
+
             text.fontSize = 30f;
             text.fontStyle = FontStyles.Bold;
             text.color = new Color(1f, 0.96f, 0.82f, 1f);
@@ -337,7 +340,7 @@ public class UIRuntimeStyler : MonoBehaviour
             rect.anchorMax = new Vector2(0.5f, 0.5f);
             rect.pivot = new Vector2(0.5f, 0.5f);
             rect.anchoredPosition = new Vector2(0f, 0f);
-            rect.sizeDelta = new Vector2(920f, 980f);
+            rect.sizeDelta = new Vector2(920f, 1110f);
         }
 
         GameObject readyTextObject = FindSceneObjectByName("ReadyText");
@@ -363,7 +366,7 @@ public class UIRuntimeStyler : MonoBehaviour
                 buttonRect.anchorMin = new Vector2(0.5f, 0.5f);
                 buttonRect.anchorMax = new Vector2(0.5f, 0.5f);
                 buttonRect.pivot = new Vector2(0.5f, 0.5f);
-                buttonRect.anchoredPosition = new Vector2(0f, -432f);
+                buttonRect.anchoredPosition = new Vector2(0f, -434f);
             }
         }
 
@@ -403,13 +406,12 @@ public class UIRuntimeStyler : MonoBehaviour
         StyleLobbySettingButton("BoosterSettingButton", new Vector2(-205f, -394f));
         StyleLobbySettingButton("AmmoSettingButton", new Vector2(205f, -394f));
         StyleLobbySettingButton("BoosterDelaySettingButton", new Vector2(-205f, -456f));
-        StyleLobbySettingButton("DeathTimerSettingButton", new Vector2(205f, -456f));
-        StyleLobbySettingButton("KillRewardSettingButton", new Vector2(-205f, -518f));
-        StyleLobbySettingButton("DeathRetainSettingButton", new Vector2(205f, -518f));
-        StyleLobbySettingButton("TimeUpRetainSettingButton", new Vector2(0f, -580f));
-        StyleLobbySettingButton("MovingObjectsSettingButton", new Vector2(-205f, -642f));
-        StyleLobbySettingButton("ObstacleWeightSettingButton", new Vector2(205f, -642f));
-        StyleLobbySettingButton("TreasureWeightSettingButton", new Vector2(0f, -704f));
+        StyleLobbySettingButton("MaxInputBoostSettingButton", new Vector2(205f, -456f));
+        StyleLobbySettingButton("ShipDriftSettingButton", new Vector2(-205f, -518f));
+        StyleLobbySettingButton("DeathTimerSettingButton", new Vector2(205f, -518f));
+        StyleLobbySettingButton("MovingObjectsSettingButton", new Vector2(-205f, -580f));
+        StyleLobbySettingButton("ObstacleWeightSettingButton", new Vector2(205f, -580f));
+        StyleLobbySettingButton("TreasureWeightSettingButton", new Vector2(0f, -642f));
     }
 
     void StyleLobbySettingButton(string objectName, Vector2 anchoredPosition)
@@ -508,27 +510,34 @@ public class UIRuntimeStyler : MonoBehaviour
             text = messageObject.GetComponentInChildren<TMP_Text>(true);
 
         RectTransform rect = messageObject.GetComponent<RectTransform>();
+        Image badge = GetOrCreateBackground(messageObject.transform, "ExtractionMessageBadge");
 
         if (rect != null)
         {
             rect.anchorMin = new Vector2(0.5f, 1f);
             rect.anchorMax = new Vector2(0.5f, 1f);
             rect.pivot = new Vector2(0.5f, 1f);
-            rect.anchoredPosition = new Vector2(0f, -96f);
-            rect.sizeDelta = new Vector2(520f, 84f);
+            rect.anchoredPosition = new Vector2(0f, -222f);
+            rect.sizeDelta = new Vector2(560f, 78f);
             rect.SetAsLastSibling();
+        }
+
+        if (badge != null)
+        {
+            badge.color = new Color(0.06f, 0.12f, 0.18f, 0.82f);
+            badge.type = Image.Type.Sliced;
         }
 
         if (text != null)
         {
             text.text = "Extraction Zone Activated";
-            text.fontSize = 34f;
+            text.fontSize = 28f;
             text.fontStyle = FontStyles.Bold;
-            text.color = new Color(0.87f, 1f, 0.96f, 1f);
+            text.color = new Color(0.9f, 1f, 0.97f, 1f);
             text.alignment = TextAlignmentOptions.Center;
             text.textWrappingMode = TextWrappingModes.NoWrap;
-            text.characterSpacing = 1.5f;
-            text.margin = new Vector4(24f, 10f, 24f, 10f);
+            text.characterSpacing = 1.1f;
+            text.margin = new Vector4(18f, 8f, 18f, 8f);
         }
 
         ApplyOutline(messageObject, new Color(0f, 0f, 0f, 0.4f), new Vector2(3f, -3f));
@@ -545,7 +554,7 @@ public class UIRuntimeStyler : MonoBehaviour
 
         if (rootRect != null)
         {
-            rootRect.sizeDelta = new Vector2(285f, 285f);
+            rootRect.sizeDelta = new Vector2(430f, 430f);
         }
 
         foreach (Image image in images)
@@ -562,7 +571,7 @@ public class UIRuntimeStyler : MonoBehaviour
             image.color = handleColor;
             if (rect != null)
             {
-                rect.sizeDelta = new Vector2(135f, 135f);
+                rect.sizeDelta = new Vector2(145f, 145f);
             }
 
             ApplyOutline(image.gameObject, new Color(0f, 0f, 0f, 0.28f), new Vector2(2f, -2f));

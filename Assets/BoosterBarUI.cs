@@ -12,6 +12,7 @@ public class BoosterBarUI : MonoBehaviourPun
     Slider boosterBar;
     Image fillImage;
     Image handleImage;
+    bool isVisible = true;
 
     void Start()
     {
@@ -29,6 +30,7 @@ public class BoosterBarUI : MonoBehaviourPun
 
     void Update()
     {
+        UpdateVisibility();
         RefreshBar();
     }
 
@@ -117,6 +119,33 @@ public class BoosterBarUI : MonoBehaviourPun
                 ? new Color(0.96f, 0.38f, 0.4f, 1f)
                 : new Color(0.6f, 0.64f, 0.7f, 1f);
         }
+    }
+
+    void UpdateVisibility()
+    {
+        if (boosterBar == null)
+            return;
+
+        bool shouldBeVisible = IsGameplayHudVisible();
+        if (isVisible == shouldBeVisible)
+            return;
+
+        isVisible = shouldBeVisible;
+        boosterBar.gameObject.SetActive(shouldBeVisible);
+    }
+
+    bool IsGameplayHudVisible()
+    {
+        if (PhotonNetwork.CurrentRoom == null)
+            return false;
+
+        if (PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue("gameStarted", out object value) &&
+            value is bool started)
+        {
+            return started;
+        }
+
+        return false;
     }
 
     Image FindFillImage(Transform root)

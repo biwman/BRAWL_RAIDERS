@@ -1,11 +1,11 @@
-using UnityEngine;
-using UnityEngine.UI;
-using TMPro;
 using System.Collections;
-using Photon.Pun;
-using ExitGames.Client.Photon;
-using UnityEngine.EventSystems;
 using System.Collections.Generic;
+using ExitGames.Client.Photon;
+using Photon.Pun;
+using TMPro;
+using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.UI;
 
 public class TreasureCollector : MonoBehaviourPun
 {
@@ -22,7 +22,9 @@ public class TreasureCollector : MonoBehaviourPun
     public PlayerShooting shooting;
 
     Treasure currentTreasure;
-    bool isCollecting = false;
+    ShipWreck currentWreck;
+    DroppedCargoCrate currentDroppedCargo;
+    bool isCollecting;
     ExtractionZone currentExtraction;
     public float collectTime = 3f;
     public int totalScore = 0;
@@ -30,9 +32,19 @@ public class TreasureCollector : MonoBehaviourPun
     LineRenderer collectionBeam;
     float nextTreasureScanTime;
     bool beamActive;
+    GameObject pickupToastObject;
+    Image pickupToastIcon;
+    TMP_Text pickupToastLabel;
+    Coroutine pickupToastRoutine;
 
     void Start()
     {
+        if (GetComponent<EnemyBot>() != null)
+        {
+            enabled = false;
+            return;
+        }
+
         SetupDrillingAudio();
         SetupBeam();
 
@@ -50,7 +62,7 @@ public class TreasureCollector : MonoBehaviourPun
 
         if (scoreText != null)
         {
-            scoreText.text = "Score: 0";
+            scoreText.text = "XP: 0";
         }
 
         SyncScoreProperty();
@@ -74,14 +86,16 @@ public class TreasureCollector : MonoBehaviourPun
 
             EventTrigger.Entry down = new EventTrigger.Entry();
             down.eventID = EventTriggerType.PointerDown;
-            down.callback.AddListener((data) => { StartHolding(); });
+            down.callback.AddListener(_ => StartHolding());
             trigger.triggers.Add(down);
 
             EventTrigger.Entry up = new EventTrigger.Entry();
             up.eventID = EventTriggerType.PointerUp;
-            up.callback.AddListener((data) => { StopHolding(); });
+            up.callback.AddListener(_ => StopHolding());
             trigger.triggers.Add(up);
         }
+
+        SetupPickupToast();
     }
 
     void Update()
@@ -89,7 +103,7 @@ public class TreasureCollector : MonoBehaviourPun
         if (photonView.IsMine && Time.unscaledTime >= nextTreasureScanTime)
         {
             nextTreasureScanTime = Time.unscaledTime + TreasureScanInterval;
-            RefreshClosestTreasure();
+            RefreshClosestCollectible();
         }
 
         UpdateCollectionBeam();
@@ -135,18 +149,35 @@ public class TreasureCollector : MonoBehaviourPun
             return;
         }
 
-        RefreshClosestTreasure();
+        RefreshClosestCollectible();
+
+        if (!PlayerProfileService.Instance.HasFreeShipInventorySlot())
+        {
+            Debug.Log("Ship inventory is full. Cannot collect loot.");
+            return;
+        }
 
         if (currentTreasure != null && !isCollecting)
         {
             isCollecting = true;
-            photonView.RPC(nameof(StartDrillingLoopSfx), RpcTarget.All);
-            PhotonView treasureView = currentTreasure.GetComponent<PhotonView>();
-            if (treasureView != null)
-            {
-                photonView.RPC(nameof(SetBeamTargetRpc), RpcTarget.All, treasureView.ViewID, true);
-            }
-            StartCoroutine(CollectRoutine(currentTreasure));
+            StartCollectibleFeedback(currentTreasure.GetComponent<PhotonView>());
+            StartCoroutine(CollectTreasureRoutine(currentTreasure));
+            return;
+        }
+
+        if (currentWreck != null && currentWreck.HasLoot && !isCollecting)
+        {
+            isCollecting = true;
+            StartCollectibleFeedback(currentWreck.GetComponent<PhotonView>());
+            StartCoroutine(LootWreckRoutine(currentWreck));
+            return;
+        }
+
+        if (currentDroppedCargo != null && currentDroppedCargo.HasLoot && !isCollecting)
+        {
+            isCollecting = true;
+            StartCollectibleFeedback(currentDroppedCargo.GetComponent<PhotonView>());
+            StartCoroutine(LootDroppedCargoRoutine(currentDroppedCargo));
         }
     }
 
@@ -155,38 +186,23 @@ public class TreasureCollector : MonoBehaviourPun
         if (!photonView.IsMine)
             return;
 
-        if (isCollecting)
-        {
-            isCollecting = false;
-        }
-
-        photonView.RPC(nameof(StopDrillingLoopSfx), RpcTarget.All);
-        photonView.RPC(nameof(ClearBeamTargetRpc), RpcTarget.All);
+        isCollecting = false;
+        StopCollectibleFeedback();
 
         if (movement != null) movement.enabled = true;
         if (shooting != null) shooting.enabled = true;
     }
 
-    IEnumerator CollectRoutine(Treasure treasureToCollect)
+    IEnumerator CollectTreasureRoutine(Treasure treasureToCollect)
     {
-        if (treasureToCollect == null)
+        if (treasureToCollect == null || treasureToCollect.isBeingCollected)
         {
-            isCollecting = false;
-            StopLocalDrillingLoop();
-            yield break;
-        }
-
-        if (treasureToCollect.isBeingCollected)
-        {
-            isCollecting = false;
-            StopLocalDrillingLoop();
+            AbortCollection(treasureToCollect);
             yield break;
         }
 
         treasureToCollect.isBeingCollected = true;
-
-        if (movement != null) movement.enabled = false;
-        if (shooting != null) shooting.enabled = false;
+        LockControls();
 
         float timer = 0f;
 
@@ -194,14 +210,7 @@ public class TreasureCollector : MonoBehaviourPun
         {
             if (!isCollecting || treasureToCollect == null || !IsTreasureInCollectRange(treasureToCollect))
             {
-                if (treasureToCollect != null)
-                    treasureToCollect.isBeingCollected = false;
-
-                photonView.RPC(nameof(StopDrillingLoopSfx), RpcTarget.All);
-                photonView.RPC(nameof(ClearBeamTargetRpc), RpcTarget.All);
-
-                if (movement != null) movement.enabled = true;
-                if (shooting != null) shooting.enabled = true;
+                AbortCollection(treasureToCollect);
                 yield break;
             }
 
@@ -211,6 +220,7 @@ public class TreasureCollector : MonoBehaviourPun
         }
 
         AddScore(treasureToCollect.value);
+        StoreCollectedItem(InventoryItemCatalog.AsteroidResourceId);
 
         PhotonView treasureView = treasureToCollect.GetComponent<PhotonView>();
         if (treasureView != null)
@@ -226,58 +236,222 @@ public class TreasureCollector : MonoBehaviourPun
         }
 
         treasureToCollect.isBeingCollected = false;
+        FinishCollection();
+    }
+
+    IEnumerator LootWreckRoutine(ShipWreck wreckToLoot)
+    {
+        if (wreckToLoot == null || !wreckToLoot.HasLoot || wreckToLoot.isBeingCollected)
+        {
+            AbortCollection();
+            yield break;
+        }
+
+        wreckToLoot.isBeingCollected = true;
+        LockControls();
+
+        float timer = 0f;
+
+        while (timer < collectTime)
+        {
+            if (!isCollecting || wreckToLoot == null || !wreckToLoot.HasLoot || !IsWreckInCollectRange(wreckToLoot))
+            {
+                wreckToLoot.isBeingCollected = false;
+                AbortCollection();
+                yield break;
+            }
+
+            currentWreck = wreckToLoot;
+            timer += Time.deltaTime;
+            yield return null;
+        }
+
+        PhotonView wreckView = wreckToLoot.GetComponent<PhotonView>();
+        if (wreckView != null)
+        {
+            photonView.RPC(nameof(RequestLootWreck), RpcTarget.MasterClient, wreckView.ViewID);
+        }
+
+        wreckToLoot.isBeingCollected = false;
+        FinishCollection();
+    }
+
+    IEnumerator LootDroppedCargoRoutine(DroppedCargoCrate crateToLoot)
+    {
+        if (crateToLoot == null || !crateToLoot.HasLoot || crateToLoot.isBeingCollected)
+        {
+            AbortCollection();
+            yield break;
+        }
+
+        crateToLoot.isBeingCollected = true;
+        LockControls();
+
+        float timer = 0f;
+
+        while (timer < collectTime)
+        {
+            if (!isCollecting || crateToLoot == null || !crateToLoot.HasLoot || !IsDroppedCargoInCollectRange(crateToLoot))
+            {
+                crateToLoot.isBeingCollected = false;
+                AbortCollection();
+                yield break;
+            }
+
+            currentDroppedCargo = crateToLoot;
+            timer += Time.deltaTime;
+            yield return null;
+        }
+
+        PhotonView crateView = crateToLoot.GetComponent<PhotonView>();
+        if (crateView != null)
+        {
+            photonView.RPC(nameof(RequestLootDroppedCargo), RpcTarget.MasterClient, crateView.ViewID);
+        }
+
+        crateToLoot.isBeingCollected = false;
+        FinishCollection();
+    }
+
+    void LockControls()
+    {
+        if (movement != null) movement.enabled = false;
+        if (shooting != null) shooting.enabled = false;
+    }
+
+    void AbortCollection(Treasure treasure = null)
+    {
+        if (treasure != null)
+            treasure.isBeingCollected = false;
+
+        FinishCollection();
+    }
+
+    void FinishCollection()
+    {
         isCollecting = false;
+        StopCollectibleFeedback();
         currentTreasure = null;
-        photonView.RPC(nameof(StopDrillingLoopSfx), RpcTarget.All);
-        photonView.RPC(nameof(ClearBeamTargetRpc), RpcTarget.All);
+        currentWreck = null;
+        currentDroppedCargo = null;
 
         if (movement != null) movement.enabled = true;
         if (shooting != null) shooting.enabled = true;
     }
 
-    void RefreshClosestTreasure()
+    void StartCollectibleFeedback(PhotonView targetView)
     {
-        Treasure nextTreasure = FindClosestTreasureInRange();
-        if (currentTreasure == nextTreasure)
-            return;
-
-        if (currentTreasure != null && !currentTreasure.isBeingCollected)
+        photonView.RPC(nameof(StartDrillingLoopSfx), RpcTarget.All);
+        if (targetView != null)
         {
-            currentTreasure.Unhighlight();
-        }
-
-        currentTreasure = nextTreasure;
-
-        if (currentTreasure != null)
-        {
-            currentTreasure.Highlight();
+            photonView.RPC(nameof(SetBeamTargetRpc), RpcTarget.All, targetView.ViewID, true);
         }
     }
 
-    Treasure FindClosestTreasureInRange()
+    void StopCollectibleFeedback()
     {
-        Treasure[] treasures = FindObjectsByType<Treasure>(FindObjectsInactive.Exclude);
-        Treasure bestTreasure = null;
+        photonView.RPC(nameof(StopDrillingLoopSfx), RpcTarget.All);
+        photonView.RPC(nameof(ClearBeamTargetRpc), RpcTarget.All);
+    }
+
+    void RefreshClosestCollectible()
+    {
+        Treasure nextTreasure = null;
+        ShipWreck nextWreck = null;
+        DroppedCargoCrate nextDroppedCargo = null;
         float bestDistance = float.MaxValue;
         Vector2 tipPosition = GetShipTipPosition();
 
+        Treasure[] treasures = FindObjectsByType<Treasure>(FindObjectsInactive.Exclude);
         foreach (Treasure treasure in treasures)
         {
             if (treasure == null)
                 continue;
 
-            float distance = GetDistanceFromTipToTreasure(treasure, tipPosition);
+            float distance = GetDistanceFromTipToCollider(treasure.GetComponent<Collider2D>(), treasure.transform.position, tipPosition);
             if (distance > Treasure.CollectRange)
                 continue;
 
             if (distance < bestDistance)
             {
                 bestDistance = distance;
-                bestTreasure = treasure;
+                nextTreasure = treasure;
+                nextWreck = null;
+                nextDroppedCargo = null;
             }
         }
 
-        return bestTreasure;
+        ShipWreck[] wrecks = FindObjectsByType<ShipWreck>(FindObjectsInactive.Exclude);
+        foreach (ShipWreck wreck in wrecks)
+        {
+            if (wreck == null || !wreck.HasLoot)
+                continue;
+
+            float distance = GetDistanceFromTipToCollider(wreck.GetComponent<Collider2D>(), wreck.transform.position, tipPosition);
+            if (distance > Treasure.CollectRange)
+                continue;
+
+            if (distance < bestDistance)
+            {
+                bestDistance = distance;
+                nextTreasure = null;
+                nextWreck = wreck;
+                nextDroppedCargo = null;
+            }
+        }
+
+        DroppedCargoCrate[] droppedCrates = FindObjectsByType<DroppedCargoCrate>(FindObjectsInactive.Exclude);
+        foreach (DroppedCargoCrate crate in droppedCrates)
+        {
+            if (crate == null || !crate.HasLoot)
+                continue;
+
+            float distance = GetDistanceFromTipToCollider(crate.GetComponent<Collider2D>(), crate.transform.position, tipPosition);
+            if (distance > Treasure.CollectRange)
+                continue;
+
+            if (distance < bestDistance)
+            {
+                bestDistance = distance;
+                nextTreasure = null;
+                nextWreck = null;
+                nextDroppedCargo = crate;
+            }
+        }
+
+        if (currentTreasure == nextTreasure && currentWreck == nextWreck && currentDroppedCargo == nextDroppedCargo)
+            return;
+
+        ClearCurrentHighlight();
+
+        currentTreasure = nextTreasure;
+        currentWreck = nextWreck;
+        currentDroppedCargo = nextDroppedCargo;
+
+        if (currentTreasure != null)
+        {
+            currentTreasure.Highlight();
+        }
+        else if (currentWreck != null)
+        {
+            currentWreck.Highlight();
+        }
+        else if (currentDroppedCargo != null)
+        {
+            currentDroppedCargo.Highlight();
+        }
+    }
+
+    void ClearCurrentHighlight()
+    {
+        if (currentTreasure != null && !currentTreasure.isBeingCollected)
+            currentTreasure.Unhighlight();
+
+        if (currentWreck != null && !currentWreck.isBeingCollected)
+            currentWreck.Unhighlight();
+
+        if (currentDroppedCargo != null && !currentDroppedCargo.isBeingCollected)
+            currentDroppedCargo.Unhighlight();
     }
 
     bool IsTreasureInCollectRange(Treasure treasure)
@@ -285,19 +459,34 @@ public class TreasureCollector : MonoBehaviourPun
         if (treasure == null)
             return false;
 
-        return GetDistanceFromTipToTreasure(treasure, GetShipTipPosition()) <= Treasure.CollectRange;
+        return GetDistanceFromTipToCollider(treasure.GetComponent<Collider2D>(), treasure.transform.position, GetShipTipPosition()) <= Treasure.CollectRange;
     }
 
-    float GetDistanceFromTipToTreasure(Treasure treasure, Vector2 tipPosition)
+    bool IsWreckInCollectRange(ShipWreck wreck)
     {
-        Collider2D collider = treasure.GetComponent<Collider2D>();
+        if (wreck == null || !wreck.HasLoot)
+            return false;
+
+        return GetDistanceFromTipToCollider(wreck.GetComponent<Collider2D>(), wreck.transform.position, GetShipTipPosition()) <= Treasure.CollectRange;
+    }
+
+    bool IsDroppedCargoInCollectRange(DroppedCargoCrate crate)
+    {
+        if (crate == null || !crate.HasLoot)
+            return false;
+
+        return GetDistanceFromTipToCollider(crate.GetComponent<Collider2D>(), crate.transform.position, GetShipTipPosition()) <= Treasure.CollectRange;
+    }
+
+    float GetDistanceFromTipToCollider(Collider2D collider, Vector2 fallbackPosition, Vector2 tipPosition)
+    {
         if (collider != null)
         {
             Vector2 closestPoint = collider.ClosestPoint(tipPosition);
             return Vector2.Distance(tipPosition, closestPoint);
         }
 
-        return Vector2.Distance(tipPosition, treasure.transform.position);
+        return Vector2.Distance(tipPosition, fallbackPosition);
     }
 
     Vector2 GetShipTipPosition()
@@ -357,10 +546,14 @@ public class TreasureCollector : MonoBehaviourPun
         if (collectionBeam == null)
             return;
 
-        bool shouldShow = beamActive && currentTreasure != null;
+        bool shouldShow = beamActive && (currentTreasure != null || currentWreck != null || currentDroppedCargo != null);
         if (shouldShow && photonView.IsMine)
         {
-            shouldShow = IsTreasureInCollectRange(currentTreasure);
+            shouldShow = currentTreasure != null
+                ? IsTreasureInCollectRange(currentTreasure)
+                : currentWreck != null
+                    ? IsWreckInCollectRange(currentWreck)
+                    : IsDroppedCargoInCollectRange(currentDroppedCargo);
         }
 
         collectionBeam.enabled = shouldShow;
@@ -369,7 +562,7 @@ public class TreasureCollector : MonoBehaviourPun
             return;
 
         Vector2 start = GetShipTipPosition();
-        Vector2 end = GetTreasureBeamTarget(currentTreasure, start);
+        Vector2 end = GetCollectibleBeamTarget(start);
         Vector2 direction = (end - start).normalized;
         Vector2 perpendicular = new Vector2(-direction.y, direction.x);
         float jitter = Mathf.Sin(Time.time * BeamJitterFrequency) * BeamJitterAmplitude;
@@ -381,15 +574,22 @@ public class TreasureCollector : MonoBehaviourPun
         collectionBeam.SetPosition(1, endPos);
     }
 
-    Vector2 GetTreasureBeamTarget(Treasure treasure, Vector2 start)
+    Vector2 GetCollectibleBeamTarget(Vector2 start)
     {
-        Collider2D collider = treasure.GetComponent<Collider2D>();
+        Collider2D collider = currentTreasure != null
+            ? currentTreasure.GetComponent<Collider2D>()
+            : currentWreck != null ? currentWreck.GetComponent<Collider2D>() : currentDroppedCargo != null ? currentDroppedCargo.GetComponent<Collider2D>() : null;
+
+        Vector2 fallbackPosition = currentTreasure != null
+            ? currentTreasure.transform.position
+            : currentWreck != null ? currentWreck.transform.position : currentDroppedCargo != null ? currentDroppedCargo.transform.position : start;
+
         if (collider != null)
         {
             return collider.ClosestPoint(start);
         }
 
-        return treasure.transform.position;
+        return fallbackPosition;
     }
 
     void SetBeamEnabled(bool enabled)
@@ -401,18 +601,18 @@ public class TreasureCollector : MonoBehaviourPun
 
     void OnDestroy()
     {
-        if (currentTreasure != null && !currentTreasure.isBeingCollected)
-        {
-            currentTreasure.Unhighlight();
-        }
-
+        ClearCurrentHighlight();
         StopLocalDrillingLoop();
+
+        if (pickupToastObject != null)
+            Destroy(pickupToastObject);
     }
 
     [PunRPC]
     void RequestDestroyTreasure(int viewID)
     {
-        if (!PhotonNetwork.IsMasterClient) return;
+        if (!PhotonNetwork.IsMasterClient)
+            return;
 
         PhotonView pv = PhotonView.Find(viewID);
         if (pv != null)
@@ -421,13 +621,65 @@ public class TreasureCollector : MonoBehaviourPun
         }
     }
 
+    [PunRPC]
+    void RequestLootWreck(int viewID)
+    {
+        if (!PhotonNetwork.IsMasterClient)
+            return;
+
+        PhotonView wreckView = PhotonView.Find(viewID);
+        if (wreckView == null)
+            return;
+
+        ShipWreck wreck = wreckView.GetComponent<ShipWreck>();
+        if (wreck == null || !wreck.HasLoot)
+            return;
+
+        if (!PlayerProfileService.PlayerHasFreeShipInventorySlot(photonView.Owner))
+            return;
+
+        int lootIndex = wreck.GetFirstLootIndex();
+        string itemId = wreck.GetLootItemAt(lootIndex);
+        if (lootIndex < 0 || string.IsNullOrWhiteSpace(itemId))
+            return;
+
+        wreckView.RPC(nameof(ShipWreck.RemoveLootAtIndexRpc), RpcTarget.All, lootIndex);
+        photonView.RPC(nameof(ReceiveLootedItemRpc), photonView.Owner, itemId);
+    }
+
+    [PunRPC]
+    void RequestLootDroppedCargo(int viewID)
+    {
+        if (!PhotonNetwork.IsMasterClient)
+            return;
+
+        PhotonView crateView = PhotonView.Find(viewID);
+        if (crateView == null)
+            return;
+
+        DroppedCargoCrate crate = crateView.GetComponent<DroppedCargoCrate>();
+        if (crate == null || !crate.HasLoot)
+            return;
+
+        if (!PlayerProfileService.PlayerHasFreeShipInventorySlot(photonView.Owner))
+            return;
+
+        string itemId = crate.StoredItemId;
+        if (string.IsNullOrWhiteSpace(itemId))
+            return;
+
+        crateView.RPC(nameof(DroppedCargoCrate.ClearStoredItemRpc), RpcTarget.All);
+        photonView.RPC(nameof(ReceiveLootedItemRpc), photonView.Owner, itemId);
+        PhotonNetwork.Destroy(crateView.gameObject);
+    }
+
     public void AddScore(int amount)
     {
-        totalScore += amount;
+        totalScore = Mathf.Max(0, totalScore + amount);
 
         if (scoreText != null)
         {
-            scoreText.text = "Score: " + totalScore;
+            scoreText.text = "XP: " + totalScore;
         }
 
         SyncScoreProperty();
@@ -436,7 +688,8 @@ public class TreasureCollector : MonoBehaviourPun
     [PunRPC]
     void RequestUseExtraction(int viewID)
     {
-        if (!PhotonNetwork.IsMasterClient) return;
+        if (!PhotonNetwork.IsMasterClient)
+            return;
 
         PhotonView pv = PhotonView.Find(viewID);
         if (pv != null)
@@ -510,11 +763,13 @@ public class TreasureCollector : MonoBehaviourPun
     }
 
     [PunRPC]
-    void SetBeamTargetRpc(int treasureViewId, bool active)
+    void SetBeamTargetRpc(int targetViewId, bool active)
     {
-        PhotonView targetView = PhotonView.Find(treasureViewId);
+        PhotonView targetView = PhotonView.Find(targetViewId);
         currentTreasure = targetView != null ? targetView.GetComponent<Treasure>() : null;
-        SetBeamEnabled(active && currentTreasure != null);
+        currentWreck = currentTreasure == null && targetView != null ? targetView.GetComponent<ShipWreck>() : null;
+        currentDroppedCargo = currentTreasure == null && currentWreck == null && targetView != null ? targetView.GetComponent<DroppedCargoCrate>() : null;
+        SetBeamEnabled(active && (currentTreasure != null || currentWreck != null || currentDroppedCargo != null));
     }
 
     [PunRPC]
@@ -522,5 +777,172 @@ public class TreasureCollector : MonoBehaviourPun
     {
         SetBeamEnabled(false);
         currentTreasure = null;
+        currentWreck = null;
+        currentDroppedCargo = null;
+    }
+
+    [PunRPC]
+    async void ReceiveLootedItemRpc(string itemId)
+    {
+        try
+        {
+            bool stored = await PlayerProfileService.Instance.AddItemToShipAsync(itemId);
+            if (!stored)
+            {
+                Debug.Log("No free ship slot for looted wreck item.");
+            }
+            else
+            {
+                ShowPickupToast(itemId);
+            }
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogError("Failed to receive wreck loot item: " + ex);
+        }
+    }
+
+    async void StoreCollectedItem(string itemId)
+    {
+        try
+        {
+            bool stored = await PlayerProfileService.Instance.AddItemToShipAsync(itemId);
+            if (!stored)
+            {
+                Debug.Log("Collected item, but ship inventory has no free slot.");
+            }
+            else
+            {
+                ShowPickupToast(itemId);
+            }
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogError("Failed to store collected item: " + ex);
+        }
+    }
+
+    void SetupPickupToast()
+    {
+        if (!photonView.IsMine || pickupToastObject != null)
+            return;
+
+        GameObject canvas = GameObject.Find("Canvas");
+        if (canvas == null)
+            return;
+
+        pickupToastObject = new GameObject("PickupToast", typeof(RectTransform), typeof(Image));
+        pickupToastObject.transform.SetParent(canvas.transform, false);
+
+        RectTransform rect = pickupToastObject.GetComponent<RectTransform>();
+        rect.anchorMin = new Vector2(0f, 1f);
+        rect.anchorMax = new Vector2(0f, 1f);
+        rect.pivot = new Vector2(0f, 1f);
+        rect.anchoredPosition = new Vector2(22f, -24f);
+        rect.sizeDelta = new Vector2(128f, 122f);
+
+        Image bg = pickupToastObject.GetComponent<Image>();
+        bg.color = new Color(0.05f, 0.09f, 0.15f, 0.92f);
+        bg.raycastTarget = false;
+
+        GameObject titleObject = new GameObject("Title", typeof(RectTransform), typeof(TextMeshProUGUI));
+        titleObject.transform.SetParent(pickupToastObject.transform, false);
+
+        RectTransform titleRect = titleObject.GetComponent<RectTransform>();
+        titleRect.anchorMin = new Vector2(0f, 1f);
+        titleRect.anchorMax = new Vector2(1f, 1f);
+        titleRect.pivot = new Vector2(0.5f, 1f);
+        titleRect.anchoredPosition = new Vector2(0f, -6f);
+        titleRect.sizeDelta = new Vector2(-12f, 20f);
+
+        TextMeshProUGUI titleText = titleObject.GetComponent<TextMeshProUGUI>();
+        titleText.alignment = TextAlignmentOptions.Center;
+        titleText.fontSize = 13f;
+        titleText.fontStyle = FontStyles.Bold;
+        titleText.textWrappingMode = TextWrappingModes.NoWrap;
+        titleText.color = new Color(0.84f, 0.93f, 1f, 0.95f);
+        titleText.text = "LOOT";
+
+        GameObject iconObject = new GameObject("Icon", typeof(RectTransform), typeof(Image));
+        iconObject.transform.SetParent(pickupToastObject.transform, false);
+
+        RectTransform iconRect = iconObject.GetComponent<RectTransform>();
+        iconRect.anchorMin = new Vector2(0.5f, 0.5f);
+        iconRect.anchorMax = new Vector2(0.5f, 0.5f);
+        iconRect.pivot = new Vector2(0.5f, 0.5f);
+        iconRect.anchoredPosition = new Vector2(0f, -8f);
+        iconRect.sizeDelta = new Vector2(72f, 72f);
+
+        pickupToastIcon = iconObject.GetComponent<Image>();
+        pickupToastIcon.preserveAspect = true;
+        pickupToastIcon.raycastTarget = false;
+
+        GameObject labelObject = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
+        labelObject.transform.SetParent(pickupToastObject.transform, false);
+
+        RectTransform labelRect = labelObject.GetComponent<RectTransform>();
+        labelRect.anchorMin = new Vector2(0f, 0f);
+        labelRect.anchorMax = new Vector2(1f, 0f);
+        labelRect.pivot = new Vector2(0.5f, 0f);
+        labelRect.anchoredPosition = new Vector2(0f, 7f);
+        labelRect.sizeDelta = new Vector2(-14f, 24f);
+
+        pickupToastLabel = labelObject.GetComponent<TextMeshProUGUI>();
+        pickupToastLabel.alignment = TextAlignmentOptions.Center;
+        pickupToastLabel.fontSize = 14f;
+        pickupToastLabel.fontStyle = FontStyles.Bold;
+        pickupToastLabel.textWrappingMode = TextWrappingModes.NoWrap;
+        pickupToastLabel.color = new Color(0.95f, 0.98f, 1f, 0.96f);
+        pickupToastLabel.text = string.Empty;
+
+        TMP_Text reference = FindAnyObjectByType<TMP_Text>();
+        if (reference != null)
+        {
+            titleText.font = reference.font;
+            titleText.fontSharedMaterial = reference.fontSharedMaterial;
+            pickupToastLabel.font = reference.font;
+            pickupToastLabel.fontSharedMaterial = reference.fontSharedMaterial;
+        }
+
+        pickupToastObject.SetActive(false);
+    }
+
+    void ShowPickupToast(string itemId)
+    {
+        if (!photonView.IsMine || string.IsNullOrWhiteSpace(itemId))
+            return;
+
+        SetupPickupToast();
+        if (pickupToastObject == null)
+            return;
+
+        Sprite icon = InventoryItemCatalog.GetIcon(itemId);
+        if (pickupToastIcon != null)
+        {
+            pickupToastIcon.sprite = icon;
+            pickupToastIcon.enabled = icon != null;
+        }
+
+        if (pickupToastLabel != null)
+        {
+            string label = InventoryItemCatalog.GetDisplayName(itemId);
+            if (string.IsNullOrWhiteSpace(label))
+                label = InventoryItemCatalog.GetShortLabel(itemId);
+
+            pickupToastLabel.text = label;
+        }
+
+        if (pickupToastRoutine != null)
+            StopCoroutine(pickupToastRoutine);
+
+        pickupToastRoutine = StartCoroutine(PickupToastRoutine());
+    }
+
+    IEnumerator PickupToastRoutine()
+    {
+        pickupToastObject.SetActive(true);
+        yield return new WaitForSeconds(2f);
+        pickupToastObject.SetActive(false);
+        pickupToastRoutine = null;
     }
 }

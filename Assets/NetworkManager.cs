@@ -2,6 +2,7 @@ using Photon.Pun;
 using Photon.Realtime;
 using UnityEngine;
 using ExitGames.Client.Photon;
+using System.Linq;
 
 public class NetworkManager : MonoBehaviourPunCallbacks
 {
@@ -107,6 +108,20 @@ public class NetworkManager : MonoBehaviourPunCallbacks
         RestoreRoomStateAfterSceneLoad();
     }
 
+    public override void OnRoomPropertiesUpdate(Hashtable propertiesThatChanged)
+    {
+        if (!propertiesThatChanged.ContainsKey("gameStarted"))
+            return;
+
+        EnsureDroppedCargoManagerExists();
+        EnsureEnemyBotManagerExists();
+        EnsureNebulaSpawnerExists();
+        if (PhotonNetwork.IsMasterClient)
+        {
+            EnsureTreasureSpawnerExists();
+        }
+    }
+
     void SpawnPlayer()
     {
         Debug.Log("Spawning player...");
@@ -118,6 +133,8 @@ public class NetworkManager : MonoBehaviourPunCallbacks
     public void RestoreRoomStateAfterSceneLoad()
     {
         PlayerProfileService.Instance.ApplyProfileToPhoton();
+        EnsureDroppedCargoManagerExists();
+        EnsureEnemyBotManagerExists();
 
         if (PhotonNetwork.LocalPlayer != null && string.IsNullOrWhiteSpace(PhotonNetwork.NickName))
         {
@@ -144,7 +161,10 @@ public class NetworkManager : MonoBehaviourPunCallbacks
         PlayerHealth[] players = FindObjectsByType<PlayerHealth>(FindObjectsSortMode.None);
         foreach (PlayerHealth player in players)
         {
-            if (player.photonView != null && player.photonView.IsMine)
+            if (player != null &&
+                !player.IsBotControlled &&
+                player.photonView != null &&
+                player.photonView.IsMine)
             {
                 PhotonNetwork.LocalPlayer.TagObject = player.gameObject;
                 return;
@@ -167,7 +187,13 @@ public class NetworkManager : MonoBehaviourPunCallbacks
             new Vector2(spawnX, -spawnY)
         };
 
-        int actorIndex = Mathf.Max(0, PhotonNetwork.LocalPlayer.ActorNumber - 1);
+        Player[] playerOrder = PhotonNetwork.PlayerList
+            .OrderBy(player => player.ActorNumber)
+            .ToArray();
+        int actorIndex = System.Array.FindIndex(playerOrder, player => player == PhotonNetwork.LocalPlayer);
+        if (actorIndex < 0)
+            actorIndex = 0;
+
         int rotationOffset = 0;
 
         if (PhotonNetwork.CurrentRoom != null && !string.IsNullOrWhiteSpace(PhotonNetwork.CurrentRoom.Name))
@@ -187,12 +213,13 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 
     void EnsureTreasureSpawnerExists()
     {
+        EnsureNebulaSpawnerExists();
+
         if (!PhotonNetwork.IsMasterClient)
             return;
 
         if (FindFirstObjectByType<TreasureSpawner>() != null)
         {
-            EnsureNebulaSpawnerExists();
             return;
         }
 
@@ -200,18 +227,24 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 
         GameObject spawner = new GameObject("TreasureSpawner");
         spawner.AddComponent<TreasureSpawner>();
-        EnsureNebulaSpawnerExists();
     }
 
     void EnsureNebulaSpawnerExists()
     {
-        if (!PhotonNetwork.IsMasterClient)
-            return;
-
         if (FindFirstObjectByType<NebulaSpawner>() != null)
             return;
 
         GameObject spawner = new GameObject("NebulaSpawner");
         spawner.AddComponent<NebulaSpawner>();
+    }
+
+    void EnsureDroppedCargoManagerExists()
+    {
+        DroppedCargoManager.EnsureExists();
+    }
+
+    void EnsureEnemyBotManagerExists()
+    {
+        EnemyBotManager.EnsureExists();
     }
 }

@@ -20,6 +20,7 @@ public class NebulaSpawner : MonoBehaviour
     public int nebulaCount = 5;
 
     bool layoutApplied;
+    float nextRetryTime;
 
     void Start()
     {
@@ -66,6 +67,38 @@ public class NebulaSpawner : MonoBehaviour
                 if (!layoutApplied)
                     yield return null;
             }
+        }
+    }
+
+    void Update()
+    {
+        if (layoutApplied || Time.unscaledTime < nextRetryTime)
+            return;
+
+        nextRetryTime = Time.unscaledTime + 0.35f;
+        TryApplyOrBuildLayout();
+    }
+
+    void TryApplyOrBuildLayout()
+    {
+        if (!PhotonNetwork.IsConnectedAndReady || !PhotonNetwork.InRoom || !IsRoundStarted())
+            return;
+
+        if (!HasExtractionLayout() || !HasObstacleLayout())
+            return;
+
+        string layout = GetLayout();
+        if (PhotonNetwork.IsMasterClient && string.IsNullOrWhiteSpace(layout))
+        {
+            layout = BuildNebulaLayout();
+            ExitGames.Client.Photon.Hashtable props = new ExitGames.Client.Photon.Hashtable();
+            props[NebulaLayoutKey] = layout;
+            PhotonNetwork.CurrentRoom.SetCustomProperties(props);
+        }
+
+        if (!string.IsNullOrWhiteSpace(layout))
+        {
+            ApplyLayout(layout);
         }
     }
 

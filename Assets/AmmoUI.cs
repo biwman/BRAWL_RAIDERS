@@ -15,6 +15,8 @@ public class AmmoUI : MonoBehaviourPun
     Image backgroundImage;
     TextMeshProUGUI labelText;
     TextMeshProUGUI valueText;
+    bool isVisible = true;
+    RectTransform rootRect;
 
     void Start()
     {
@@ -32,6 +34,8 @@ public class AmmoUI : MonoBehaviourPun
 
     void Update()
     {
+        UpdateVisibility();
+        UpdateLayout();
         RefreshCounter();
     }
 
@@ -51,28 +55,29 @@ public class AmmoUI : MonoBehaviourPun
             Destroy(existing);
         }
 
-        GameObject hpBar = GameObject.Find("HP_Bar");
-        if (hpBar == null || hpBar.transform.parent == null)
+        GameObject canvas = GameObject.Find("Canvas");
+        if (canvas == null)
             return;
 
         rootObject = new GameObject(AmmoRootName, typeof(RectTransform), typeof(Image));
-        rootObject.transform.SetParent(hpBar.transform.parent, false);
+        rootObject.transform.SetParent(canvas.transform, false);
 
-        RectTransform rect = rootObject.GetComponent<RectTransform>();
-        rect.anchorMin = new Vector2(0.5f, 1f);
-        rect.anchorMax = new Vector2(0.5f, 1f);
-        rect.pivot = new Vector2(0.5f, 1f);
-        rect.anchoredPosition = new Vector2(0f, -188f);
-        rect.sizeDelta = new Vector2(560f, 44f);
+        rootRect = rootObject.GetComponent<RectTransform>();
+        rootRect.anchorMin = new Vector2(1f, 0f);
+        rootRect.anchorMax = new Vector2(1f, 0f);
+        rootRect.pivot = new Vector2(0.5f, 0.5f);
+        rootRect.anchoredPosition = new Vector2(-148f, 292f);
+        rootRect.sizeDelta = new Vector2(210f, 42f);
 
         backgroundImage = rootObject.GetComponent<Image>();
         backgroundImage.color = new Color(0.07f, 0.1f, 0.14f, 0.92f);
         backgroundImage.type = Image.Type.Sliced;
 
-        labelText = CreateText(AmmoLabelName, new Vector2(16f, 0f), TextAlignmentOptions.Left);
-        labelText.text = "AMMO";
+        labelText = CreateText(AmmoLabelName, new Vector2(0f, 0f), TextAlignmentOptions.Left);
+        labelText.text = "AMMO:";
 
-        valueText = CreateText(AmmoValueName, new Vector2(-16f, 0f), TextAlignmentOptions.Right);
+        valueText = CreateText(AmmoValueName, new Vector2(0f, 0f), TextAlignmentOptions.Right);
+        UpdateLayout();
     }
 
     void RefreshCounter()
@@ -83,13 +88,13 @@ public class AmmoUI : MonoBehaviourPun
         if (shooting.IsReloading)
         {
             float secondsLeft = Mathf.Max(0f, shooting.reloadDuration * (1f - shooting.ReloadProgress));
-            valueText.text = "RELOADING " + secondsLeft.ToString("0.0") + "s";
+            valueText.text = "RLD " + secondsLeft.ToString("0.0") + "s";
             valueText.color = new Color(1f, 0.78f, 0.28f, 1f);
             backgroundImage.color = new Color(0.16f, 0.12f, 0.07f, 0.94f);
         }
         else
         {
-            valueText.text = shooting.CurrentAmmo + " / " + shooting.MaxAmmo;
+            valueText.text = shooting.CurrentAmmo + "/" + shooting.MaxAmmo;
             valueText.color = shooting.CurrentAmmo <= 3
                 ? new Color(1f, 0.45f, 0.35f, 1f)
                 : Color.white;
@@ -111,12 +116,12 @@ public class AmmoUI : MonoBehaviourPun
         rect.anchoredPosition = anchoredPosition;
 
         TextMeshProUGUI text = textObject.GetComponent<TextMeshProUGUI>();
-        text.fontSize = 21f;
+        text.fontSize = 18f;
         text.fontStyle = FontStyles.Bold;
         text.color = Color.white;
         text.alignment = alignment;
         text.textWrappingMode = TextWrappingModes.NoWrap;
-        text.margin = new Vector4(16f, 6f, 16f, 6f);
+        text.margin = new Vector4(10f, 5f, 10f, 5f);
 
         TMP_Text referenceText = FindAnyObjectByType<TMP_Text>();
         if (referenceText != null)
@@ -126,5 +131,62 @@ public class AmmoUI : MonoBehaviourPun
         }
 
         return text;
+    }
+
+    void UpdateLayout()
+    {
+        if (rootRect == null)
+            return;
+
+        GameObject reloadButton = GameObject.Find("ReloadButton");
+        RectTransform reloadRect = reloadButton != null ? reloadButton.GetComponent<RectTransform>() : null;
+        GameObject shootJoystick = GameObject.Find("ShootJoystickBG");
+        RectTransform joystickRect = shootJoystick != null ? shootJoystick.GetComponent<RectTransform>() : null;
+
+        if (reloadRect != null)
+        {
+            rootRect.anchorMin = reloadRect.anchorMin;
+            rootRect.anchorMax = reloadRect.anchorMax;
+            rootRect.pivot = new Vector2(0.5f, 0.5f);
+            rootRect.anchoredPosition = reloadRect.anchoredPosition + new Vector2(0f, 78f);
+            rootRect.sizeDelta = new Vector2(210f, 42f);
+            return;
+        }
+
+        if (joystickRect != null)
+        {
+            rootRect.anchorMin = joystickRect.anchorMin;
+            rootRect.anchorMax = joystickRect.anchorMax;
+            rootRect.pivot = new Vector2(0.5f, 0.5f);
+            rootRect.anchoredPosition = joystickRect.anchoredPosition + new Vector2(0f, 296f);
+            rootRect.sizeDelta = new Vector2(210f, 42f);
+        }
+    }
+
+    void UpdateVisibility()
+    {
+        if (rootObject == null)
+            return;
+
+        bool shouldBeVisible = IsGameplayHudVisible();
+        if (isVisible == shouldBeVisible)
+            return;
+
+        isVisible = shouldBeVisible;
+        rootObject.SetActive(shouldBeVisible);
+    }
+
+    bool IsGameplayHudVisible()
+    {
+        if (PhotonNetwork.CurrentRoom == null)
+            return false;
+
+        if (PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue("gameStarted", out object value) &&
+            value is bool started)
+        {
+            return started;
+        }
+
+        return false;
     }
 }

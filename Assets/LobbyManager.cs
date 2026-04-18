@@ -17,9 +17,8 @@ public class LobbyManager : MonoBehaviourPunCallbacks
     static readonly int[] BoosterSlowdownOptions = { 30, 40, 50, 60, 70, 80, 90, 100 };
     static readonly int[] AmmoCountOptions = { 5, 10, 15, 20, 25, 30 };
     static readonly int[] BoosterRecoveryDelayOptions = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
-    static readonly int[] DeathTimerPenaltyOptions = { 0, 5, 10, 15, 20, 25, 30 };
-    static readonly int[] PercentOptions = { 0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100 };
-    static readonly int[] TimeUpPercentOptions = { 0, 25, 50, 75, 100 };
+    static readonly int[] MaxInputBoostPercentOptions = { 0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50 };
+    static readonly int[] LastShipTimerMultiplierOptions = { 1, 2, 3, 4, 5 };
     static readonly int[] WeightFactorOptions = { 2, 6, 12 };
 
     public Button readyButton;
@@ -34,10 +33,9 @@ public class LobbyManager : MonoBehaviourPunCallbacks
     public TMP_Text boosterSettingText;
     public TMP_Text ammoSettingText;
     public TMP_Text boosterDelaySettingText;
+    public TMP_Text maxInputBoostSettingText;
+    public TMP_Text shipDriftSettingText;
     public TMP_Text deathTimerSettingText;
-    public TMP_Text killRewardSettingText;
-    public TMP_Text deathRetainSettingText;
-    public TMP_Text timeUpRetainSettingText;
     public TMP_Text movingObjectsSettingText;
     public TMP_Text obstacleWeightSettingText;
     public TMP_Text treasureWeightSettingText;
@@ -50,10 +48,9 @@ public class LobbyManager : MonoBehaviourPunCallbacks
     public Button boosterSettingButton;
     public Button ammoSettingButton;
     public Button boosterDelaySettingButton;
+    public Button maxInputBoostSettingButton;
+    public Button shipDriftSettingButton;
     public Button deathTimerSettingButton;
-    public Button killRewardSettingButton;
-    public Button deathRetainSettingButton;
-    public Button timeUpRetainSettingButton;
     public Button movingObjectsSettingButton;
     public Button obstacleWeightSettingButton;
     public Button treasureWeightSettingButton;
@@ -172,10 +169,9 @@ public class LobbyManager : MonoBehaviourPunCallbacks
             changedProps.ContainsKey(RoomSettings.BoosterSlowdownKey) ||
             changedProps.ContainsKey(RoomSettings.AmmoCountKey) ||
             changedProps.ContainsKey(RoomSettings.BoosterRecoveryDelayKey) ||
-            changedProps.ContainsKey(RoomSettings.DeathTimerPenaltyKey) ||
-            changedProps.ContainsKey(RoomSettings.KillRewardPercentKey) ||
-            changedProps.ContainsKey(RoomSettings.DeathRetainPercentKey) ||
-            changedProps.ContainsKey(RoomSettings.TimeUpRetainPercentKey) ||
+            changedProps.ContainsKey(RoomSettings.MaxInputBoostPercentKey) ||
+            changedProps.ContainsKey(RoomSettings.ShipDriftEnabledKey) ||
+            changedProps.ContainsKey(RoomSettings.LastShipTimerMultiplierKey) ||
             changedProps.ContainsKey(RoomSettings.MovingObjectsEnabledKey) ||
             changedProps.ContainsKey(RoomSettings.ObstacleWeightFactorKey) ||
             changedProps.ContainsKey(RoomSettings.TreasureWeightFactorKey))
@@ -238,10 +234,9 @@ public class LobbyManager : MonoBehaviourPunCallbacks
             propertiesThatChanged.ContainsKey(RoomSettings.BoosterSlowdownKey) ||
             propertiesThatChanged.ContainsKey(RoomSettings.AmmoCountKey) ||
             propertiesThatChanged.ContainsKey(RoomSettings.BoosterRecoveryDelayKey) ||
-            propertiesThatChanged.ContainsKey(RoomSettings.DeathTimerPenaltyKey) ||
-            propertiesThatChanged.ContainsKey(RoomSettings.KillRewardPercentKey) ||
-            propertiesThatChanged.ContainsKey(RoomSettings.DeathRetainPercentKey) ||
-            propertiesThatChanged.ContainsKey(RoomSettings.TimeUpRetainPercentKey) ||
+            propertiesThatChanged.ContainsKey(RoomSettings.MaxInputBoostPercentKey) ||
+            propertiesThatChanged.ContainsKey(RoomSettings.ShipDriftEnabledKey) ||
+            propertiesThatChanged.ContainsKey(RoomSettings.LastShipTimerMultiplierKey) ||
             propertiesThatChanged.ContainsKey(RoomSettings.MovingObjectsEnabledKey) ||
             propertiesThatChanged.ContainsKey(RoomSettings.ObstacleWeightFactorKey) ||
             propertiesThatChanged.ContainsKey(RoomSettings.TreasureWeightFactorKey))
@@ -343,13 +338,12 @@ public class LobbyManager : MonoBehaviourPunCallbacks
         boosterSettingButton = EnsureSettingButton(ref boosterSettingText, boosterSettingButton, "BoosterSettingButton", "BoosterSettingText", new Vector2(-205f, -370f), CycleBoosterSlowdown);
         ammoSettingButton = EnsureSettingButton(ref ammoSettingText, ammoSettingButton, "AmmoSettingButton", "AmmoSettingText", new Vector2(205f, -370f), CycleAmmoCount);
         boosterDelaySettingButton = EnsureSettingButton(ref boosterDelaySettingText, boosterDelaySettingButton, "BoosterDelaySettingButton", "BoosterDelaySettingText", new Vector2(-205f, -424f), CycleBoosterRecoveryDelay);
-        deathTimerSettingButton = EnsureSettingButton(ref deathTimerSettingText, deathTimerSettingButton, "DeathTimerSettingButton", "DeathTimerSettingText", new Vector2(205f, -424f), CycleDeathTimerPenalty);
-        killRewardSettingButton = EnsureSettingButton(ref killRewardSettingText, killRewardSettingButton, "KillRewardSettingButton", "KillRewardSettingText", new Vector2(-205f, -478f), CycleKillRewardPercent);
-        deathRetainSettingButton = EnsureSettingButton(ref deathRetainSettingText, deathRetainSettingButton, "DeathRetainSettingButton", "DeathRetainSettingText", new Vector2(205f, -478f), CycleDeathRetainPercent);
-        timeUpRetainSettingButton = EnsureSettingButton(ref timeUpRetainSettingText, timeUpRetainSettingButton, "TimeUpRetainSettingButton", "TimeUpRetainSettingText", new Vector2(0f, -532f), CycleTimeUpRetainPercent);
-        movingObjectsSettingButton = EnsureSettingButton(ref movingObjectsSettingText, movingObjectsSettingButton, "MovingObjectsSettingButton", "MovingObjectsSettingText", new Vector2(-205f, -586f), CycleMovingObjectsEnabled);
-        obstacleWeightSettingButton = EnsureSettingButton(ref obstacleWeightSettingText, obstacleWeightSettingButton, "ObstacleWeightSettingButton", "ObstacleWeightSettingText", new Vector2(205f, -586f), CycleObstacleWeightFactor);
-        treasureWeightSettingButton = EnsureSettingButton(ref treasureWeightSettingText, treasureWeightSettingButton, "TreasureWeightSettingButton", "TreasureWeightSettingText", new Vector2(0f, -640f), CycleTreasureWeightFactor);
+        maxInputBoostSettingButton = EnsureSettingButton(ref maxInputBoostSettingText, maxInputBoostSettingButton, "MaxInputBoostSettingButton", "MaxInputBoostSettingText", new Vector2(205f, -424f), CycleMaxInputBoostPercent);
+        shipDriftSettingButton = EnsureSettingButton(ref shipDriftSettingText, shipDriftSettingButton, "ShipDriftSettingButton", "ShipDriftSettingText", new Vector2(-205f, -478f), CycleShipDriftEnabled);
+        deathTimerSettingButton = EnsureSettingButton(ref deathTimerSettingText, deathTimerSettingButton, "DeathTimerSettingButton", "DeathTimerSettingText", new Vector2(205f, -478f), CycleLastShipTimerMultiplier);
+        movingObjectsSettingButton = EnsureSettingButton(ref movingObjectsSettingText, movingObjectsSettingButton, "MovingObjectsSettingButton", "MovingObjectsSettingText", new Vector2(-205f, -532f), CycleMovingObjectsEnabled);
+        obstacleWeightSettingButton = EnsureSettingButton(ref obstacleWeightSettingText, obstacleWeightSettingButton, "ObstacleWeightSettingButton", "ObstacleWeightSettingText", new Vector2(205f, -532f), CycleObstacleWeightFactor);
+        treasureWeightSettingButton = EnsureSettingButton(ref treasureWeightSettingText, treasureWeightSettingButton, "TreasureWeightSettingButton", "TreasureWeightSettingText", new Vector2(0f, -586f), CycleTreasureWeightFactor);
     }
 
     void RefreshPlayerStatusList()
@@ -411,7 +405,7 @@ public class LobbyManager : MonoBehaviourPunCallbacks
 
         if (!PhotonNetwork.CurrentRoom.CustomProperties.ContainsKey(RoomSettings.ObstacleDensityKey))
         {
-            props[RoomSettings.ObstacleDensityKey] = "medium";
+            props[RoomSettings.ObstacleDensityKey] = RoomSettings.DefaultObstacleDensity;
             changed = true;
         }
 
@@ -457,27 +451,21 @@ public class LobbyManager : MonoBehaviourPunCallbacks
             changed = true;
         }
 
-        if (!PhotonNetwork.CurrentRoom.CustomProperties.ContainsKey(RoomSettings.DeathTimerPenaltyKey))
+        if (!PhotonNetwork.CurrentRoom.CustomProperties.ContainsKey(RoomSettings.MaxInputBoostPercentKey))
         {
-            props[RoomSettings.DeathTimerPenaltyKey] = RoomSettings.DefaultDeathTimerPenalty;
+            props[RoomSettings.MaxInputBoostPercentKey] = RoomSettings.DefaultMaxInputBoostPercent;
             changed = true;
         }
 
-        if (!PhotonNetwork.CurrentRoom.CustomProperties.ContainsKey(RoomSettings.KillRewardPercentKey))
+        if (!PhotonNetwork.CurrentRoom.CustomProperties.ContainsKey(RoomSettings.ShipDriftEnabledKey))
         {
-            props[RoomSettings.KillRewardPercentKey] = RoomSettings.DefaultKillRewardPercent;
+            props[RoomSettings.ShipDriftEnabledKey] = RoomSettings.DefaultShipDriftEnabled;
             changed = true;
         }
 
-        if (!PhotonNetwork.CurrentRoom.CustomProperties.ContainsKey(RoomSettings.DeathRetainPercentKey))
+        if (!PhotonNetwork.CurrentRoom.CustomProperties.ContainsKey(RoomSettings.LastShipTimerMultiplierKey))
         {
-            props[RoomSettings.DeathRetainPercentKey] = RoomSettings.DefaultDeathRetainPercent;
-            changed = true;
-        }
-
-        if (!PhotonNetwork.CurrentRoom.CustomProperties.ContainsKey(RoomSettings.TimeUpRetainPercentKey))
-        {
-            props[RoomSettings.TimeUpRetainPercentKey] = RoomSettings.DefaultTimeUpRetainPercent;
+            props[RoomSettings.LastShipTimerMultiplierKey] = RoomSettings.DefaultLastShipTimerMultiplier;
             changed = true;
         }
 
@@ -683,24 +671,25 @@ public class LobbyManager : MonoBehaviourPunCallbacks
         CycleIntSetting(RoomSettings.BoosterRecoveryDelayKey, BoosterRecoveryDelayOptions, GetBoosterRecoveryDelay(), 0);
     }
 
-    void CycleDeathTimerPenalty()
+    void CycleMaxInputBoostPercent()
     {
-        CycleIntSetting(RoomSettings.DeathTimerPenaltyKey, DeathTimerPenaltyOptions, GetDeathTimerPenalty(), 0);
+        CycleIntSetting(RoomSettings.MaxInputBoostPercentKey, MaxInputBoostPercentOptions, GetMaxInputBoostPercent(), RoomSettings.DefaultMaxInputBoostPercent);
     }
 
-    void CycleKillRewardPercent()
+    void CycleShipDriftEnabled()
     {
-        CycleIntSetting(RoomSettings.KillRewardPercentKey, PercentOptions, GetKillRewardPercent(), RoomSettings.DefaultKillRewardPercent);
+        if (!PhotonNetwork.IsMasterClient || PhotonNetwork.CurrentRoom == null)
+            return;
+
+        Hashtable props = new Hashtable();
+        props[RoomSettings.ShipDriftEnabledKey] = !IsShipDriftEnabled();
+        PhotonNetwork.CurrentRoom.SetCustomProperties(props);
+        RefreshHostSettingsUi();
     }
 
-    void CycleDeathRetainPercent()
+    void CycleLastShipTimerMultiplier()
     {
-        CycleIntSetting(RoomSettings.DeathRetainPercentKey, PercentOptions, GetDeathRetainPercent(), RoomSettings.DefaultDeathRetainPercent);
-    }
-
-    void CycleTimeUpRetainPercent()
-    {
-        CycleIntSetting(RoomSettings.TimeUpRetainPercentKey, TimeUpPercentOptions, GetTimeUpRetainPercent(), RoomSettings.DefaultTimeUpRetainPercent);
+        CycleIntSetting(RoomSettings.LastShipTimerMultiplierKey, LastShipTimerMultiplierOptions, GetLastShipTimerMultiplier(), RoomSettings.DefaultLastShipTimerMultiplier);
     }
 
     void CycleMovingObjectsEnabled()
@@ -795,17 +784,14 @@ public class LobbyManager : MonoBehaviourPunCallbacks
         if (boosterDelaySettingText != null)
             boosterDelaySettingText.text = "BOOST COOLDOWN: " + GetBoosterRecoveryDelay() + "s";
 
+        if (maxInputBoostSettingText != null)
+            maxInputBoostSettingText.text = "MAX BOOST BONUS: +" + GetMaxInputBoostPercent() + "%";
+
+        if (shipDriftSettingText != null)
+            shipDriftSettingText.text = "BRAKING DRIFT: " + (IsShipDriftEnabled() ? "ON" : "OFF");
+
         if (deathTimerSettingText != null)
-            deathTimerSettingText.text = "TIMER DEATH JUMP: -" + GetDeathTimerPenalty() + "s";
-
-        if (killRewardSettingText != null)
-            killRewardSettingText.text = "KILL LOOT: " + GetKillRewardPercent() + "%";
-
-        if (deathRetainSettingText != null)
-            deathRetainSettingText.text = "DEATH SAFEPOCKET: " + GetDeathRetainPercent() + "%";
-
-        if (timeUpRetainSettingText != null)
-            timeUpRetainSettingText.text = "END ROUND KEEP: " + GetTimeUpRetainPercent() + "%";
+            deathTimerSettingText.text = "LONE SHIP TIMER: X" + GetLastShipTimerMultiplier();
 
         if (movingObjectsSettingText != null)
             movingObjectsSettingText.text = "MOVING OBJECTS: " + (AreMovingObjectsEnabled() ? "ON" : "OFF");
@@ -825,10 +811,9 @@ public class LobbyManager : MonoBehaviourPunCallbacks
         SetSettingButtonState(boosterSettingButton, isHost);
         SetSettingButtonState(ammoSettingButton, isHost);
         SetSettingButtonState(boosterDelaySettingButton, isHost);
+        SetSettingButtonState(maxInputBoostSettingButton, isHost);
+        SetSettingButtonState(shipDriftSettingButton, isHost);
         SetSettingButtonState(deathTimerSettingButton, isHost);
-        SetSettingButtonState(killRewardSettingButton, isHost);
-        SetSettingButtonState(deathRetainSettingButton, isHost);
-        SetSettingButtonState(timeUpRetainSettingButton, isHost);
         SetSettingButtonState(movingObjectsSettingButton, isHost);
         SetSettingButtonState(obstacleWeightSettingButton, isHost);
         SetSettingButtonState(treasureWeightSettingButton, isHost);
@@ -902,24 +887,19 @@ public class LobbyManager : MonoBehaviourPunCallbacks
         return RoomSettings.GetBoosterRecoveryDelay();
     }
 
-    int GetDeathTimerPenalty()
+    int GetMaxInputBoostPercent()
     {
-        return RoomSettings.GetDeathTimerPenalty();
+        return RoomSettings.GetMaxInputBoostPercent();
     }
 
-    int GetKillRewardPercent()
+    bool IsShipDriftEnabled()
     {
-        return RoomSettings.GetKillRewardPercent();
+        return RoomSettings.IsShipDriftEnabled();
     }
 
-    int GetDeathRetainPercent()
+    int GetLastShipTimerMultiplier()
     {
-        return RoomSettings.GetDeathRetainPercent();
-    }
-
-    int GetTimeUpRetainPercent()
-    {
-        return RoomSettings.GetTimeUpRetainPercent();
+        return RoomSettings.GetLastShipTimerMultiplier();
     }
 
     bool AreMovingObjectsEnabled()
