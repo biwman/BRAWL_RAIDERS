@@ -36,7 +36,7 @@ namespace Photon.Pun.UtilityScripts
             // Destroying the newly created cull area if there is already one existing
             int cullAreaCount = 0;
             #if UNITY_6000_0_OR_NEWER
-            cullAreaCount = FindObjectsByType<CullArea>(FindObjectsSortMode.None).Length;
+            cullAreaCount = FindObjectsByType<CullArea>(FindObjectsInactive.Exclude).Length;
             #else
             cullAreaCount = FindObjectsOfType<CullArea>().Length;
             #endif

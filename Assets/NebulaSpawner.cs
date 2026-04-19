@@ -204,7 +204,7 @@ public class NebulaSpawner : MonoBehaviour
     List<Vector2> GetCurrentPlayerPositions()
     {
         List<Vector2> positions = new List<Vector2>();
-        PlayerHealth[] players = FindObjectsByType<PlayerHealth>(FindObjectsSortMode.None);
+        PlayerHealth[] players = FindObjectsByType<PlayerHealth>(FindObjectsInactive.Exclude);
 
         for (int i = 0; i < players.Length; i++)
         {

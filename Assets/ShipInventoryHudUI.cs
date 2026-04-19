@@ -42,6 +42,7 @@ public class ShipInventoryHudUI : MonoBehaviourPun
 
     void Update()
     {
+        RefreshRuntimeLayout();
         UpdateVisibility();
         RefreshUi();
     }
@@ -89,12 +90,14 @@ public class ShipInventoryHudUI : MonoBehaviourPun
         buttonObject.transform.SetParent(parent, false);
 
         RectTransform rect = buttonObject.GetComponent<RectTransform>();
+        rect.sizeDelta = new Vector2(164f, 62f);
         if (collectRect != null)
         {
             rect.anchorMin = collectRect.anchorMin;
             rect.anchorMax = collectRect.anchorMax;
             rect.pivot = new Vector2(0.5f, 0.5f);
-            rect.anchoredPosition = collectRect.anchoredPosition + new Vector2(0f, 118f);
+            float verticalOffset = collectRect.rect.height * 0.5f + rect.sizeDelta.y * 0.5f + 18f;
+            rect.anchoredPosition = collectRect.anchoredPosition + new Vector2(0f, verticalOffset);
         }
         else
         {
@@ -103,7 +106,6 @@ public class ShipInventoryHudUI : MonoBehaviourPun
             rect.pivot = new Vector2(0.5f, 0.5f);
             rect.anchoredPosition = new Vector2(180f, 210f);
         }
-        rect.sizeDelta = new Vector2(164f, 62f);
 
         buttonImage = buttonObject.GetComponent<Image>();
         buttonImage.color = new Color(0.18f, 0.38f, 0.62f, 0.95f);
@@ -145,12 +147,14 @@ public class ShipInventoryHudUI : MonoBehaviourPun
         panelObject.transform.SetParent(parent, false);
 
         RectTransform rect = panelObject.GetComponent<RectTransform>();
+        rect.sizeDelta = new Vector2(330f, 170f);
         if (buttonRect != null)
         {
             rect.anchorMin = buttonRect.anchorMin;
             rect.anchorMax = buttonRect.anchorMax;
             rect.pivot = new Vector2(0.5f, 0.5f);
-            rect.anchoredPosition = buttonRect.anchoredPosition + new Vector2(0f, 160f);
+            float verticalOffset = buttonRect.rect.height * 0.5f + rect.sizeDelta.y * 0.5f + 14f;
+            rect.anchoredPosition = buttonRect.anchoredPosition + new Vector2(0f, verticalOffset);
         }
         else
         {
@@ -159,7 +163,6 @@ public class ShipInventoryHudUI : MonoBehaviourPun
             rect.pivot = new Vector2(0f, 0.5f);
             rect.anchoredPosition = new Vector2(28f, 76f);
         }
-        rect.sizeDelta = new Vector2(330f, 170f);
 
         Image bg = panelObject.GetComponent<Image>();
         bg.color = new Color(0.06f, 0.1f, 0.15f, 0.9f);
@@ -171,7 +174,7 @@ public class ShipInventoryHudUI : MonoBehaviourPun
         slotIcons = new Image[PlayerInventoryData.ShipSlotCount];
         slotLabels = new TMP_Text[PlayerInventoryData.ShipSlotCount];
 
-        const float slotSize = 50f;
+        const float slotSize = 55f;
         const float slotSpacing = 10f;
         Vector2 start = new Vector2(20f, -52f);
 
@@ -220,7 +223,7 @@ public class ShipInventoryHudUI : MonoBehaviourPun
         iconRect.anchorMax = new Vector2(0.5f, 0.5f);
         iconRect.pivot = new Vector2(0.5f, 0.5f);
         iconRect.anchoredPosition = Vector2.zero;
-        iconRect.sizeDelta = new Vector2(36f, 36f);
+        iconRect.sizeDelta = new Vector2(40f, 40f);
 
         Image icon = iconObject.GetComponent<Image>();
         icon.preserveAspect = true;
@@ -502,6 +505,48 @@ public class ShipInventoryHudUI : MonoBehaviourPun
     {
         if (dragVisualObject != null)
             dragVisualObject.SetActive(false);
+    }
+
+    void RefreshRuntimeLayout()
+    {
+        if (buttonObject == null)
+            return;
+
+        GameObject collectButton = GameObject.Find("CollectButton");
+        GameObject joystickObject = GameObject.Find("JoystickBG");
+        RectTransform collectRect = collectButton != null ? collectButton.GetComponent<RectTransform>() : null;
+        RectTransform joystickRect = joystickObject != null ? joystickObject.GetComponent<RectTransform>() : null;
+        RectTransform buttonRect = buttonObject.GetComponent<RectTransform>();
+
+        if (collectRect == null || buttonRect == null)
+            return;
+
+        buttonRect.anchorMin = collectRect.anchorMin;
+        buttonRect.anchorMax = collectRect.anchorMax;
+        buttonRect.pivot = new Vector2(0.5f, 0.5f);
+        float buttonVerticalOffset = collectRect.rect.height * 0.5f + buttonRect.rect.height * 0.5f + 30f;
+        Vector2 targetButtonPosition = collectRect.anchoredPosition + new Vector2(0f, buttonVerticalOffset);
+        if (joystickRect != null)
+        {
+            float joystickTop = joystickRect.anchoredPosition.y + joystickRect.rect.height * 0.5f;
+            float minimumButtonCenterY = joystickTop + buttonRect.rect.height * 0.5f + 26f;
+            targetButtonPosition.y = Mathf.Max(targetButtonPosition.y, minimumButtonCenterY);
+        }
+
+        buttonRect.anchoredPosition = targetButtonPosition;
+
+        if (panelObject == null)
+            return;
+
+        RectTransform panelRect = panelObject.GetComponent<RectTransform>();
+        if (panelRect == null)
+            return;
+
+        panelRect.anchorMin = buttonRect.anchorMin;
+        panelRect.anchorMax = buttonRect.anchorMax;
+        panelRect.pivot = new Vector2(0.5f, 0.5f);
+        float panelVerticalOffset = buttonRect.rect.height * 0.5f + panelRect.rect.height * 0.5f + 20f;
+        panelRect.anchoredPosition = buttonRect.anchoredPosition + new Vector2(0f, panelVerticalOffset);
     }
 
     void UpdateVisibility()

@@ -2,6 +2,9 @@ using ExitGames.Client.Photon;
 using Photon.Pun;
 using Photon.Realtime;
 using UnityEngine;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 [RequireComponent(typeof(PhotonView))]
 [RequireComponent(typeof(SpriteRenderer))]
@@ -12,6 +15,7 @@ public class DroppedCargoCrate : MonoBehaviourPun, IOnEventCallback
     const float BaseDriftSpeed = 0.65f;
     const float MaxDriftSpeed = 1.1f;
     const float DriftBouncePadding = 0.6f;
+    const float TargetVisualSize = 0.42f;
     const string CrateSpriteFileName = "skrzynia_metal_clean.png";
     const byte SnapshotEventCode = 83;
     const byte ImpulseRequestEventCode = 84;
@@ -114,9 +118,10 @@ public class DroppedCargoCrate : MonoBehaviourPun, IOnEventCallback
             if (crateSprite != null)
             {
                 spriteRenderer.sprite = crateSprite;
+                FitSpriteToTargetSize(spriteRenderer, TargetVisualSize);
             }
 
-            spriteRenderer.sortingOrder = 1;
+            spriteRenderer.sortingOrder = 14;
             spriteRenderer.color = defaultColor;
         }
 
@@ -127,7 +132,6 @@ public class DroppedCargoCrate : MonoBehaviourPun, IOnEventCallback
             bodyCollider.sharedMaterial = MovingSpaceObject.GetSharedBouncyMaterial();
         }
 
-        transform.localScale = new Vector3(0.04f, 0.04f, 1f);
     }
 
     void ApplyDataFromPhoton()
@@ -482,22 +486,82 @@ public class DroppedCargoCrate : MonoBehaviourPun, IOnEventCallback
         if (cachedCrateSprite != null)
             return cachedCrateSprite;
 
-        string filePath = System.IO.Path.Combine(Application.dataPath, CrateSpriteFileName);
-        if (!System.IO.File.Exists(filePath))
-            return null;
+        Sprite[] sprites = Resources.LoadAll<Sprite>("skrzynia_metal_clean_resource");
+        cachedCrateSprite = GetLargestSprite(sprites);
+        if (cachedCrateSprite != null)
+            return cachedCrateSprite;
 
-        byte[] bytes = System.IO.File.ReadAllBytes(filePath);
-        Texture2D texture = new Texture2D(2, 2, TextureFormat.RGBA32, false);
-        texture.LoadImage(bytes, false);
-        texture.wrapMode = TextureWrapMode.Clamp;
-        texture.filterMode = FilterMode.Bilinear;
+        Texture2D texture = Resources.Load<Texture2D>("skrzynia_metal_clean_resource");
+        if (texture != null)
+        {
+            float pixelsPerUnit = Mathf.Max(100f, Mathf.Max(texture.width, texture.height));
+            cachedCrateSprite = Sprite.Create(
+                texture,
+                new Rect(0f, 0f, texture.width, texture.height),
+                new Vector2(0.5f, 0.5f),
+                pixelsPerUnit);
+            return cachedCrateSprite;
+        }
 
-        cachedCrateSprite = Sprite.Create(
-            texture,
-            new Rect(0f, 0f, texture.width, texture.height),
-            new Vector2(0.5f, 0.5f),
-            100f);
+        cachedCrateSprite = Resources.Load<Sprite>("skrzynia_metal_clean_resource");
+        if (cachedCrateSprite != null)
+        {
+            return cachedCrateSprite;
+        }
+
+#if UNITY_EDITOR
+        Object[] assets = AssetDatabase.LoadAllAssetsAtPath("Assets/Resources/skrzynia_metal_clean_resource.png");
+        Sprite[] editorSprites = new Sprite[assets.Length];
+        for (int i = 0; i < assets.Length; i++)
+            editorSprites[i] = assets[i] as Sprite;
+        cachedCrateSprite = GetLargestSprite(editorSprites);
+        if (cachedCrateSprite != null)
+            return cachedCrateSprite;
+
+        cachedCrateSprite = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Resources/skrzynia_metal_clean_resource.png");
+        if (cachedCrateSprite != null)
+            return cachedCrateSprite;
+
+        cachedCrateSprite = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/" + CrateSpriteFileName);
+#endif
 
         return cachedCrateSprite;
+    }
+
+    static Sprite GetLargestSprite(Sprite[] sprites)
+    {
+        if (sprites == null || sprites.Length == 0)
+            return null;
+
+        Sprite best = null;
+        float bestArea = 0f;
+        for (int i = 0; i < sprites.Length; i++)
+        {
+            Sprite candidate = sprites[i];
+            if (candidate == null)
+                continue;
+
+            float area = candidate.rect.width * candidate.rect.height;
+            if (best == null || area > bestArea)
+            {
+                best = candidate;
+                bestArea = area;
+            }
+        }
+
+        return best;
+    }
+
+    static void FitSpriteToTargetSize(SpriteRenderer renderer, float targetMaxWorldSize)
+    {
+        if (renderer == null || renderer.sprite == null)
+            return;
+
+        float maxDimension = Mathf.Max(renderer.sprite.bounds.size.x, renderer.sprite.bounds.size.y);
+        if (maxDimension <= 0.0001f)
+            return;
+
+        float scale = targetMaxWorldSize / maxDimension;
+        renderer.transform.localScale = new Vector3(scale, scale, 1f);
     }
 }

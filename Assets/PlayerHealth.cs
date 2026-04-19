@@ -273,20 +273,24 @@ public class PlayerHealth : MonoBehaviourPun
         if (cargoHudUi != null)
             Destroy(cargoHudUi);
 
+        EngineThrusterVFX thruster = GetComponent<EngineThrusterVFX>();
+        if (thruster != null)
+            thruster.DisableAndClearTrails();
+
         Rigidbody2D body = GetComponent<Rigidbody2D>();
         if (body != null)
         {
             body.bodyType = RigidbodyType2D.Dynamic;
-            body.mass = 2.4f;
-            body.linearDamping = 0.32f;
-            body.angularDamping = 0.42f;
+            body.mass = 6f;
+            body.linearDamping = 0.62f;
+            body.angularDamping = 0.78f;
 
             Vector2 driftDirection = Random.insideUnitCircle.normalized;
             if (driftDirection.sqrMagnitude < 0.001f)
                 driftDirection = Vector2.left;
 
-            body.linearVelocity = driftDirection * 0.32f;
-            body.angularVelocity = Random.Range(-12f, 12f);
+            body.linearVelocity = driftDirection * 0.14f;
+            body.angularVelocity = Random.Range(-5f, 5f);
         }
 
         ShipWreck wreck = GetComponent<ShipWreck>();
@@ -317,6 +321,10 @@ public class PlayerHealth : MonoBehaviourPun
         if (collector != null)
             collector.enabled = false;
 
+        EngineThrusterVFX thruster = GetComponent<EngineThrusterVFX>();
+        if (thruster != null)
+            thruster.DisableAndClearTrails();
+
         Collider2D[] colliders = GetComponents<Collider2D>();
         for (int i = 0; i < colliders.Length; i++)
             colliders[i].enabled = true;
@@ -326,16 +334,16 @@ public class PlayerHealth : MonoBehaviourPun
         {
             body.simulated = true;
             body.bodyType = RigidbodyType2D.Dynamic;
-            body.mass = 1.5f;
-            body.linearDamping = 0.28f;
-            body.angularDamping = 0.36f;
+            body.mass = 4.6f;
+            body.linearDamping = 0.56f;
+            body.angularDamping = 0.72f;
 
             Vector2 driftDirection = Random.insideUnitCircle.normalized;
             if (driftDirection.sqrMagnitude < 0.001f)
                 driftDirection = Vector2.left;
 
-            body.linearVelocity = driftDirection * 0.28f;
-            body.angularVelocity = Random.Range(-18f, 18f);
+            body.linearVelocity = driftDirection * 0.12f;
+            body.angularVelocity = Random.Range(-4f, 4f);
         }
 
         ShipWreck wreck = GetComponent<ShipWreck>();
@@ -344,6 +352,11 @@ public class PlayerHealth : MonoBehaviourPun
 
         string serializedLoot = PlayerProfileService.SerializeShipInventorySlots(new[] { InventoryItemCatalog.DroidScrapId });
         wreck.InitializeFromLootJson(serializedLoot, -1);
+        wreck.SetBaseColor(new Color(0.2f, 0.23f, 0.26f, 0.94f));
+
+        SpriteRenderer renderer = GetComponent<SpriteRenderer>();
+        if (renderer != null)
+            renderer.color = new Color(0.2f, 0.23f, 0.26f, 0.94f);
     }
 
     [PunRPC]
@@ -491,6 +504,12 @@ public class ShieldBarUI : MonoBehaviourPun
 
     void Update()
     {
+        if (shieldBar == null)
+        {
+            CreateShieldBar();
+            RefreshBar();
+        }
+
         UpdateVisibility();
         RefreshBar();
     }
@@ -708,9 +727,9 @@ public class AstronautSurvivor : MonoBehaviourPun
         Rigidbody2D body = GetComponent<Rigidbody2D>();
         if (body != null)
         {
-            body.mass = 0.03f;
-            body.linearDamping = 0.3f;
-            body.angularDamping = 0.8f;
+            body.mass = 0.01f;
+            body.linearDamping = 0.9f;
+            body.angularDamping = 1f;
         }
 
         BoxCollider2D boxCollider = GetComponent<BoxCollider2D>();

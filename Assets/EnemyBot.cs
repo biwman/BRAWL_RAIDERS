@@ -1,5 +1,8 @@
 using Photon.Pun;
 using UnityEngine;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 [RequireComponent(typeof(PhotonView))]
 [RequireComponent(typeof(Rigidbody2D))]
@@ -159,21 +162,34 @@ public class EnemyBot : MonoBehaviourPun
         if (cachedBotSprite != null)
             return cachedBotSprite;
 
-        string filePath = System.IO.Path.Combine(Application.dataPath, "droid1.png");
-        if (!System.IO.File.Exists(filePath))
-            return null;
+        cachedBotSprite = Resources.Load<Sprite>("droid1_resource");
+        if (cachedBotSprite != null)
+            return cachedBotSprite;
 
-        byte[] bytes = System.IO.File.ReadAllBytes(filePath);
-        Texture2D texture = new Texture2D(2, 2, TextureFormat.RGBA32, false);
-        texture.LoadImage(bytes, false);
-        texture.wrapMode = TextureWrapMode.Clamp;
-        texture.filterMode = FilterMode.Bilinear;
+        Sprite[] sprites = Resources.LoadAll<Sprite>("droid1_resource");
+        if (sprites != null && sprites.Length > 0)
+        {
+            cachedBotSprite = sprites[0];
+            return cachedBotSprite;
+        }
 
-        cachedBotSprite = Sprite.Create(
-            texture,
-            new Rect(0f, 0f, texture.width, texture.height),
-            new Vector2(0.5f, 0.5f),
-            100f);
+#if UNITY_EDITOR
+        cachedBotSprite = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Resources/droid1_resource.png");
+        if (cachedBotSprite != null)
+            return cachedBotSprite;
+
+        Object[] assets = AssetDatabase.LoadAllAssetsAtPath("Assets/Resources/droid1_resource.png");
+        for (int i = 0; i < assets.Length; i++)
+        {
+            if (assets[i] is Sprite sprite)
+            {
+                cachedBotSprite = sprite;
+                return cachedBotSprite;
+            }
+        }
+
+        cachedBotSprite = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/droid1.png");
+#endif
 
         return cachedBotSprite;
     }

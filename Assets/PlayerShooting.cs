@@ -347,6 +347,7 @@ public class ReloadButtonUI : MonoBehaviourPun
 
     void Update()
     {
+        EnsureButton();
         RefreshState();
     }
 
@@ -419,6 +420,17 @@ public class ReloadButtonUI : MonoBehaviourPun
             buttonText.font = referenceText.font;
             buttonText.fontSharedMaterial = referenceText.fontSharedMaterial;
         }
+    }
+
+    void EnsureButton()
+    {
+        if (!photonView.IsMine)
+            return;
+
+        if (buttonObject != null && reloadButton != null && backgroundImage != null && buttonText != null)
+            return;
+
+        CreateButton();
     }
 
     void RefreshState()

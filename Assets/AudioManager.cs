@@ -133,7 +133,7 @@ public class AudioManager : MonoBehaviour
             if (button == null || !button.gameObject.scene.IsValid())
                 continue;
 
-            int id = button.GetInstanceID();
+            int id = button.GetHashCode();
             if (hookedButtons.Contains(id))
                 continue;
 

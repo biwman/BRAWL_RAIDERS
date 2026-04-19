@@ -24,11 +24,9 @@ namespace Photon.Pun.UtilityScripts
             #if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
             Debug.LogError("PUN Demos are not compatible with the New Input System, unless you enable \"Both\" in: Edit > Project Settings > Player > Active Input Handling. Pausing App.");
             Debug.Break();
-            return;
-            #endif
-
+            #else
             #if UNITY_6000_0_OR_NEWER
-            EventSystem sceneEventSystem = FindFirstObjectByType<EventSystem>();
+            EventSystem sceneEventSystem = FindAnyObjectByType<EventSystem>();
             #else
             EventSystem sceneEventSystem = FindObjectOfType<EventSystem>();
             #endif
@@ -39,6 +37,7 @@ namespace Photon.Pun.UtilityScripts
                 eventSystem.AddComponent<EventSystem>();
                 eventSystem.AddComponent<StandaloneInputModule>();
             }
+            #endif
         }
     }
 }

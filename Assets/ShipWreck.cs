@@ -16,6 +16,7 @@ public class ShipWreck : MonoBehaviourPun
     SpriteRenderer spriteRenderer;
     Color baseColor = new Color(0.46f, 0.48f, 0.52f, 0.96f);
     int sourceShipSkinIndex;
+    bool isHighlighted;
 
     public bool isBeingCollected;
     public bool HasLoot => lootItems.Count > 0;
@@ -29,7 +30,7 @@ public class ShipWreck : MonoBehaviourPun
 
     public void InitializeFromLootJson(string rawLoot, int shipSkinIndex = 0)
     {
-        sourceShipSkinIndex = Mathf.Max(0, shipSkinIndex);
+        sourceShipSkinIndex = shipSkinIndex;
         lootItems.Clear();
         string[] slots = PlayerProfileService.DeserializeShipInventorySlots(rawLoot);
         for (int i = 0; i < slots.Length; i++)
@@ -59,11 +60,19 @@ public class ShipWreck : MonoBehaviourPun
         if (!HasLoot || spriteRenderer == null)
             return;
 
-        spriteRenderer.color = Color.green;
+        isHighlighted = true;
+        RefreshVisualState();
+    }
+
+    public void SetBaseColor(Color color)
+    {
+        baseColor = color;
+        RefreshVisualState();
     }
 
     public void Unhighlight()
     {
+        isHighlighted = false;
         RefreshVisualState();
     }
 
@@ -72,7 +81,15 @@ public class ShipWreck : MonoBehaviourPun
         if (spriteRenderer == null)
             return;
 
-        spriteRenderer.color = HasLoot ? baseColor : new Color(0.28f, 0.29f, 0.32f, 0.78f);
+        if (!HasLoot)
+        {
+            spriteRenderer.color = new Color(0.28f, 0.29f, 0.32f, 0.78f);
+            return;
+        }
+
+        spriteRenderer.color = isHighlighted
+            ? new Color(0.08f, 1f, 0.22f, 1f)
+            : baseColor;
     }
 
     [PunRPC]
@@ -84,6 +101,14 @@ public class ShipWreck : MonoBehaviourPun
         }
 
         isBeingCollected = false;
+        isHighlighted = false;
+
+        if (!HasLoot && sourceShipSkinIndex < 0)
+        {
+            Destroy(gameObject);
+            return;
+        }
+
         RefreshVisualState();
     }
 }

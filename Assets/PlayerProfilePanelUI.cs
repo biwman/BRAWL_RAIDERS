@@ -6,6 +6,9 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 public class PlayerProfilePanelUI : MonoBehaviour
 {
@@ -48,6 +51,7 @@ public class PlayerProfilePanelUI : MonoBehaviour
     TMP_Text shipTypeLabelText;
     TMP_Text shipSkinLabelText;
     TMP_Text shipInventoryLabelText;
+    TMP_Text playerInventoryLabelText;
     TMP_Text shipPreviewTitleText;
     TMP_Text[] equipmentSlotPreviewTexts;
     Image shipPreviewImage;
@@ -55,6 +59,10 @@ public class PlayerProfilePanelUI : MonoBehaviour
     Image itemPreviewIcon;
     TMP_Text itemPreviewNameText;
     TMP_Text itemPreviewPriceText;
+    GameObject splashScreenObject;
+    Image splashScreenImage;
+    float splashHideTime;
+    static bool splashShownOnce;
     int selectedSkin;
     bool inventoryActionInProgress;
     Coroutine holdSellRoutine;
@@ -208,41 +216,43 @@ public class PlayerProfilePanelUI : MonoBehaviour
         nicknameInput.contentType = TMP_InputField.ContentType.Standard;
         nicknameInput.characterLimit = 18;
 
-        shipTypeLabelText = CreateText(panelObject.transform, "ShipTypeLabel", "SHIP", new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-326f, -392f), new Vector2(260f, 24f), 18f, TextAlignmentOptions.Left);
+        CreateSplashScreen(panelObject.transform);
+
+        shipTypeLabelText = CreateText(panelObject.transform, "ShipTypeLabel", "SHIP", new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-304f, -214f), new Vector2(260f, 24f), 18f, TextAlignmentOptions.Left);
 
         shipTypeButtons = new Button[2];
-        shipTypeButtons[0] = CreateButton(panelObject.transform, "ExplorerShipButton", "EXPLORER", new Vector2(386f, -418f), new Vector2(156f, 40f), () =>
+        shipTypeButtons[0] = CreateButton(panelObject.transform, "ExplorerShipButton", "EXPLORER", new Vector2(404f, -242f), new Vector2(156f, 40f), () =>
         {
             SetSelectedShipType(ShipType.Explorer);
         });
-        shipTypeButtons[1] = CreateButton(panelObject.transform, "ViperShipButton", "VIPER", new Vector2(564f, -418f), new Vector2(156f, 40f), () =>
+        shipTypeButtons[1] = CreateButton(panelObject.transform, "ViperShipButton", "VIPER", new Vector2(580f, -242f), new Vector2(156f, 40f), () =>
         {
             SetSelectedShipType(ShipType.Viper);
         });
 
-        shipSkinLabelText = CreateText(panelObject.transform, "SkinLabel", "SHIP SKIN", new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-326f, -486f), new Vector2(300f, 24f), 18f, TextAlignmentOptions.Left);
+        shipSkinLabelText = CreateText(panelObject.transform, "SkinLabel", "SHIP SKIN", new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-304f, -294f), new Vector2(300f, 24f), 18f, TextAlignmentOptions.Left);
 
         skinButtons = new Button[3];
         for (int i = 0; i < 3; i++)
         {
             int capturedIndex = i;
-            skinButtons[i] = CreateButton(panelObject.transform, "ShipSkinButton" + i, "SKIN", new Vector2(338f + (146f * i), -514f), new Vector2(126f, 40f), () =>
+            skinButtons[i] = CreateButton(panelObject.transform, "ShipSkinButton" + i, "SKIN", new Vector2(346f + (146f * i), -322f), new Vector2(126f, 56f), () =>
             {
                 ApplySkinChoiceByButtonIndex(capturedIndex);
             });
         }
 
-        shipPreviewTitleText = CreateText(panelObject.transform, "ShipPreviewTitle", "SHIP LOADOUT", new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-326f, -578f), new Vector2(360f, 24f), 18f, TextAlignmentOptions.Left);
+        shipPreviewTitleText = CreateText(panelObject.transform, "ShipPreviewTitle", "SHIP LOADOUT", new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-304f, -506f), new Vector2(360f, 24f), 18f, TextAlignmentOptions.Left);
         CreateShipPreview(panelObject.transform);
 
         inventoryHintText = CreateText(panelObject.transform, "InventoryHintText", "Tap to preview. Drag between inventories. Hold 2s to sell for Astrons.", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -146f), new Vector2(680f, 24f), 16f, TextAlignmentOptions.Center);
         inventoryHintText.fontStyle = FontStyles.Normal;
 
-        shipInventoryLabelText = CreateText(panelObject.transform, "ShipInventoryLabel", "SHIP INVENTORY", new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(270f, -390f), new Vector2(320f, 24f), 18f, TextAlignmentOptions.Center);
-        CreateInventoryGrid(panelObject.transform, false, new Vector2(-290f, -424f), 2, 5, out shipInventoryButtons, out shipInventoryTexts, out shipInventoryIcons);
+        shipInventoryLabelText = CreateText(panelObject.transform, "ShipInventoryLabel", "SHIP INVENTORY", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(-776f, -320f), new Vector2(320f, 24f), 18f, TextAlignmentOptions.Center);
+        CreateInventoryGrid(panelObject.transform, false, new Vector2(-900f, -352f), 2, 5, out shipInventoryButtons, out shipInventoryTexts, out shipInventoryIcons);
 
-        CreateText(panelObject.transform, "PlayerInventoryLabel", "PLAYER INVENTORY (50)", new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(420f, -540f), new Vector2(380f, 24f), 18f, TextAlignmentOptions.Center);
-        CreateInventoryGrid(panelObject.transform, true, new Vector2(-290f, -574f), 5, 10, out playerInventoryButtons, out playerInventoryTexts, out playerInventoryIcons);
+        playerInventoryLabelText = CreateText(panelObject.transform, "PlayerInventoryLabel", "PLAYER INVENTORY (50)", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(-621f, -536f), new Vector2(380f, 24f), 18f, TextAlignmentOptions.Center);
+        CreateInventoryGrid(panelObject.transform, true, new Vector2(-900f, -568f), 5, 10, out playerInventoryButtons, out playerInventoryTexts, out playerInventoryIcons);
 
         CreateItemPreview(panelObject.transform);
 
@@ -259,7 +269,7 @@ public class PlayerProfilePanelUI : MonoBehaviour
         rootRect.anchorMin = new Vector2(1f, 1f);
         rootRect.anchorMax = new Vector2(1f, 1f);
         rootRect.pivot = new Vector2(1f, 1f);
-        rootRect.anchoredPosition = new Vector2(-90f, -614f);
+        rootRect.anchoredPosition = new Vector2(-56f, -570f);
         rootRect.sizeDelta = new Vector2(440f, 208f);
 
         Image rootImage = previewRoot.GetComponent<Image>();
@@ -282,7 +292,48 @@ public class PlayerProfilePanelUI : MonoBehaviour
         equipmentSlotPreviewTexts[2] = CreateEquipmentSlotBadge(previewRoot.transform, "ShieldSlot", new Vector2(0f, -150f), "SHIELD");
         equipmentSlotPreviewTexts[3] = CreateEquipmentSlotBadge(previewRoot.transform, "EngineA", new Vector2(-124f, 10f), "ENGINE");
         equipmentSlotPreviewTexts[4] = CreateEquipmentSlotBadge(previewRoot.transform, "EngineB", new Vector2(124f, 10f), "ENGINE");
-        equipmentSlotPreviewTexts[5] = CreateEquipmentSlotBadge(previewRoot.transform, "GadgetSlot", new Vector2(0f, 104f), "GADGET");
+        equipmentSlotPreviewTexts[5] = CreateEquipmentSlotBadge(previewRoot.transform, "GadgetSlot", new Vector2(0f, 56f), "GADGET");
+    }
+
+    void CreateSplashScreen(Transform parent)
+    {
+        splashScreenObject = new GameObject("StartupSplashScreen", typeof(RectTransform), typeof(Image));
+        splashScreenObject.transform.SetParent(parent, false);
+
+        RectTransform rect = splashScreenObject.GetComponent<RectTransform>();
+        rect.anchorMin = Vector2.zero;
+        rect.anchorMax = Vector2.one;
+        rect.offsetMin = Vector2.zero;
+        rect.offsetMax = Vector2.zero;
+
+        Image splashBackground = splashScreenObject.GetComponent<Image>();
+        splashBackground.color = Color.black;
+        splashBackground.raycastTarget = false;
+
+        GameObject logoObject = new GameObject("StartupSplashLogo", typeof(RectTransform), typeof(Image));
+        logoObject.transform.SetParent(splashScreenObject.transform, false);
+        RectTransform logoRect = logoObject.GetComponent<RectTransform>();
+        logoRect.anchorMin = Vector2.zero;
+        logoRect.anchorMax = Vector2.one;
+        logoRect.offsetMin = Vector2.zero;
+        logoRect.offsetMax = Vector2.zero;
+
+        splashScreenImage = logoObject.GetComponent<Image>();
+        splashScreenImage.color = Color.white;
+        splashScreenImage.preserveAspect = true;
+        splashScreenImage.raycastTarget = false;
+        splashScreenImage.sprite = LoadStandaloneSprite("STAR_RAIDERS_ekran.png");
+
+        if (!splashShownOnce)
+        {
+            splashHideTime = Time.unscaledTime + 3f;
+            splashShownOnce = true;
+        }
+        else
+        {
+            splashHideTime = -1f;
+            splashScreenObject.SetActive(false);
+        }
     }
 
     void CreateItemPreview(Transform parent)
@@ -342,7 +393,7 @@ public class PlayerProfilePanelUI : MonoBehaviour
         labels = new TMP_Text[rows * columns];
         icons = new Image[rows * columns];
 
-        const float slotSize = 54f;
+        const float slotSize = 60f;
         const float slotSpacing = 8f;
 
         for (int row = 0; row < rows; row++)
@@ -404,7 +455,7 @@ public class PlayerProfilePanelUI : MonoBehaviour
         iconRect.anchorMax = new Vector2(0.5f, 0.5f);
         iconRect.pivot = new Vector2(0.5f, 0.5f);
         iconRect.anchoredPosition = Vector2.zero;
-        iconRect.sizeDelta = new Vector2(38f, 38f);
+        iconRect.sizeDelta = new Vector2(42f, 42f);
 
         icon = iconObject.GetComponent<Image>();
         icon.preserveAspect = true;
@@ -438,6 +489,13 @@ public class PlayerProfilePanelUI : MonoBehaviour
 
         TMP_Text text = CreateText(buttonObject.transform, objectName + "Text", label, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero, 18f, TextAlignmentOptions.Center);
         text.fontStyle = FontStyles.Bold;
+        if (objectName.StartsWith("ShipSkinButton", StringComparison.Ordinal))
+        {
+            text.fontSize = 15f;
+            text.textWrappingMode = TextWrappingModes.Normal;
+            text.overflowMode = TextOverflowModes.Ellipsis;
+            text.margin = new Vector4(6f, 4f, 6f, 4f);
+        }
 
         return button;
     }
@@ -550,16 +608,42 @@ public class PlayerProfilePanelUI : MonoBehaviour
         return ShipCatalog.GetShipTypeFromSkinIndex(selectedSkin);
     }
 
-    void SetSelectedShipType(ShipType shipType)
+    async void SetSelectedShipType(ShipType shipType)
     {
         int[] allowedSkins = ShipCatalog.GetSkinsForShipType(shipType);
-        if (System.Array.IndexOf(allowedSkins, selectedSkin) < 0)
-            selectedSkin = allowedSkins[0];
+        int targetSkin = System.Array.IndexOf(allowedSkins, selectedSkin) >= 0 ? selectedSkin : allowedSkins[0];
+        if (inventoryActionInProgress)
+            return;
 
-        UpdateShipTypeButtonVisuals();
-        UpdateSkinButtonsForSelectedShip();
-        UpdateSkinButtonVisuals();
-        RefreshShipPreview();
+        inventoryActionInProgress = true;
+        SetInteractable(false);
+        SetStatus("Switching ship...");
+
+        try
+        {
+            bool changed = await PlayerProfileService.Instance.TryChangeShipSkinAsync(targetSkin);
+            if (!changed)
+            {
+                SetStatus("No room in player inventory for extra cargo.");
+                RefreshView();
+                return;
+            }
+
+            selectedSkin = targetSkin;
+            RefreshView();
+            SetStatus("Ship changed.");
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError("Ship switch failed: " + ex);
+            SetStatus("Ship change failed.");
+            RefreshView();
+        }
+        finally
+        {
+            inventoryActionInProgress = false;
+            SetInteractable(true);
+        }
     }
 
     void ApplySkinChoiceByButtonIndex(int buttonIndex)
@@ -701,31 +785,158 @@ public class PlayerProfilePanelUI : MonoBehaviour
 
     Sprite LoadShipPreviewSprite(int skinIndex)
     {
-        string fileName = skinIndex switch
+        string resourcesPath = skinIndex switch
         {
-            1 => "ship2.png",
-            2 => "ship3.png",
-            3 => "ship4.png",
-            _ => "ship1.png"
+            1 => "Visuals/Ships/ship2_resource",
+            2 => "Visuals/Ships/ship3_resource",
+            3 => "ship4_resource",
+            _ => "Visuals/Ships/ship1_resource"
         };
 
-        string filePath = System.IO.Path.Combine(Application.dataPath, fileName);
-        if (!System.IO.File.Exists(filePath))
+        string editorPath = skinIndex switch
+        {
+            1 => "Assets/Resources/Visuals/Ships/ship2_resource.png",
+            2 => "Assets/Resources/Visuals/Ships/ship3_resource.png",
+            3 => "Assets/Resources/ship4_resource.png",
+            _ => "Assets/Resources/Visuals/Ships/ship1_resource.png"
+        };
+
+        string editorFallbackPath = skinIndex switch
+        {
+            1 => "Assets/ship2.png",
+            2 => "Assets/ship3.png",
+            3 => "Assets/ship4.png",
+            _ => "Assets/ship1.png"
+        };
+
+        return LoadSpriteFromResourcesOrEditor(resourcesPath, editorPath, editorFallbackPath);
+    }
+
+    Sprite LoadStandaloneSprite(string fileName)
+    {
+        string resourcesPath = fileName switch
+        {
+            "STAR_RAIDERS_ekran.png" => "STAR_RAIDERS_ekran_resource",
+            "ship1.png" => "Visuals/Ships/ship1_resource",
+            "ship2.png" => "Visuals/Ships/ship2_resource",
+            "ship3.png" => "Visuals/Ships/ship3_resource",
+            "ship4.png" => "ship4_resource",
+            _ => null
+        };
+
+        string editorResourcePath = fileName switch
+        {
+            "STAR_RAIDERS_ekran.png" => "Assets/Resources/STAR_RAIDERS_ekran_resource.png",
+            "ship1.png" => "Assets/Resources/Visuals/Ships/ship1_resource.png",
+            "ship2.png" => "Assets/Resources/Visuals/Ships/ship2_resource.png",
+            "ship3.png" => "Assets/Resources/Visuals/Ships/ship3_resource.png",
+            "ship4.png" => "Assets/Resources/ship4_resource.png",
+            _ => null
+        };
+
+        string editorFallbackPath = string.IsNullOrWhiteSpace(fileName) ? null : "Assets/" + fileName;
+        return LoadSpriteFromResourcesOrEditor(resourcesPath, editorResourcePath, editorFallbackPath);
+    }
+
+    Sprite LoadSpriteFromResourcesOrEditor(string resourcesPath, string editorPreferredPath, string editorFallbackPath = null)
+    {
+        Sprite sprite = LoadSpriteFromResources(resourcesPath);
+        if (sprite != null)
+            return sprite;
+
+#if UNITY_EDITOR
+        sprite = LoadEditorSprite(editorPreferredPath);
+        if (sprite != null)
+            return sprite;
+
+        if (!string.IsNullOrWhiteSpace(editorFallbackPath))
+            return LoadEditorSprite(editorFallbackPath);
+#endif
+
+        return null;
+    }
+
+    Sprite LoadSpriteFromResources(string resourcesPath)
+    {
+        if (string.IsNullOrWhiteSpace(resourcesPath))
             return null;
 
-        byte[] bytes = System.IO.File.ReadAllBytes(filePath);
-        Texture2D texture = new Texture2D(2, 2, TextureFormat.RGBA32, false);
-        texture.LoadImage(bytes, false);
+        Sprite sprite = Resources.Load<Sprite>(resourcesPath);
+        if (sprite != null)
+            return sprite;
+
+        Sprite[] sprites = Resources.LoadAll<Sprite>(resourcesPath);
+        sprite = GetLargestSprite(sprites);
+        if (sprite != null)
+            return sprite;
+
+        Texture2D texture = Resources.Load<Texture2D>(resourcesPath);
+        if (texture == null)
+            return null;
+
         texture.wrapMode = TextureWrapMode.Clamp;
         texture.filterMode = FilterMode.Bilinear;
-
-        return Sprite.Create(texture, new Rect(0f, 0f, texture.width, texture.height), new Vector2(0.5f, 0.5f), 100f);
+        float pixelsPerUnit = Mathf.Max(100f, Mathf.Max(texture.width, texture.height));
+        return Sprite.Create(texture, new Rect(0f, 0f, texture.width, texture.height), new Vector2(0.5f, 0.5f), pixelsPerUnit);
     }
+
+    Sprite GetLargestSprite(Sprite[] sprites)
+    {
+        if (sprites == null || sprites.Length == 0)
+            return null;
+
+        Sprite best = null;
+        float bestArea = 0f;
+        for (int i = 0; i < sprites.Length; i++)
+        {
+            Sprite candidate = sprites[i];
+            if (candidate == null)
+                continue;
+
+            float area = candidate.rect.width * candidate.rect.height;
+            if (best == null || area > bestArea)
+            {
+                best = candidate;
+                bestArea = area;
+            }
+        }
+
+        return best;
+    }
+
+#if UNITY_EDITOR
+    Sprite LoadEditorSprite(string assetPath)
+    {
+        if (string.IsNullOrWhiteSpace(assetPath))
+            return null;
+
+        Sprite sprite = AssetDatabase.LoadAssetAtPath<Sprite>(assetPath);
+        if (sprite != null)
+            return sprite;
+
+        UnityEngine.Object[] assets = AssetDatabase.LoadAllAssetsAtPath(assetPath);
+        for (int i = 0; i < assets.Length; i++)
+        {
+            if (assets[i] is Sprite loadedSprite)
+                return loadedSprite;
+        }
+
+        return null;
+    }
+#endif
 
     void RefreshVisibility()
     {
         if (panelObject == null)
             return;
+
+        bool splashShowing = splashScreenObject != null && splashHideTime > 0f && Time.unscaledTime < splashHideTime;
+        if (splashScreenObject != null)
+        {
+            splashScreenObject.SetActive(splashShowing);
+            if (splashShowing)
+                splashScreenObject.transform.SetAsLastSibling();
+        }
 
         bool show = !PhotonNetwork.InRoom;
         panelObject.SetActive(show);
@@ -796,7 +1007,7 @@ public class PlayerProfilePanelUI : MonoBehaviour
         }
     }
 
-    async void OnInventorySlotClicked(bool isPlayerInventory, int slotIndex)
+    void OnInventorySlotClicked(bool isPlayerInventory, int slotIndex)
     {
         if (suppressNextInventoryClick)
         {
@@ -1085,6 +1296,9 @@ public class PlayerProfilePanelUI : MonoBehaviour
         if (shipInventoryLabelText != null)
             shipInventoryLabelText.text = "SHIP INVENTORY (" + ShipCatalog.GetShipInventoryCapacity(selectedSkin) + ")";
 
+        if (playerInventoryLabelText != null)
+            playerInventoryLabelText.text = "PLAYER INVENTORY (" + PlayerInventoryData.PlayerSlotCount + ")";
+
         RefreshInventoryButtons(shipInventoryButtons, shipInventoryTexts, shipInventoryIcons, normalized.ShipSlots, true);
         RefreshInventoryButtons(playerInventoryButtons, playerInventoryTexts, playerInventoryIcons, normalized.PlayerSlots, false);
     }
@@ -1098,18 +1312,23 @@ public class PlayerProfilePanelUI : MonoBehaviour
         {
             string itemId = slots[i];
             bool occupied = !string.IsNullOrWhiteSpace(itemId);
-            bool locked = isShipInventory && i >= ShipCatalog.GetShipInventoryCapacity(selectedSkin);
+            int shipCapacity = ShipCatalog.GetShipInventoryCapacity(selectedSkin);
+            bool withinShipCapacity = !isShipInventory || i < shipCapacity;
             Image image = buttons[i] != null ? buttons[i].GetComponent<Image>() : null;
             Image icon = icons[i];
             Sprite itemSprite = occupied ? InventoryItemCatalog.GetIcon(itemId) : null;
 
+            if (buttons[i] != null)
+                buttons[i].gameObject.SetActive(withinShipCapacity);
+
+            if (!withinShipCapacity)
+                continue;
+
             if (labels[i] != null)
             {
                 bool useTextLabel = occupied && itemSprite == null;
-                labels[i].text = locked && !occupied ? "LOCK" : useTextLabel ? InventoryItemCatalog.GetShortLabel(itemId) : string.Empty;
-                labels[i].color = locked && !occupied
-                    ? new Color(0.68f, 0.72f, 0.78f, 0.9f)
-                    : useTextLabel ? new Color(0.97f, 0.99f, 1f, 1f) : new Color(0f, 0f, 0f, 0f);
+                labels[i].text = useTextLabel ? InventoryItemCatalog.GetShortLabel(itemId) : string.Empty;
+                labels[i].color = useTextLabel ? new Color(0.97f, 0.99f, 1f, 1f) : new Color(0f, 0f, 0f, 0f);
             }
 
             if (icon != null)
@@ -1120,15 +1339,13 @@ public class PlayerProfilePanelUI : MonoBehaviour
 
             if (image != null)
             {
-                image.color = locked && !occupied
-                    ? new Color(0.09f, 0.1f, 0.12f, 0.72f)
-                    : occupied
+                image.color = occupied
                     ? InventoryItemCatalog.GetRarityColor(itemId)
                     : new Color(0.12f, 0.16f, 0.21f, 0.96f);
             }
 
             if (buttons[i] != null)
-                buttons[i].interactable = !(locked && !occupied) && !inventoryActionInProgress;
+                buttons[i].interactable = !inventoryActionInProgress;
         }
     }
 

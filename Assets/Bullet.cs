@@ -32,6 +32,9 @@ public class Bullet : MonoBehaviourPun
         {
             rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
             rb.interpolation = RigidbodyInterpolation2D.Interpolate;
+            rb.mass = 0.005f * RoomSettings.GetBulletPushMultiplier();
+            rb.linearDamping = 0f;
+            rb.angularDamping = 0f;
         }
 
         CircleCollider2D collider2D = GetComponent<CircleCollider2D>();
@@ -91,7 +94,38 @@ public class Bullet : MonoBehaviourPun
             hp.photonView.RPC("TakeDamage", RpcTarget.MasterClient, damage, ownerViewID);
         }
 
+        ApplyBulletPush(collision);
+
         DestroyBullet();
+    }
+
+    void ApplyBulletPush(Collision2D collision)
+    {
+        if (collision == null)
+            return;
+
+        Rigidbody2D rb = GetComponent<Rigidbody2D>();
+        Vector2 bulletVelocity = rb != null ? rb.linearVelocity : Vector2.zero;
+        if (bulletVelocity.sqrMagnitude < 0.0001f)
+            return;
+
+        float pushMultiplier = RoomSettings.GetBulletPushMultiplier();
+        Vector2 impulse = bulletVelocity * (0.22f * pushMultiplier);
+
+        MovingSpaceObject movingObject = collision.collider != null
+            ? collision.collider.GetComponentInParent<MovingSpaceObject>()
+            : null;
+        if (movingObject != null && !string.IsNullOrWhiteSpace(movingObject.StableId))
+        {
+            SpaceObjectMotionSync.RequestImpulse(movingObject.StableId, impulse);
+            return;
+        }
+
+        Rigidbody2D hitBody = collision.rigidbody;
+        if (hitBody == null || hitBody.bodyType != RigidbodyType2D.Dynamic)
+            return;
+
+        hitBody.AddForce(impulse, ForceMode2D.Impulse);
     }
 
     IEnumerator DestroyAfterSafetyLifetime()

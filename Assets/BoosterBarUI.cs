@@ -30,6 +30,12 @@ public class BoosterBarUI : MonoBehaviourPun
 
     void Update()
     {
+        if (boosterBar == null)
+        {
+            CreateBoosterBar();
+            RefreshBar();
+        }
+
         UpdateVisibility();
         RefreshBar();
     }

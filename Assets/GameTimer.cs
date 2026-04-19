@@ -98,7 +98,7 @@ public class GameTimer : MonoBehaviourPun
             return;
 
         isEndingRound = true;
-        GameManager manager = FindFirstObjectByType<GameManager>();
+        GameManager manager = FindAnyObjectByType<GameManager>();
         if (manager != null)
         {
             manager.EndGame("no_survivors");
@@ -121,6 +121,11 @@ public class GameTimer : MonoBehaviourPun
             {
                 if (!p.IsBotControlled)
                 {
+                    if (!p.IsAstronautControlled)
+                    {
+                        pv.RPC(nameof(PlayerHealth.ClearLocalShipInventoryForWreck), pv.Owner);
+                    }
+
                     int currentScore = RoundResultsTracker.GetKnownScore(pv.Owner, p.gameObject);
                     RoundResultsTracker.RecordOutcome(pv.Owner, currentScore, "lost_in_space");
                 }
@@ -130,7 +135,7 @@ public class GameTimer : MonoBehaviourPun
 
         yield return new WaitForSeconds(1.8f);
 
-        GameManager manager = FindFirstObjectByType<GameManager>();
+        GameManager manager = FindAnyObjectByType<GameManager>();
         if (manager != null)
         {
             manager.EndGame("time_up");

@@ -411,10 +411,9 @@ public class UIRuntimeStyler : MonoBehaviour
         StyleLobbySettingButton("DeathTimerSettingButton", new Vector2(205f, -518f));
         StyleLobbySettingButton("MovingObjectsSettingButton", new Vector2(-205f, -580f));
         StyleLobbySettingButton("EnemyBotsSettingButton", new Vector2(205f, -580f));
-        StyleLobbySettingButton("ObstacleWeightSettingButton", new Vector2(-205f, -642f));
-        StyleLobbySettingButton("TreasureWeightSettingButton", new Vector2(205f, -642f));
-        StyleLobbySettingButton("PirateBattleshipSettingButton", new Vector2(-205f, -704f));
-        StyleLobbySettingButton("PirateBattleshipTimeSettingButton", new Vector2(205f, -704f));
+        StyleLobbySettingButton("BulletPushSettingButton", new Vector2(-205f, -642f));
+        StyleLobbySettingButton("ObstacleWeightSettingButton", new Vector2(205f, -642f));
+        StyleLobbySettingButton("TreasureWeightSettingButton", new Vector2(0f, -704f));
     }
 
     void StyleLobbySettingButton(string objectName, Vector2 anchoredPosition)

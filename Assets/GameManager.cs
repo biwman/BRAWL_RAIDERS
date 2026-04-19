@@ -172,7 +172,7 @@ public class GameManager : MonoBehaviourPunCallbacks
         for (int i = 0; i < views.Length; i++)
         {
             PhotonView view = views[i];
-            if (view == null || view.IsSceneView)
+            if (view == null || view.IsRoomView)
                 continue;
 
             return true;

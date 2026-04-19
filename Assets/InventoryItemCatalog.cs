@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using UnityEngine;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 public enum InventoryItemType
 {
@@ -47,26 +49,73 @@ public class InventoryItemDefinition
             cachedIcon = Resources.Load<Sprite>(IconResourcePath);
             if (cachedIcon != null)
                 return cachedIcon;
+
+            Sprite[] sprites = Resources.LoadAll<Sprite>(IconResourcePath);
+            cachedIcon = GetLargestSprite(sprites);
+            if (cachedIcon != null)
+            {
+                return cachedIcon;
+            }
+
+            Texture2D texture = Resources.Load<Texture2D>(IconResourcePath);
+            if (texture != null)
+            {
+                float pixelsPerUnit = Mathf.Max(100f, Mathf.Max(texture.width, texture.height));
+                cachedIcon = Sprite.Create(
+                    texture,
+                    new Rect(0f, 0f, texture.width, texture.height),
+                    new Vector2(0.5f, 0.5f),
+                    pixelsPerUnit);
+                return cachedIcon;
+            }
         }
 
+#if UNITY_EDITOR
         if (string.IsNullOrWhiteSpace(ProjectFileName))
             return null;
 
-        string filePath = Path.Combine(Application.dataPath, ProjectFileName);
-        if (!File.Exists(filePath))
+        string assetPath = "Assets/" + ProjectFileName;
+        cachedIcon = AssetDatabase.LoadAssetAtPath<Sprite>(assetPath);
+        if (cachedIcon != null)
+            return cachedIcon;
+
+        UnityEngine.Object[] assets = AssetDatabase.LoadAllAssetsAtPath(assetPath);
+        for (int i = 0; i < assets.Length; i++)
+        {
+            if (assets[i] is Sprite sprite)
+            {
+                cachedIcon = sprite;
+                return cachedIcon;
+            }
+        }
+#endif
+
+        return null;
+    }
+
+    static Sprite GetLargestSprite(Sprite[] sprites)
+    {
+        if (sprites == null || sprites.Length == 0)
             return null;
 
-        byte[] bytes = File.ReadAllBytes(filePath);
-        Texture2D texture = new Texture2D(2, 2, TextureFormat.RGBA32, false);
-        texture.LoadImage(bytes, false);
-        texture.wrapMode = TextureWrapMode.Clamp;
-        texture.filterMode = FilterMode.Bilinear;
-        cachedIcon = Sprite.Create(
-            texture,
-            new Rect(0f, 0f, texture.width, texture.height),
-            new Vector2(0.5f, 0.5f),
-            Mathf.Max(1f, texture.width));
-        return cachedIcon;
+        Sprite best = null;
+        float bestArea = 0f;
+        for (int i = 0; i < sprites.Length; i++)
+        {
+            Sprite candidate = sprites[i];
+            if (candidate == null)
+                continue;
+
+            Rect rect = candidate.rect;
+            float area = rect.width * rect.height;
+            if (best == null || area > bestArea)
+            {
+                best = candidate;
+                bestArea = area;
+            }
+        }
+
+        return best;
     }
 }
 

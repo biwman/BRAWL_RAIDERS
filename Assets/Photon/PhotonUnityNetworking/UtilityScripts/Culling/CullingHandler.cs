@@ -66,7 +66,7 @@ namespace Photon.Pun.UtilityScripts
             if (this.cullArea == null)
             {
                 #if UNITY_6000_0_OR_NEWER
-                this.cullArea = FindFirstObjectByType<CullArea>();
+                this.cullArea = FindAnyObjectByType<CullArea>();
                 #else
                 this.cullArea = FindObjectOfType<CullArea>();
                 #endif

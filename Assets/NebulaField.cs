@@ -1,5 +1,7 @@
-using System.IO;
 using UnityEngine;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 [RequireComponent(typeof(SpriteRenderer))]
 [RequireComponent(typeof(CircleCollider2D))]
@@ -7,19 +9,25 @@ public class NebulaField : MonoBehaviour
 {
     const float TargetVisualSize = 3.36f;
     const float ColliderRadiusFactor = 0.4f;
-    const float PlayerDeepHideFactor = 0.6f;
+    const float PlayerDeepHideFactor = 0.8f;
+    const float PlayerDamageFactor = 0.8f;
+    const float MinSizeMultiplier = 1f;
+    const float MaxSizeMultiplier = 4f;
 
     static Sprite cachedNebulaSprite;
 
     SpriteRenderer spriteRenderer;
     CircleCollider2D triggerCollider;
     int nebulaKey;
+    float nebulaScaleMultiplier = 1f;
 
     void Awake()
     {
         nebulaKey = GetHashCode();
         spriteRenderer = GetComponent<SpriteRenderer>();
         triggerCollider = GetComponent<CircleCollider2D>();
+        nebulaScaleMultiplier = GetDeterministicScaleMultiplier((Vector2)transform.position);
+        transform.rotation = Quaternion.Euler(0f, 0f, GetDeterministicRotation((Vector2)transform.position));
         ConfigureVisual();
         ConfigureCollider();
     }
@@ -44,7 +52,7 @@ public class NebulaField : MonoBehaviour
         float maxDimension = Mathf.Max(cachedNebulaSprite.bounds.size.x, cachedNebulaSprite.bounds.size.y);
         if (maxDimension > 0f)
         {
-            float scale = TargetVisualSize / maxDimension;
+            float scale = (TargetVisualSize * nebulaScaleMultiplier) / maxDimension;
             transform.localScale = new Vector3(scale, scale, 1f);
         }
     }
@@ -97,7 +105,7 @@ public class NebulaField : MonoBehaviour
         HideInNebulaTarget target = other.GetComponentInParent<HideInNebulaTarget>();
         if (target != null)
         {
-            target.UpdateNebulaState(nebulaKey, ShouldHideTarget(target));
+            target.UpdateNebulaState(nebulaKey, ShouldHideTarget(target), ShouldDamageTarget(target));
         }
     }
 
@@ -106,7 +114,7 @@ public class NebulaField : MonoBehaviour
         HideInNebulaTarget target = other.GetComponentInParent<HideInNebulaTarget>();
         if (target != null)
         {
-            target.UpdateNebulaState(nebulaKey, ShouldHideTarget(target));
+            target.UpdateNebulaState(nebulaKey, ShouldHideTarget(target), ShouldDamageTarget(target));
         }
     }
 
@@ -128,6 +136,24 @@ public class NebulaField : MonoBehaviour
         float nebulaRadius = GetWorldNebulaRadius();
         float targetRadius = Mathf.Max(targetBounds.extents.x, targetBounds.extents.y);
         float allowedDistance = nebulaRadius - (targetRadius * PlayerDeepHideFactor);
+
+        if (allowedDistance <= 0f)
+            return false;
+
+        float distance = Vector2.Distance(transform.position, targetBounds.center);
+        return distance <= allowedDistance;
+    }
+
+    bool ShouldDamageTarget(HideInNebulaTarget target)
+    {
+        PlayerHealth health = target.GetComponent<PlayerHealth>();
+        if (health == null)
+            return false;
+
+        Bounds targetBounds = GetTargetBounds(target);
+        float nebulaRadius = GetWorldNebulaRadius();
+        float targetRadius = Mathf.Max(targetBounds.extents.x, targetBounds.extents.y);
+        float allowedDistance = nebulaRadius - (targetRadius * PlayerDamageFactor);
 
         if (allowedDistance <= 0f)
             return false;
@@ -166,15 +192,84 @@ public class NebulaField : MonoBehaviour
         return triggerCollider.radius * maxScale;
     }
 
+    static float GetDeterministicScaleMultiplier(Vector2 position)
+    {
+        unchecked
+        {
+            int hash = 17;
+            hash = hash * 31 + Mathf.RoundToInt(position.x * 100f);
+            hash = hash * 31 + Mathf.RoundToInt(position.y * 100f);
+            float normalized = Mathf.Abs(Mathf.Sin(hash * 0.0001234f));
+            return Mathf.Lerp(MinSizeMultiplier, MaxSizeMultiplier, normalized);
+        }
+    }
+
+    static float GetDeterministicRotation(Vector2 position)
+    {
+        unchecked
+        {
+            int hash = 23;
+            hash = hash * 37 + Mathf.RoundToInt(position.x * 100f);
+            hash = hash * 37 + Mathf.RoundToInt(position.y * 100f);
+            float normalized = Mathf.Abs(Mathf.Sin(hash * 0.0001731f));
+            return Mathf.Lerp(0f, 360f, normalized);
+        }
+    }
+
     static Sprite LoadSprite()
     {
-        string filePath = Path.Combine(Application.dataPath, "nebula_frayed.png");
-        if (!File.Exists(filePath))
+        Sprite sprite = Resources.Load<Sprite>("koszmiczna_anomalia_resource");
+        if (sprite != null)
+            return sprite;
+
+        Sprite[] sprites = Resources.LoadAll<Sprite>("koszmiczna_anomalia_resource");
+        sprite = GetLargestSprite(sprites);
+        if (sprite != null)
+            return sprite;
+
+        Texture2D texture = Resources.Load<Texture2D>("koszmiczna_anomalia_resource");
+        if (texture != null)
+            return CreateSpriteFromTexture(texture);
+
+        sprite = Resources.Load<Sprite>("nebula_frayed_resource");
+        if (sprite != null)
+            return sprite;
+
+        sprites = Resources.LoadAll<Sprite>("nebula_frayed_resource");
+        sprite = GetLargestSprite(sprites);
+        if (sprite != null)
+            return sprite;
+
+        texture = Resources.Load<Texture2D>("nebula_frayed_resource");
+        if (texture != null)
+            return CreateSpriteFromTexture(texture);
+
+#if UNITY_EDITOR
+        sprite = LoadEditorSprite("Assets/Resources/koszmiczna_anomalia_resource.png");
+        if (sprite != null)
+            return sprite;
+
+        sprite = LoadEditorSprite("Assets/koszmiczna_anomalia.png");
+        if (sprite != null)
+            return sprite;
+
+        sprite = LoadEditorSprite("Assets/Resources/nebula_frayed_resource.png");
+        if (sprite != null)
+            return sprite;
+
+        sprite = LoadEditorSprite("Assets/nebula_frayed.png");
+        if (sprite != null)
+            return sprite;
+#endif
+
+        return null;
+    }
+
+    static Sprite CreateSpriteFromTexture(Texture2D texture)
+    {
+        if (texture == null)
             return null;
 
-        byte[] bytes = File.ReadAllBytes(filePath);
-        Texture2D texture = new Texture2D(2, 2, TextureFormat.RGBA32, false);
-        texture.LoadImage(bytes, false);
         texture.wrapMode = TextureWrapMode.Clamp;
         texture.filterMode = FilterMode.Bilinear;
 
@@ -185,4 +280,49 @@ public class NebulaField : MonoBehaviour
             new Vector2(0.5f, 0.5f),
             pixelsPerUnit);
     }
+
+    static Sprite GetLargestSprite(Sprite[] sprites)
+    {
+        if (sprites == null || sprites.Length == 0)
+            return null;
+
+        Sprite best = null;
+        float bestArea = 0f;
+        for (int i = 0; i < sprites.Length; i++)
+        {
+            Sprite candidate = sprites[i];
+            if (candidate == null)
+                continue;
+
+            float area = candidate.rect.width * candidate.rect.height;
+            if (best == null || area > bestArea)
+            {
+                best = candidate;
+                bestArea = area;
+            }
+        }
+
+        return best;
+    }
+
+#if UNITY_EDITOR
+    static Sprite LoadEditorSprite(string assetPath)
+    {
+        if (string.IsNullOrWhiteSpace(assetPath))
+            return null;
+
+        Sprite sprite = AssetDatabase.LoadAssetAtPath<Sprite>(assetPath);
+        if (sprite != null)
+            return sprite;
+
+        Object[] assets = AssetDatabase.LoadAllAssetsAtPath(assetPath);
+        for (int i = 0; i < assets.Length; i++)
+        {
+            if (assets[i] is Sprite loadedSprite)
+                return loadedSprite;
+        }
+
+        return null;
+    }
+#endif
 }

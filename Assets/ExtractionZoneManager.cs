@@ -108,7 +108,7 @@ public class ExtractionZoneManager : MonoBehaviourPunCallbacks
                 continue;
 
             PhotonView view = zone.GetComponent<PhotonView>();
-            if (view != null && view.IsSceneView && zone.gameObject.activeSelf)
+            if (view != null && view.IsRoomView && zone.gameObject.activeSelf)
             {
                 zone.gameObject.SetActive(false);
             }
@@ -129,13 +129,13 @@ public class ExtractionZoneManager : MonoBehaviourPunCallbacks
 
     void DestroyRuntimeZones()
     {
-        foreach (ExtractionZone zone in FindObjectsByType<ExtractionZone>(FindObjectsSortMode.None))
+        foreach (ExtractionZone zone in FindObjectsByType<ExtractionZone>(FindObjectsInactive.Exclude))
         {
             if (zone == null)
                 continue;
 
             PhotonView view = zone.GetComponent<PhotonView>();
-            if (view != null && !view.IsSceneView)
+            if (view != null && !view.IsRoomView)
             {
                 PhotonNetwork.Destroy(zone.gameObject);
             }
@@ -146,13 +146,13 @@ public class ExtractionZoneManager : MonoBehaviourPunCallbacks
     {
         int count = 0;
 
-        foreach (ExtractionZone zone in FindObjectsByType<ExtractionZone>(FindObjectsSortMode.None))
+        foreach (ExtractionZone zone in FindObjectsByType<ExtractionZone>(FindObjectsInactive.Exclude))
         {
             if (zone == null)
                 continue;
 
             PhotonView view = zone.GetComponent<PhotonView>();
-            if (view != null && !view.IsSceneView)
+            if (view != null && !view.IsRoomView)
             {
                 count++;
             }

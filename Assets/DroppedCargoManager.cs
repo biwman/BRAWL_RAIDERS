@@ -90,7 +90,7 @@ public class DroppedCargoManager : MonoBehaviourPunCallbacks
         for (int i = 0; i < views.Length; i++)
         {
             PhotonView view = views[i];
-            if (view == null || view.IsSceneView || view.gameObject == null)
+            if (view == null || view.IsRoomView || view.gameObject == null)
                 continue;
 
             if (!view.gameObject.name.StartsWith("DroppedCargoCrate"))

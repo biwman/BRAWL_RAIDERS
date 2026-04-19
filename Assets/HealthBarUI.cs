@@ -18,6 +18,7 @@ public class HealthBarUI : MonoBehaviourPun
     TextMeshProUGUI labelText;
     TextMeshProUGUI valueText;
     bool isVisible = true;
+    PlayerHealth health;
 
     void Start()
     {
@@ -27,6 +28,7 @@ public class HealthBarUI : MonoBehaviourPun
             return;
         }
 
+        health = GetComponent<PlayerHealth>();
         InitializeBar();
         RefreshVisuals();
     }
@@ -77,6 +79,12 @@ public class HealthBarUI : MonoBehaviourPun
     {
         if (hpBar == null)
             return;
+
+        if (health != null)
+        {
+            hpBar.maxValue = Mathf.Max(1, health.maxHP);
+            hpBar.value = Mathf.Clamp(health.CurrentHP, 0, Mathf.RoundToInt(hpBar.maxValue));
+        }
 
         float normalized = hpBar.maxValue > 0f ? hpBar.value / hpBar.maxValue : 0f;
 
@@ -166,9 +174,9 @@ public class HealthBarUI : MonoBehaviourPun
         text.fontSize = 20f;
         text.color = Color.white;
         text.alignment = alignment;
-        text.enableWordWrapping = false;
+        text.textWrappingMode = TextWrappingModes.NoWrap;
 
-        TMP_Text referenceText = FindFirstObjectByType<TMP_Text>();
+        TMP_Text referenceText = FindAnyObjectByType<TMP_Text>();
         if (referenceText != null)
         {
             text.font = referenceText.font;

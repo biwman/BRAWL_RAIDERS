@@ -113,10 +113,15 @@ public class NetworkManager : MonoBehaviourPunCallbacks
         if (!propertiesThatChanged.ContainsKey("gameStarted"))
             return;
 
+        bool started = IsRoundStarted();
         EnsureDroppedCargoManagerExists();
         EnsureEnemyBotManagerExists();
-        EnsurePirateBattleshipManagerExists();
         EnsureNebulaSpawnerExists();
+        if (started)
+        {
+            SpawnPlayerIfNeeded();
+        }
+
         if (PhotonNetwork.IsMasterClient)
         {
             EnsureTreasureSpawnerExists();
@@ -136,7 +141,6 @@ public class NetworkManager : MonoBehaviourPunCallbacks
         PlayerProfileService.Instance.ApplyProfileToPhoton();
         EnsureDroppedCargoManagerExists();
         EnsureEnemyBotManagerExists();
-        EnsurePirateBattleshipManagerExists();
         EnsureNebulaSpawnerExists();
 
         if (PhotonNetwork.LocalPlayer != null && string.IsNullOrWhiteSpace(PhotonNetwork.NickName))
@@ -144,8 +148,26 @@ public class NetworkManager : MonoBehaviourPunCallbacks
             PhotonNetwork.NickName = "Player " + PhotonNetwork.LocalPlayer.ActorNumber;
         }
 
-        SpawnPlayerIfNeeded();
+        if (IsRoundStarted())
+        {
+            SpawnPlayerIfNeeded();
+        }
+
         EnsureTreasureSpawnerExists();
+    }
+
+    bool IsRoundStarted()
+    {
+        if (PhotonNetwork.CurrentRoom == null)
+            return false;
+
+        if (PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue("gameStarted", out object value) &&
+            value is bool started)
+        {
+            return started;
+        }
+
+        return false;
     }
 
     void SpawnPlayerIfNeeded()
@@ -161,7 +183,7 @@ public class NetworkManager : MonoBehaviourPunCallbacks
             PhotonNetwork.LocalPlayer.TagObject = null;
         }
 
-        PlayerHealth[] players = FindObjectsByType<PlayerHealth>(FindObjectsSortMode.None);
+        PlayerHealth[] players = FindObjectsByType<PlayerHealth>(FindObjectsInactive.Exclude);
         foreach (PlayerHealth player in players)
         {
             if (player != null &&
@@ -222,7 +244,7 @@ public class NetworkManager : MonoBehaviourPunCallbacks
         if (!PhotonNetwork.IsMasterClient)
             return;
 
-        if (FindFirstObjectByType<TreasureSpawner>() != null)
+        if (FindAnyObjectByType<TreasureSpawner>() != null)
         {
             return;
         }
@@ -250,10 +272,5 @@ public class NetworkManager : MonoBehaviourPunCallbacks
     void EnsureEnemyBotManagerExists()
     {
         EnemyBotManager.EnsureExists();
-    }
-
-    void EnsurePirateBattleshipManagerExists()
-    {
-        PirateBattleshipEventManager.EnsureExists();
     }
 }

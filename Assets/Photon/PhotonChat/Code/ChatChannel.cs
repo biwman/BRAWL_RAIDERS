@@ -68,7 +68,7 @@ namespace Photon.Chat
         public readonly HashSet<string> Subscribers = new HashSet<string>();
 
         /// <summary> Properties of subscribers </summary>
-        private Dictionary<string, Dictionary<object, object>> usersProperties;
+        private Dictionary<string, Dictionary<object, object>> usersProperties = new Dictionary<string, Dictionary<object, object>>();
 
         /// <summary>Used internally to create new channels. This does NOT create a channel on the server! Use ChatClient.Subscribe.</summary>
         public ChatChannel(string name)

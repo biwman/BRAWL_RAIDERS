@@ -453,7 +453,8 @@ public class TreasureCollector : MonoBehaviourPun
                 continue;
 
             float distance = GetDistanceFromTipToCollider(wreck.GetComponent<Collider2D>(), wreck.transform.position, tipPosition);
-            if (distance > Treasure.CollectRange)
+            float wreckCollectRange = wreck.SourceShipSkinIndex < 0 ? Treasure.CollectRange + 0.45f : Treasure.CollectRange;
+            if (distance > wreckCollectRange)
                 continue;
 
             if (distance < bestDistance)
@@ -485,7 +486,16 @@ public class TreasureCollector : MonoBehaviourPun
         }
 
         if (currentTreasure == nextTreasure && currentWreck == nextWreck && currentDroppedCargo == nextDroppedCargo)
+        {
+            if (currentTreasure != null)
+                currentTreasure.Highlight();
+            else if (currentWreck != null)
+                currentWreck.Highlight();
+            else if (currentDroppedCargo != null)
+                currentDroppedCargo.Highlight();
+
             return;
+        }
 
         ClearCurrentHighlight();
 
@@ -532,7 +542,8 @@ public class TreasureCollector : MonoBehaviourPun
         if (wreck == null || !wreck.HasLoot)
             return false;
 
-        return GetDistanceFromTipToCollider(wreck.GetComponent<Collider2D>(), wreck.transform.position, GetShipTipPosition()) <= Treasure.CollectRange;
+        float wreckCollectRange = wreck.SourceShipSkinIndex < 0 ? Treasure.CollectRange + 0.45f : Treasure.CollectRange;
+        return GetDistanceFromTipToCollider(wreck.GetComponent<Collider2D>(), wreck.transform.position, GetShipTipPosition()) <= wreckCollectRange;
     }
 
     bool IsDroppedCargoInCollectRange(DroppedCargoCrate crate)

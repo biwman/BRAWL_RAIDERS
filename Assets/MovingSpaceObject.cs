@@ -128,35 +128,36 @@ public class MovingSpaceObject : MonoBehaviour
         if (!RoomSettings.AreMovingObjectsEnabled())
             return;
 
+        PlayerMovement player = collision.collider.GetComponentInParent<PlayerMovement>();
+        if (player != null && player.GetComponent<AstronautSurvivor>() == null)
+        {
+            Rigidbody2D playerRb = player.GetComponent<Rigidbody2D>();
+            Vector2 playerVelocity = playerRb != null ? playerRb.linearVelocity : Vector2.zero;
+            if (playerVelocity.sqrMagnitude >= 0.01f)
+            {
+                int weightFactor = objectType == SpaceObjectType.Obstacle
+                    ? RoomSettings.GetObstacleWeightFactor()
+                    : RoomSettings.GetTreasureWeightFactor();
+                weightFactor = Mathf.Max(1, weightFactor);
+
+                Vector2 impulse = (playerVelocity * 1.25f) / weightFactor;
+                if (isAuthority)
+                {
+                    ApplyImpulse(impulse * 0.82f);
+                }
+                else if (player.photonView.IsMine && Time.time >= nextImpulseRequestTime)
+                {
+                    nextImpulseRequestTime = Time.time + ImpulseRequestCooldown;
+                    SpaceObjectMotionSync.RequestImpulse(stableId, impulse);
+                }
+            }
+        }
+
         if (isAuthority)
         {
             TryFlipSpinOnCollision(collision);
             return;
         }
-
-        if (Time.time < nextImpulseRequestTime)
-            return;
-
-        PlayerMovement player = collision.collider.GetComponentInParent<PlayerMovement>();
-        if (player == null || !player.photonView.IsMine)
-            return;
-
-        if (player.GetComponent<AstronautSurvivor>() != null)
-            return;
-
-        Rigidbody2D playerRb = player.GetComponent<Rigidbody2D>();
-        Vector2 playerVelocity = playerRb != null ? playerRb.linearVelocity : Vector2.zero;
-        if (playerVelocity.sqrMagnitude < 0.01f)
-            return;
-
-        int weightFactor = objectType == SpaceObjectType.Obstacle
-            ? RoomSettings.GetObstacleWeightFactor()
-            : RoomSettings.GetTreasureWeightFactor();
-        weightFactor = Mathf.Max(1, weightFactor);
-
-        Vector2 impulse = playerVelocity / weightFactor;
-        nextImpulseRequestTime = Time.time + ImpulseRequestCooldown;
-        SpaceObjectMotionSync.RequestImpulse(stableId, impulse);
     }
 
     public void ApplyImpulse(Vector2 impulse)
@@ -169,7 +170,7 @@ public class MovingSpaceObject : MonoBehaviour
             return;
 
         EnsureDynamicBody();
-        rb.linearVelocity += impulse;
+        rb.linearVelocity += impulse * 0.7f;
         if (Mathf.Abs(impulse.x) + Mathf.Abs(impulse.y) > 0.05f)
         {
             float torqueDirection = Mathf.Sign(Vector3.Cross(cruiseDirection, impulse).z);

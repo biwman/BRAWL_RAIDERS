@@ -30,6 +30,7 @@ public class PlayerMovement : MonoBehaviourPun
     const float AccelerationResponsiveness = 18f;
     const float LowSpeedBrakeResponsiveness = 7.4f;
     const float HighSpeedBrakeResponsiveness = 1.15f;
+    static PhysicsMaterial2D playerCollisionMaterial;
 
     public float BoosterNormalized => boosterCharge;
     public bool IsBoosterDepleted => boosterExhausted;
@@ -55,6 +56,8 @@ public class PlayerMovement : MonoBehaviourPun
             rb.angularVelocity = 0f;
         }
 
+        ApplyPlayerCollisionMaterial();
+
         if (GetComponent<HideInNebulaTarget>() == null)
         {
             gameObject.AddComponent<HideInNebulaTarget>();
@@ -76,7 +79,7 @@ public class PlayerMovement : MonoBehaviourPun
         if (!photonView.IsMine)
             return;
 
-        CameraFollow cam = FindObjectOfType<CameraFollow>();
+        CameraFollow cam = FindAnyObjectByType<CameraFollow>();
         if (cam != null)
         {
             cam.target = transform;
@@ -174,13 +177,22 @@ public class PlayerMovement : MonoBehaviourPun
         Debug.Log("DOTKNALEM: " + other.name);
     }
 
+    void OnCollisionEnter2D(Collision2D collision)
+    {
+        if (!photonView.IsMine || rb == null)
+            return;
+
+        float currentSpeed = IsBoosterDepleted ? speed * CurrentDepletedSpeedMultiplier : speed;
+        ClampExcessCollisionBoost(currentSpeed);
+    }
+
     void ClampExcessCollisionBoost(float currentSpeed)
     {
         if (rb == null)
             return;
 
         float expectedTopSpeed = currentSpeed * Mathf.Max(1f, GetMaxInputSpeedBoostMultiplier());
-        float hardCap = expectedTopSpeed * 1.55f;
+        float hardCap = expectedTopSpeed * 1.22f;
         float currentMagnitude = rb.linearVelocity.magnitude;
 
         if (currentMagnitude <= hardCap || currentMagnitude <= 0.001f)
@@ -405,6 +417,28 @@ public class PlayerMovement : MonoBehaviourPun
         lastAudioPosition = transform.position;
         return Mathf.Clamp01(delta / speedReference);
     }
+
+    void ApplyPlayerCollisionMaterial()
+    {
+        if (playerCollisionMaterial == null)
+        {
+            playerCollisionMaterial = new PhysicsMaterial2D("PlayerShipCollision")
+            {
+                friction = 0f,
+                bounciness = 0f
+            };
+        }
+
+        Collider2D[] colliders = GetComponents<Collider2D>();
+        for (int i = 0; i < colliders.Length; i++)
+        {
+            Collider2D currentCollider = colliders[i];
+            if (currentCollider != null)
+            {
+                currentCollider.sharedMaterial = playerCollisionMaterial;
+            }
+        }
+    }
 }
 
 [RequireComponent(typeof(Rigidbody2D))]
@@ -476,8 +510,8 @@ public class EngineThrusterVFX : MonoBehaviour
         Vector3[] offsets = isViper
             ? new[]
             {
-                new Vector3(-shipWidth * 0.30f, 0.34f, 0f),
-                new Vector3(shipWidth * 0.30f, 0.34f, 0f)
+                new Vector3(-shipWidth * 0.60f, 0.34f, 0f),
+                new Vector3(shipWidth * 0.60f, 0.34f, 0f)
             }
             : new[] { new Vector3(0f, 0.02f, 0f) };
 
@@ -575,8 +609,35 @@ public class EngineThrusterVFX : MonoBehaviour
         }
     }
 
+    public void DisableAndClearTrails()
+    {
+        if (trailRenderers == null)
+            return;
+
+        for (int i = 0; i < trailRenderers.Length; i++)
+        {
+            if (trailRenderers[i] == null)
+                continue;
+
+            trailRenderers[i].emitting = false;
+            trailRenderers[i].Clear();
+            trailRenderers[i].gameObject.SetActive(false);
+        }
+
+        enabled = false;
+    }
+
     void UpdateVisuals(float speedNormalized)
     {
+        HideInNebulaTarget nebulaTarget = GetComponent<HideInNebulaTarget>();
+        PhotonView view = GetComponent<PhotonView>();
+        bool hideForOthers = nebulaTarget != null && nebulaTarget.IsHiddenForOthers && view != null && !view.IsMine;
+        if (hideForOthers)
+        {
+            DisableEmission();
+            return;
+        }
+
         float clamped = Mathf.Clamp01(speedNormalized);
         float intensity = Mathf.Lerp(isAstronaut ? 0.28f : 0.18f, 1f, clamped);
 
@@ -601,6 +662,22 @@ public class EngineThrusterVFX : MonoBehaviour
                 trailRenderer.widthMultiplier = Mathf.Lerp(0.03f, 0.16f, intensity);
                 trailRenderer.emitting = clamped > 0.04f;
             }
+        }
+    }
+
+    void DisableEmission()
+    {
+        if (trailRenderers == null)
+            return;
+
+        for (int i = 0; i < trailRenderers.Length; i++)
+        {
+            TrailRenderer trailRenderer = trailRenderers[i];
+            if (trailRenderer == null)
+                continue;
+
+            trailRenderer.emitting = false;
+            trailRenderer.Clear();
         }
     }
 

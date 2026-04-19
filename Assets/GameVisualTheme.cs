@@ -1,5 +1,4 @@
 using Photon.Pun;
-using System.IO;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 #if UNITY_EDITOR
@@ -34,6 +33,7 @@ public class GameVisualTheme : MonoBehaviour
     Sprite extractionSprite;
     Sprite backgroundSprite;
     float nextRefreshTime;
+    int lastRuntimeSignature = int.MinValue;
 #if UNITY_EDITOR
     double nextEditorRefreshTime;
 #endif
@@ -138,6 +138,11 @@ public class GameVisualTheme : MonoBehaviour
             return;
 
         nextRefreshTime = Time.unscaledTime + RefreshInterval;
+        int currentSignature = CalculateRuntimeSignature();
+        if (currentSignature == lastRuntimeSignature)
+            return;
+
+        lastRuntimeSignature = currentSignature;
         ApplyTheme();
     }
 
@@ -145,6 +150,7 @@ public class GameVisualTheme : MonoBehaviour
     {
         LoadAssets();
         nextRefreshTime = 0f;
+        lastRuntimeSignature = int.MinValue;
         ApplyTheme();
     }
 
@@ -168,34 +174,34 @@ public class GameVisualTheme : MonoBehaviour
     {
         shipSprites = new[]
         {
-            LoadSpriteFromProjectOrResources("ship1.png", "Visuals/Ships/ship1_resource"),
-            LoadSpriteFromProjectOrResources("ship2.png", "Visuals/Ships/ship2_resource"),
-            LoadSpriteFromProjectOrResources("ship3.png", "Visuals/Ships/ship3_resource"),
-            LoadSpriteFromProjectOrResources("ship4.png", "ship4_resource")
+            LoadSpriteFromResourcesOrEditor("Visuals/Ships/ship1_resource", "Assets/Resources/Visuals/Ships/ship1_resource.png", "Assets/ship1.png"),
+            LoadSpriteFromResourcesOrEditor("Visuals/Ships/ship2_resource", "Assets/Resources/Visuals/Ships/ship2_resource.png", "Assets/ship2.png"),
+            LoadSpriteFromResourcesOrEditor("Visuals/Ships/ship3_resource", "Assets/Resources/Visuals/Ships/ship3_resource.png", "Assets/ship3.png"),
+            LoadSpriteFromResourcesOrEditor("ship4_resource", "Assets/Resources/ship4_resource.png", "Assets/ship4.png")
         };
         wreckSprites = new[]
         {
             null,
-            LoadSpriteFromProjectOrResources("wrak2.png", "wrak2_resource"),
+            LoadSpriteFromResourcesOrEditor("wrak2_resource", "Assets/Resources/wrak2_resource.png", "Assets/wrak2.png"),
             null,
             null
         };
-        enemyBotSprite = LoadSpriteFromProjectOrResources("droid1.png", "droid1_resource");
-        astronautSprite = LoadSpriteFromProjectOrResources("kosmonauta.png", "kosmonauta_resource");
+        enemyBotSprite = LoadSpriteFromResourcesOrEditor("droid1_resource", "Assets/Resources/droid1_resource.png", "Assets/droid1.png");
+        astronautSprite = LoadSpriteFromResourcesOrEditor("kosmonauta_resource", "Assets/Resources/kosmonauta_resource.png", "Assets/kosmonauta.png");
 
-        treasureSprite = LoadSpriteFromProjectOrResources("asteroida_treasure.png", "Visuals/Treasures/asteroid_treasure_resource");
-        goldTreasureSprite = LoadSpriteFromProjectOrResources("asteroida_zloto_clean.png", "asteroida_zloto_clean_resource");
-        rareTreasureSprite = LoadSpriteFromProjectOrResources("asteroida_rare_clean.png", "asteroida_rare_clean_resource");
+        treasureSprite = LoadSpriteFromResourcesOrEditor("Visuals/Treasures/asteroid_treasure_resource", "Assets/Resources/Visuals/Treasures/asteroid_treasure_resource.png", "Assets/asteroida_treasure.png");
+        goldTreasureSprite = LoadSpriteFromResourcesOrEditor("asteroida_zloto_clean_resource", "Assets/Resources/asteroida_zloto_clean_resource.png", "Assets/asteroida_zloto_clean.png");
+        rareTreasureSprite = LoadSpriteFromResourcesOrEditor("asteroida_rare_clean_resource", "Assets/Resources/asteroida_rare_clean_resource.png", "Assets/asteroida_rare_clean.png");
         obstacleSprites = new[]
         {
-            LoadObstacleSprite("asteroida_1_clean.png", "asteroida_1.png"),
-            LoadObstacleSprite("asteroida_2_clean.png", "asteroida_2.png"),
-            LoadObstacleSprite("asteroida_3_clean.png", "asteroida_3.png"),
-            LoadObstacleSprite("asteroida_podluzna_1_clean.png", "asteroida_podluzna_1.png"),
-            LoadObstacleSprite("asteroida_podluzna_2_clean.png", "asteroida_podluzna_2.png")
+            LoadObstacleSprite("asteroida_1_clean_resource", "Assets/Resources/asteroida_1_clean_resource.png", "Assets/asteroida_1_clean.png"),
+            LoadObstacleSprite("asteroida_2_clean_resource", "Assets/Resources/asteroida_2_clean_resource.png", "Assets/asteroida_2_clean.png"),
+            LoadObstacleSprite("asteroida_3_clean_resource", "Assets/Resources/asteroida_3_clean_resource.png", "Assets/asteroida_3_clean.png"),
+            LoadObstacleSprite("asteroida_podluzna_1_clean_resource", "Assets/Resources/asteroida_podluzna_1_clean_resource.png", "Assets/asteroida_podluzna_1_clean.png"),
+            LoadObstacleSprite("asteroida_podluzna_2_clean_resource", "Assets/Resources/asteroida_podluzna_2_clean_resource.png", "Assets/asteroida_podluzna_2_clean.png")
         };
-        extractionSprite = LoadSpriteFromProjectOrResources("baza1.png", "Visuals/Bases/base1_resource");
-        backgroundSprite = Resources.Load<Sprite>("Visuals/Backgrounds/background5_resource");
+        extractionSprite = LoadSpriteFromResourcesOrEditor("Visuals/Bases/base1_resource", "Assets/Resources/Visuals/Bases/base1_resource.png", "Assets/baza1.png");
+        backgroundSprite = LoadSpriteFromResourcesOrEditor("Visuals/Backgrounds/background5_resource", "Assets/Resources/Visuals/Backgrounds/background5_resource.png", "Assets/tło5.png");
         if (backgroundSprite == null)
         {
             backgroundSprite = LoadSpriteFromProjectOrResources("tło5.png", "Visuals/Backgrounds/background5_resource");
@@ -323,7 +329,8 @@ public class GameVisualTheme : MonoBehaviour
             {
                 renderer.sprite = sprite;
             }
-            renderer.color = Color.white;
+            if (!player.IsWreck)
+                renderer.color = Color.white;
             FitSpriteToTargetSize(renderer, isAstronaut ? AstronautTargetSize : PlayerTargetSize);
 
             Vector2 spriteWorldSize = GetSpriteWorldSize(renderer);
@@ -570,37 +577,189 @@ public class GameVisualTheme : MonoBehaviour
         collider2D.radius = worldRadius / maxScale;
     }
 
-    Sprite LoadSpriteFromProjectOrResources(string projectFileName, string resourcesPath)
+    int CalculateRuntimeSignature()
     {
-        string filePath = Path.Combine(Application.dataPath, projectFileName);
-        if (File.Exists(filePath))
+        unchecked
         {
-            byte[] bytes = File.ReadAllBytes(filePath);
-            Texture2D texture = new Texture2D(2, 2, TextureFormat.RGBA32, false);
-            texture.LoadImage(bytes, false);
-            texture.wrapMode = TextureWrapMode.Repeat;
-            texture.filterMode = FilterMode.Trilinear;
+            int signature = 17;
+            PlayerHealth[] players = FindObjectsByType<PlayerHealth>(FindObjectsInactive.Exclude);
+            Treasure[] treasures = FindObjectsByType<Treasure>(FindObjectsInactive.Exclude);
+            ExtractionZone[] extractionZones = FindObjectsByType<ExtractionZone>(FindObjectsInactive.Exclude);
+            ShipWreck[] wrecks = FindObjectsByType<ShipWreck>(FindObjectsInactive.Exclude);
+            DroppedCargoCrate[] droppedCrates = FindObjectsByType<DroppedCargoCrate>(FindObjectsInactive.Exclude);
 
-            float pixelsPerUnit = Mathf.Max(1f, Mathf.Max(texture.width, texture.height) / BackgroundTileWorldSize);
-            return Sprite.Create(
-                texture,
-                new Rect(0f, 0f, texture.width, texture.height),
-                new Vector2(0.5f, 0.5f),
-                pixelsPerUnit,
-                0,
-                SpriteMeshType.FullRect);
+            signature = signature * 31 + players.Length;
+            signature = signature * 31 + treasures.Length;
+            signature = signature * 31 + extractionZones.Length;
+            signature = signature * 31 + wrecks.Length;
+            signature = signature * 31 + droppedCrates.Length;
+
+            for (int i = 0; i < players.Length; i++)
+            {
+                PlayerHealth player = players[i];
+                if (player == null)
+                    continue;
+
+                PhotonView view = player.GetComponent<PhotonView>();
+                signature = signature * 31 + (view != null ? view.ViewID : 0);
+                signature = signature * 31 + (player.IsWreck ? 1 : 0);
+                signature = signature * 31 + (player.IsBotControlled ? 1 : 0);
+                signature = signature * 31 + (player.IsAstronautControlled ? 1 : 0);
+
+                if (view != null && view.Owner != null)
+                    signature = signature * 31 + RoomSettings.GetPlayerShipSkin(view.Owner, 0);
+            }
+
+            for (int i = 0; i < treasures.Length; i++)
+            {
+                Treasure treasure = treasures[i];
+                if (treasure == null)
+                    continue;
+
+                PhotonView view = treasure.GetComponent<PhotonView>();
+                signature = signature * 31 + (view != null ? view.ViewID : treasure.GetHashCode());
+                signature = signature * 31 + (string.IsNullOrWhiteSpace(treasure.itemId) ? 0 : treasure.itemId.GetHashCode());
+            }
+
+            for (int i = 0; i < wrecks.Length; i++)
+            {
+                ShipWreck wreck = wrecks[i];
+                if (wreck == null)
+                    continue;
+
+                PhotonView view = wreck.GetComponent<PhotonView>();
+                signature = signature * 31 + (view != null ? view.ViewID : wreck.GetHashCode());
+                signature = signature * 31 + wreck.SourceShipSkinIndex;
+                signature = signature * 31 + (wreck.HasLoot ? 1 : 0);
+            }
+
+            for (int i = 0; i < droppedCrates.Length; i++)
+            {
+                DroppedCargoCrate crate = droppedCrates[i];
+                if (crate == null)
+                    continue;
+
+                PhotonView view = crate.GetComponent<PhotonView>();
+                signature = signature * 31 + (view != null ? view.ViewID : crate.GetHashCode());
+                signature = signature * 31 + (crate.HasLoot ? 1 : 0);
+                signature = signature * 31 + (string.IsNullOrWhiteSpace(crate.StoredItemId) ? 0 : crate.StoredItemId.GetHashCode());
+            }
+
+            SpriteRenderer[] renderers = FindObjectsByType<SpriteRenderer>(FindObjectsInactive.Exclude);
+            int obstacleCount = 0;
+            for (int i = 0; i < renderers.Length; i++)
+            {
+                if (renderers[i] != null && renderers[i].gameObject.name.StartsWith("Obstacle"))
+                    obstacleCount++;
+            }
+            signature = signature * 31 + obstacleCount;
+            return signature;
         }
-
-        return Resources.Load<Sprite>(resourcesPath);
     }
 
-    Sprite LoadObstacleSprite(string cleanedProjectFileName, string fallbackProjectFileName)
+    Sprite LoadSpriteFromProjectOrResources(string projectFileName, string resourcesPath)
     {
-        Sprite sprite = LoadSpriteFromProjectOrResources(cleanedProjectFileName, "Visuals/Obstacles/asteroid_obstacle_resource");
+        string editorPath = string.IsNullOrWhiteSpace(projectFileName) ? null : "Assets/" + projectFileName;
+        return LoadSpriteFromResourcesOrEditor(resourcesPath, editorPath);
+    }
+
+    Sprite LoadObstacleSprite(string resourcesPath, string editorPreferredPath, string editorFallbackPath)
+    {
+        Sprite sprite = LoadSpriteFromResourcesOrEditor(resourcesPath, editorPreferredPath, editorFallbackPath);
         if (sprite != null)
             return sprite;
 
-        return LoadSpriteFromProjectOrResources(fallbackProjectFileName, "Visuals/Obstacles/asteroid_obstacle_resource");
+        return LoadSpriteFromResourcesOrEditor("Visuals/Obstacles/asteroid_obstacle_resource", "Assets/Resources/Visuals/Obstacles/asteroid_obstacle_resource.png", "Assets/asteroida_obstacle.png");
     }
+
+    Sprite LoadSpriteFromResourcesOrEditor(string resourcesPath, string editorPreferredPath, string editorFallbackPath = null)
+    {
+        Sprite sprite = LoadSpriteFromResources(resourcesPath);
+        if (sprite != null)
+            return sprite;
+
+#if UNITY_EDITOR
+        sprite = LoadEditorSprite(editorPreferredPath);
+        if (sprite != null)
+            return sprite;
+
+        if (!string.IsNullOrWhiteSpace(editorFallbackPath))
+            return LoadEditorSprite(editorFallbackPath);
+#endif
+
+        return null;
+    }
+
+    Sprite LoadSpriteFromResources(string resourcesPath)
+    {
+        if (string.IsNullOrWhiteSpace(resourcesPath))
+            return null;
+
+        Sprite sprite = Resources.Load<Sprite>(resourcesPath);
+        if (sprite != null)
+            return sprite;
+
+        Sprite[] resourceSprites = Resources.LoadAll<Sprite>(resourcesPath);
+        sprite = GetLargestSprite(resourceSprites);
+        if (sprite != null)
+            return sprite;
+
+        Texture2D texture = Resources.Load<Texture2D>(resourcesPath);
+        if (texture == null)
+            return null;
+
+        float pixelsPerUnit = Mathf.Max(100f, Mathf.Max(texture.width, texture.height));
+        return Sprite.Create(
+            texture,
+            new Rect(0f, 0f, texture.width, texture.height),
+            new Vector2(0.5f, 0.5f),
+            pixelsPerUnit);
+    }
+
+    Sprite GetLargestSprite(Sprite[] sprites)
+    {
+        if (sprites == null || sprites.Length == 0)
+            return null;
+
+        Sprite best = null;
+        float bestArea = 0f;
+        for (int i = 0; i < sprites.Length; i++)
+        {
+            Sprite candidate = sprites[i];
+            if (candidate == null)
+                continue;
+
+            Rect rect = candidate.rect;
+            float area = rect.width * rect.height;
+            if (best == null || area > bestArea)
+            {
+                best = candidate;
+                bestArea = area;
+            }
+        }
+
+        return best;
+    }
+
+#if UNITY_EDITOR
+    Sprite LoadEditorSprite(string assetPath)
+    {
+        if (string.IsNullOrWhiteSpace(assetPath))
+            return null;
+
+        Sprite sprite = AssetDatabase.LoadAssetAtPath<Sprite>(assetPath);
+        if (sprite != null)
+            return sprite;
+
+        Object[] assets = AssetDatabase.LoadAllAssetsAtPath(assetPath);
+        for (int i = 0; i < assets.Length; i++)
+        {
+            if (assets[i] is Sprite loadedSprite)
+                return loadedSprite;
+        }
+
+        return null;
+    }
+#endif
 }
 

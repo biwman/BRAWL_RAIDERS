@@ -10,6 +10,8 @@ using UnityEngine;
 
 public class PlayerProfileService : MonoBehaviour
 {
+    const int CloudRetryCount = 3;
+    const int CloudRetryDelayMs = 1200;
     const string CloudNicknameKey = "profile_nickname";
     const string CloudShipSkinKey = "profile_ship_skin";
     const string CloudGamesPlayedKey = "profile_games_played";
@@ -108,10 +110,11 @@ public class PlayerProfileService : MonoBehaviour
         }
         catch (Exception ex)
         {
-            Debug.LogError("PlayerProfileService init failed: " + ex);
+            Debug.LogWarning("PlayerProfileService init fallback: " + ex.Message);
             CurrentProfile = BuildFallbackProfile();
             ApplyProfileToPhoton();
             NotifyProfileChanged();
+            initialized = true;
         }
         finally
         {
@@ -130,7 +133,9 @@ public class PlayerProfileService : MonoBehaviour
             CloudAstronsKey,
             CloudInventoryKey
         };
-        Dictionary<string, Item> data = await CloudSaveService.Instance.Data.Player.LoadAsync(keys);
+        Dictionary<string, Item> data = await RunCloudOperationWithRetryAsync(
+            () => CloudSaveService.Instance.Data.Player.LoadAsync(keys),
+            "load profile");
 
         string nickname = null;
         int shipSkinIndex = 0;
@@ -205,7 +210,9 @@ public class PlayerProfileService : MonoBehaviour
                 [CloudInventoryKey] = SerializeInventory(CurrentProfile.Inventory)
             };
 
-            await CloudSaveService.Instance.Data.Player.SaveAsync(data);
+            await RunCloudOperationWithRetryAsync(
+                () => CloudSaveService.Instance.Data.Player.SaveAsync(data),
+                "save profile");
             ApplyProfileToPhoton();
             NotifyProfileChanged();
         }
@@ -256,7 +263,9 @@ public class PlayerProfileService : MonoBehaviour
                 [CloudGamesPlayedKey] = CurrentProfile.GamesPlayed
             };
 
-            await CloudSaveService.Instance.Data.Player.SaveAsync(data);
+            await RunCloudOperationWithRetryAsync(
+                () => CloudSaveService.Instance.Data.Player.SaveAsync(data),
+                "save games played");
             NotifyProfileChanged();
         }
         catch (Exception ex)
@@ -295,7 +304,9 @@ public class PlayerProfileService : MonoBehaviour
                 [CloudTotalXpKey] = CurrentProfile.TotalXp
             };
 
-            await CloudSaveService.Instance.Data.Player.SaveAsync(data);
+            await RunCloudOperationWithRetryAsync(
+                () => CloudSaveService.Instance.Data.Player.SaveAsync(data),
+                "save round xp");
             NotifyProfileChanged();
         }
         catch (Exception ex)
@@ -383,6 +394,36 @@ public class PlayerProfileService : MonoBehaviour
         return true;
     }
 
+    public async Task<bool> TryChangeShipSkinAsync(int newShipSkinIndex)
+    {
+        await EnsureInitializedAsync();
+        EnsureInventory();
+
+        int clampedSkin = Mathf.Clamp(newShipSkinIndex, 0, 3);
+        if (CurrentProfile.ShipSkinIndex == clampedSkin)
+            return true;
+
+        PlayerInventoryData workingInventory = CurrentProfile.Inventory.Clone();
+        int newCapacity = ShipCatalog.GetShipInventoryCapacity(clampedSkin);
+
+        for (int i = newCapacity; i < workingInventory.ShipSlots.Length; i++)
+        {
+            string itemId = workingInventory.ShipSlots[i];
+            if (string.IsNullOrWhiteSpace(itemId))
+                continue;
+
+            if (!workingInventory.TryAddToPlayer(itemId))
+                return false;
+
+            workingInventory.ShipSlots[i] = null;
+        }
+
+        CurrentProfile.ShipSkinIndex = clampedSkin;
+        CurrentProfile.Inventory = workingInventory;
+        await SaveShipSkinAndInventoryAsync();
+        return true;
+    }
+
     public async Task<string> RemoveShipItemAtAsync(int index)
     {
         await EnsureInitializedAsync();
@@ -419,7 +460,9 @@ public class PlayerProfileService : MonoBehaviour
                 [CloudInventoryKey] = SerializeInventory(CurrentProfile.Inventory)
             };
 
-            await CloudSaveService.Instance.Data.Player.SaveAsync(data);
+            await RunCloudOperationWithRetryAsync(
+                () => CloudSaveService.Instance.Data.Player.SaveAsync(data),
+                "save inventory");
             ApplyProfileToPhoton();
             NotifyProfileChanged();
         }
@@ -427,6 +470,34 @@ public class PlayerProfileService : MonoBehaviour
         {
             Debug.LogError("PlayerProfileService inventory save failed: " + ex);
             throw;
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    async Task SaveShipSkinAndInventoryAsync()
+    {
+        try
+        {
+            IsBusy = true;
+
+            var data = new Dictionary<string, object>
+            {
+                [CloudShipSkinKey] = CurrentProfile.ShipSkinIndex,
+                [CloudInventoryKey] = SerializeInventory(CurrentProfile.Inventory)
+            };
+
+            await RunCloudOperationWithRetryAsync(
+                () => CloudSaveService.Instance.Data.Player.SaveAsync(data),
+                "save ship skin and inventory");
+            ApplyProfileToPhoton();
+            NotifyProfileChanged();
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError("PlayerProfileService ship/inventory save failed: " + ex);
         }
         finally
         {
@@ -446,7 +517,9 @@ public class PlayerProfileService : MonoBehaviour
                 [CloudAstronsKey] = CurrentProfile.Astrons
             };
 
-            await CloudSaveService.Instance.Data.Player.SaveAsync(data);
+            await RunCloudOperationWithRetryAsync(
+                () => CloudSaveService.Instance.Data.Player.SaveAsync(data),
+                "save inventory and astrons");
             ApplyProfileToPhoton();
             NotifyProfileChanged();
         }
@@ -559,6 +632,53 @@ public class PlayerProfileService : MonoBehaviour
             CurrentProfile.Inventory = PlayerInventoryData.Default();
 
         CurrentProfile.Inventory.Normalize();
+    }
+
+    async Task<T> RunCloudOperationWithRetryAsync<T>(Func<Task<T>> operation, string operationName)
+    {
+        Exception lastException = null;
+        for (int attempt = 1; attempt <= CloudRetryCount; attempt++)
+        {
+            try
+            {
+                return await operation();
+            }
+            catch (Exception ex)
+            {
+                lastException = ex;
+                if (attempt >= CloudRetryCount)
+                    break;
+
+                Debug.LogWarning("PlayerProfileService " + operationName + " retry " + attempt + "/" + CloudRetryCount + ": " + ex.Message);
+                await Task.Delay(CloudRetryDelayMs);
+            }
+        }
+
+        throw lastException ?? new Exception("Cloud operation failed: " + operationName);
+    }
+
+    async Task RunCloudOperationWithRetryAsync(Func<Task> operation, string operationName)
+    {
+        Exception lastException = null;
+        for (int attempt = 1; attempt <= CloudRetryCount; attempt++)
+        {
+            try
+            {
+                await operation();
+                return;
+            }
+            catch (Exception ex)
+            {
+                lastException = ex;
+                if (attempt >= CloudRetryCount)
+                    break;
+
+                Debug.LogWarning("PlayerProfileService " + operationName + " retry " + attempt + "/" + CloudRetryCount + ": " + ex.Message);
+                await Task.Delay(CloudRetryDelayMs);
+            }
+        }
+
+        throw lastException ?? new Exception("Cloud operation failed: " + operationName);
     }
 
     string SerializeInventory(PlayerInventoryData inventory)

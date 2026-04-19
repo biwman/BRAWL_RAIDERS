@@ -20,8 +20,7 @@ public static class RoomSettings
     public const string MapSizeKey = "mapSize";
     public const string MovingObjectsEnabledKey = "movingObjectsEnabled";
     public const string EnemyBotsEnabledKey = "enemyBotsEnabled";
-    public const string PirateBattleshipEventEnabledKey = "pirateBattleshipEventEnabled";
-    public const string PirateBattleshipEventSecondKey = "pirateBattleshipEventSecond";
+    public const string BulletPushMultiplierKey = "bulletPushMultiplier";
     public const string ObstacleWeightFactorKey = "obstacleWeightFactor";
     public const string TreasureWeightFactorKey = "treasureWeightFactor";
     public const string RoundResultsKey = "roundResultsSnapshot";
@@ -45,8 +44,7 @@ public static class RoomSettings
     public const string DefaultMapSize = "medium";
     public const bool DefaultMovingObjectsEnabled = true;
     public const bool DefaultEnemyBotsEnabled = true;
-    public const bool DefaultPirateBattleshipEventEnabled = true;
-    public const int DefaultPirateBattleshipEventSecond = 60;
+    public const int DefaultBulletPushMultiplier = 1;
     public const int DefaultObstacleWeightFactor = 6;
     public const int DefaultTreasureWeightFactor = 6;
 
@@ -169,23 +167,9 @@ public static class RoomSettings
         return DefaultEnemyBotsEnabled;
     }
 
-    public static bool IsPirateBattleshipEventEnabled()
+    public static int GetBulletPushMultiplier()
     {
-        if (PhotonNetwork.CurrentRoom != null &&
-            PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue(PirateBattleshipEventEnabledKey, out object value) &&
-            value is bool enabled)
-        {
-            return enabled;
-        }
-
-        return DefaultPirateBattleshipEventEnabled;
-    }
-
-    public static int GetPirateBattleshipEventSecond()
-    {
-        int roundDuration = Mathf.RoundToInt(GetRoundDuration());
-        int maxValue = Mathf.Max(15, roundDuration - 5);
-        return GetInt(PirateBattleshipEventSecondKey, DefaultPirateBattleshipEventSecond, 15, maxValue);
+        return GetInt(BulletPushMultiplierKey, DefaultBulletPushMultiplier, 1, 5);
     }
 
     public static string GetMassLabel(int mass)

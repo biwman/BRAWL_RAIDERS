@@ -12,7 +12,8 @@ public class HideInNebulaTarget : MonoBehaviour
     PhotonView photonView;
     PlayerHealth playerHealth;
     Coroutine damageRoutine;
-    Dictionary<int, bool> nebulaStates = new Dictionary<int, bool>();
+    Dictionary<int, bool> hiddenNebulaStates = new Dictionary<int, bool>();
+    HashSet<int> damagingNebulas = new HashSet<int>();
     public bool IsHiddenForOthers => HasHiddenNebula();
 
     void Awake()
@@ -22,14 +23,19 @@ public class HideInNebulaTarget : MonoBehaviour
         CacheRenderers();
     }
 
-    public void UpdateNebulaState(int nebulaId, bool shouldHide)
+    public void UpdateNebulaState(int nebulaId, bool shouldHide, bool shouldDamage)
     {
         CacheRenderers();
-        nebulaStates[nebulaId] = shouldHide;
+        hiddenNebulaStates[nebulaId] = shouldHide;
+        if (shouldDamage)
+            damagingNebulas.Add(nebulaId);
+        else
+            damagingNebulas.Remove(nebulaId);
+
         RefreshLocalNebulaCache();
         ApplyVisibility();
 
-        if (playerHealth != null && photonView != null && photonView.IsMine && damageRoutine == null && nebulaStates.Count > 0)
+        if (playerHealth != null && photonView != null && photonView.IsMine && damageRoutine == null && damagingNebulas.Count > 0)
         {
             damageRoutine = StartCoroutine(ApplyNebulaDamage());
         }
@@ -37,11 +43,12 @@ public class HideInNebulaTarget : MonoBehaviour
 
     public void RemoveNebula(int nebulaId)
     {
-        nebulaStates.Remove(nebulaId);
+        hiddenNebulaStates.Remove(nebulaId);
+        damagingNebulas.Remove(nebulaId);
         RefreshLocalNebulaCache();
         ApplyVisibility();
 
-        if (nebulaStates.Count == 0 && damageRoutine != null)
+        if (damagingNebulas.Count == 0 && damageRoutine != null)
         {
             StopCoroutine(damageRoutine);
             damageRoutine = null;
@@ -73,7 +80,7 @@ public class HideInNebulaTarget : MonoBehaviour
 
     bool HasHiddenNebula()
     {
-        foreach (bool value in nebulaStates.Values)
+        foreach (bool value in hiddenNebulaStates.Values)
         {
             if (value)
                 return true;
@@ -88,7 +95,7 @@ public class HideInNebulaTarget : MonoBehaviour
             return;
 
         LocalPlayerNebulas.Clear();
-        foreach (KeyValuePair<int, bool> state in nebulaStates)
+        foreach (KeyValuePair<int, bool> state in hiddenNebulaStates)
         {
             if (state.Value)
                 LocalPlayerNebulas.Add(state.Key);
@@ -100,7 +107,7 @@ public class HideInNebulaTarget : MonoBehaviour
         if (LocalPlayerNebulas.Count == 0)
             return false;
 
-        foreach (KeyValuePair<int, bool> state in nebulaStates)
+        foreach (KeyValuePair<int, bool> state in hiddenNebulaStates)
         {
             if (state.Value && LocalPlayerNebulas.Contains(state.Key))
                 return true;
@@ -111,11 +118,11 @@ public class HideInNebulaTarget : MonoBehaviour
 
     IEnumerator ApplyNebulaDamage()
     {
-        while (nebulaStates.Count > 0)
+        while (damagingNebulas.Count > 0)
         {
             yield return new WaitForSeconds(2f);
 
-            if (nebulaStates.Count <= 0)
+            if (damagingNebulas.Count <= 0)
                 break;
 
             if (playerHealth == null || photonView == null || !photonView.IsMine)

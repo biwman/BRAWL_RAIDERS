@@ -61,6 +61,7 @@ public class EndGameWatcher : MonoBehaviour
 
         PlayerMovement.gameStarted = false;
         PlayerShooting.gameStarted = false;
+        HideLobbyUnderSummary();
         AwardRoundXpIfNeeded();
 
         GameObject endScreenRoot = FindObjectEvenIfDisabled("EndScreen");
@@ -123,6 +124,21 @@ public class EndGameWatcher : MonoBehaviour
         {
             ui.playerItemPrefab = Resources.Load<GameObject>("PlayerListItem");
         }
+    }
+
+    void HideLobbyUnderSummary()
+    {
+        LobbyManager lobby = FindAnyObjectByType<LobbyManager>();
+        if (lobby == null)
+            return;
+
+        CanvasGroup canvasGroup = lobby.GetComponent<CanvasGroup>();
+        if (canvasGroup == null)
+            canvasGroup = lobby.gameObject.AddComponent<CanvasGroup>();
+
+        canvasGroup.alpha = 0f;
+        canvasGroup.interactable = false;
+        canvasGroup.blocksRaycasts = false;
     }
 
     void FixEndScreenLayout(EndScreenUI ui)
@@ -289,7 +305,11 @@ public class EndGameWatcher : MonoBehaviour
         {
             foreach (RoundResultEntry entry in snapshot.entries.OrderBy(result => result.placement).ThenByDescending(result => result.finalScore))
             {
-                CreateScoreRow(listParent, entry.nickname + " - " + entry.finalScore + " XP - " + FormatOutcome(entry.outcome), ui);
+                int cargoValueAstrons = GetEndScreenCargoValueAstrons(entry);
+                CreateScoreRow(
+                    listParent,
+                    entry.nickname + " - " + entry.finalScore + " XP - " + FormatOutcome(entry.outcome) + " - " + cargoValueAstrons + " Astrons",
+                    ui);
             }
         }
         else
@@ -479,5 +499,36 @@ public class EndGameWatcher : MonoBehaviour
             default:
                 return "active";
         }
+    }
+
+    int GetEndScreenCargoValueAstrons(RoundResultEntry entry)
+    {
+        if (entry == null)
+            return 0;
+
+        switch (entry.outcome)
+        {
+            case "dead":
+            case "lost_in_space":
+            case "time_up":
+            case "active":
+                return 0;
+        }
+
+        Player player = PhotonNetwork.PlayerList.FirstOrDefault(p => p != null && p.ActorNumber == entry.actorNumber);
+        if (player == null)
+            return 0;
+
+        string[] shipSlots = PlayerProfileService.GetPlayerShipInventorySlots(player);
+        int totalValue = 0;
+        for (int i = 0; i < shipSlots.Length; i++)
+        {
+            if (string.IsNullOrWhiteSpace(shipSlots[i]))
+                continue;
+
+            totalValue += InventoryItemCatalog.GetSellValueAstrons(shipSlots[i]);
+        }
+
+        return Mathf.Max(0, totalValue);
     }
 }
