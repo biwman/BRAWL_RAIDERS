@@ -5,6 +5,9 @@ using UnityEngine.UI;
 
 public class PlayerShooting : MonoBehaviourPun
 {
+    const float AutoAimRange = 13f;
+    const float ManualAimThreshold = 0.35f;
+
     public Joystick shootJoystick;
     public GameObject bulletPrefab;
     public float bulletSpeed = 10f;
@@ -38,6 +41,9 @@ public class PlayerShooting : MonoBehaviourPun
     {
         maxAmmo = GetConfiguredMaxAmmo();
         currentAmmo = maxAmmo;
+
+        if (AstronautSurvivor.IsAstronautInstantiationData(photonView.InstantiationData))
+            return;
 
         if (GetComponent<EnemyBot>() != null)
             return;
@@ -93,9 +99,10 @@ public class PlayerShooting : MonoBehaviourPun
         if (isReloading || currentAmmo <= 0)
             return;
 
-        Vector2 direction = shootJoystick.IsPressed ? shootJoystick.inputVector : Vector2.zero;
-        if (direction.magnitude < 0.2f)
+        if (!shootJoystick.IsPressed)
             return;
+
+        Vector2 direction = ResolveManualAimDirection();
 
         if (Time.time >= nextFireTime)
         {
@@ -103,6 +110,49 @@ public class PlayerShooting : MonoBehaviourPun
             ConsumeAmmo();
             nextFireTime = Time.time + fireRate;
         }
+    }
+
+    Vector2 ResolveManualAimDirection()
+    {
+        Vector2 rawDirection = shootJoystick != null ? shootJoystick.inputVector : Vector2.zero;
+        if (rawDirection.magnitude >= ManualAimThreshold)
+            return rawDirection.normalized;
+
+        return FindAutoAimDirection();
+    }
+
+    Vector2 FindAutoAimDirection()
+    {
+        PlayerHealth[] targets = FindObjectsByType<PlayerHealth>(FindObjectsInactive.Exclude);
+        Transform bestTarget = null;
+        float bestDistance = float.MaxValue;
+
+        for (int i = 0; i < targets.Length; i++)
+        {
+            PlayerHealth target = targets[i];
+            if (target == null || target.IsWreck || target.photonView == null || target.photonView.ViewID == photonView.ViewID)
+                continue;
+
+            HideInNebulaTarget nebulaState = target.GetComponent<HideInNebulaTarget>();
+            if (nebulaState != null && nebulaState.IsHiddenForOthers)
+                continue;
+
+            float distance = Vector2.Distance(transform.position, target.transform.position);
+            if (distance > AutoAimRange || distance >= bestDistance)
+                continue;
+
+            bestDistance = distance;
+            bestTarget = target.transform;
+        }
+
+        if (bestTarget != null)
+        {
+            Vector2 aim = (bestTarget.position - transform.position);
+            if (aim.sqrMagnitude > 0.001f)
+                return aim.normalized;
+        }
+
+        return transform.up;
     }
 
     void Shoot(Vector2 direction)

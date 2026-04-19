@@ -56,14 +56,24 @@ public class EnemyBotManager : MonoBehaviour
             if (view == null || view.gameObject == null || !view.gameObject.name.StartsWith("Player"))
                 continue;
 
-            if (!EnemyBot.IsBotInstantiationData(view.InstantiationData))
+            if (EnemyBot.IsBotInstantiationData(view.InstantiationData))
+            {
+                EnemyBot bot = view.GetComponent<EnemyBot>();
+                if (bot == null)
+                    bot = view.gameObject.AddComponent<EnemyBot>();
+
+                bot.InitializeFromPhotonData();
                 continue;
+            }
 
-            EnemyBot bot = view.GetComponent<EnemyBot>();
-            if (bot == null)
-                bot = view.gameObject.AddComponent<EnemyBot>();
+            if (AstronautSurvivor.IsAstronautInstantiationData(view.InstantiationData))
+            {
+                AstronautSurvivor astronaut = view.GetComponent<AstronautSurvivor>();
+                if (astronaut == null)
+                    astronaut = view.gameObject.AddComponent<AstronautSurvivor>();
 
-            bot.InitializeFromPhotonData();
+                astronaut.InitializeFromPhotonData();
+            }
         }
     }
 
@@ -80,6 +90,13 @@ public class EnemyBotManager : MonoBehaviour
         {
             spawnedForCurrentRound = false;
             lastHandledStartTime = double.MinValue;
+            return;
+        }
+
+        if (!RoomSettings.AreEnemyBotsEnabled())
+        {
+            DestroyExistingBots();
+            spawnedForCurrentRound = true;
             return;
         }
 
@@ -106,10 +123,25 @@ public class EnemyBotManager : MonoBehaviour
         spawnedForCurrentRound = true;
     }
 
+    void DestroyExistingBots()
+    {
+        EnemyBot[] bots = FindObjectsByType<EnemyBot>(FindObjectsInactive.Exclude);
+        for (int i = 0; i < bots.Length; i++)
+        {
+            EnemyBot bot = bots[i];
+            if (bot == null || bot.GetComponent<PhotonView>() == null)
+                continue;
+
+            PhotonView view = bot.GetComponent<PhotonView>();
+            if (view.IsMine)
+                PhotonNetwork.Destroy(bot.gameObject);
+        }
+    }
+
     void SpawnEnemyBot()
     {
         Vector2 mapSize = RoomSettings.GetMapDimensions();
-        Vector2 spawn = new Vector2(0f, mapSize.y * 0.18f);
+        Vector2 spawn = GetSafeBotSpawnPosition(mapSize);
         GameObject botObject = PhotonNetwork.Instantiate("Player", spawn, Quaternion.identity, 0, new object[] { EnemyBot.BotInstantiationMarker });
         if (botObject != null)
         {
@@ -119,5 +151,44 @@ public class EnemyBotManager : MonoBehaviour
 
             bot.InitializeFromPhotonData();
         }
+    }
+
+    Vector2 GetSafeBotSpawnPosition(Vector2 mapSize)
+    {
+        Vector2[] candidates =
+        {
+            new Vector2(-mapSize.x * 0.34f, mapSize.y * 0.34f),
+            new Vector2(mapSize.x * 0.34f, mapSize.y * 0.34f),
+            new Vector2(-mapSize.x * 0.34f, -mapSize.y * 0.34f),
+            new Vector2(mapSize.x * 0.34f, -mapSize.y * 0.34f),
+            new Vector2(0f, mapSize.y * 0.38f),
+            new Vector2(0f, -mapSize.y * 0.38f)
+        };
+
+        PlayerHealth[] players = FindObjectsByType<PlayerHealth>(FindObjectsInactive.Exclude);
+        float bestScore = float.MinValue;
+        Vector2 bestCandidate = candidates[0];
+
+        for (int i = 0; i < candidates.Length; i++)
+        {
+            float nearestDistance = float.MaxValue;
+            for (int j = 0; j < players.Length; j++)
+            {
+                PlayerHealth player = players[j];
+                if (player == null || player.IsBotControlled || player.IsWreck)
+                    continue;
+
+                float distance = Vector2.Distance(candidates[i], player.transform.position);
+                nearestDistance = Mathf.Min(nearestDistance, distance);
+            }
+
+            if (nearestDistance > bestScore)
+            {
+                bestScore = nearestDistance;
+                bestCandidate = candidates[i];
+            }
+        }
+
+        return bestCandidate;
     }
 }

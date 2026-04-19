@@ -36,6 +36,8 @@ public class TreasureCollector : MonoBehaviourPun
     Image pickupToastIcon;
     TMP_Text pickupToastLabel;
     Coroutine pickupToastRoutine;
+    Coroutine extractionUseRoutine;
+    bool collectButtonHooked;
 
     void Start()
     {
@@ -51,14 +53,7 @@ public class TreasureCollector : MonoBehaviourPun
         if (!photonView.IsMine)
             return;
 
-        if (scoreText == null)
-        {
-            GameObject obj = GameObject.Find("ScoreText");
-            if (obj != null)
-            {
-                scoreText = obj.GetComponent<TMP_Text>();
-            }
-        }
+        TryBindHudReferences();
 
         if (scoreText != null)
         {
@@ -67,39 +62,30 @@ public class TreasureCollector : MonoBehaviourPun
 
         SyncScoreProperty();
 
-        if (collectButton == null)
-        {
-            GameObject obj = GameObject.Find("CollectButton");
-            if (obj != null)
-            {
-                collectButton = obj.GetComponent<Button>();
-            }
-        }
-
-        if (collectButton != null)
-        {
-            EventTrigger trigger = collectButton.GetComponent<EventTrigger>();
-            if (trigger == null)
-                trigger = collectButton.gameObject.AddComponent<EventTrigger>();
-
-            trigger.triggers = new List<EventTrigger.Entry>();
-
-            EventTrigger.Entry down = new EventTrigger.Entry();
-            down.eventID = EventTriggerType.PointerDown;
-            down.callback.AddListener(_ => StartHolding());
-            trigger.triggers.Add(down);
-
-            EventTrigger.Entry up = new EventTrigger.Entry();
-            up.eventID = EventTriggerType.PointerUp;
-            up.callback.AddListener(_ => StopHolding());
-            trigger.triggers.Add(up);
-        }
-
         SetupPickupToast();
     }
 
     void Update()
     {
+        if (photonView.IsMine && (!collectButtonHooked || collectButton == null || scoreText == null))
+        {
+            TryBindHudReferences();
+        }
+
+        if (photonView.IsMine && IsAstronautMode())
+        {
+            if (currentTreasure != null || currentWreck != null || currentDroppedCargo != null)
+            {
+                ClearCurrentHighlight();
+                currentTreasure = null;
+                currentWreck = null;
+                currentDroppedCargo = null;
+            }
+
+            UpdateCollectionBeam();
+            return;
+        }
+
         if (photonView.IsMine && Time.unscaledTime >= nextTreasureScanTime)
         {
             nextTreasureScanTime = Time.unscaledTime + TreasureScanInterval;
@@ -107,6 +93,47 @@ public class TreasureCollector : MonoBehaviourPun
         }
 
         UpdateCollectionBeam();
+    }
+
+    void TryBindHudReferences()
+    {
+        if (!photonView.IsMine)
+            return;
+
+        if (scoreText == null)
+        {
+            GameObject scoreObject = GameObject.Find("ScoreText");
+            if (scoreObject != null)
+                scoreText = scoreObject.GetComponent<TMP_Text>();
+        }
+
+        if (collectButton == null)
+        {
+            GameObject buttonObject = GameObject.Find("CollectButton");
+            if (buttonObject != null)
+                collectButton = buttonObject.GetComponent<Button>();
+        }
+
+        if (collectButton == null || collectButtonHooked)
+            return;
+
+        EventTrigger trigger = collectButton.GetComponent<EventTrigger>();
+        if (trigger == null)
+            trigger = collectButton.gameObject.AddComponent<EventTrigger>();
+
+        trigger.triggers = new List<EventTrigger.Entry>();
+
+        EventTrigger.Entry down = new EventTrigger.Entry();
+        down.eventID = EventTriggerType.PointerDown;
+        down.callback.AddListener(_ => StartHolding());
+        trigger.triggers.Add(down);
+
+        EventTrigger.Entry up = new EventTrigger.Entry();
+        up.eventID = EventTriggerType.PointerUp;
+        up.callback.AddListener(_ => StopHolding());
+        trigger.triggers.Add(up);
+
+        collectButtonHooked = true;
     }
 
     void OnTriggerEnter2D(Collider2D other)
@@ -140,14 +167,18 @@ public class TreasureCollector : MonoBehaviourPun
 
         if (currentExtraction != null)
         {
-            PhotonView ezView = currentExtraction.GetComponent<PhotonView>();
-            if (ezView != null)
+            if (!isCollecting)
             {
-                photonView.RPC(nameof(RequestUseExtraction), RpcTarget.MasterClient, ezView.ViewID);
+                isCollecting = true;
+                LockControls();
+                extractionUseRoutine = StartCoroutine(HoldExtractionRoutine(currentExtraction));
             }
 
             return;
         }
+
+        if (IsAstronautMode())
+            return;
 
         RefreshClosestCollectible();
 
@@ -181,6 +212,12 @@ public class TreasureCollector : MonoBehaviourPun
         }
     }
 
+    bool IsAstronautMode()
+    {
+        return AstronautSurvivor.IsAstronautInstantiationData(photonView.InstantiationData) ||
+               GetComponent<AstronautSurvivor>() != null;
+    }
+
     public void StopHolding()
     {
         if (!photonView.IsMine)
@@ -188,9 +225,37 @@ public class TreasureCollector : MonoBehaviourPun
 
         isCollecting = false;
         StopCollectibleFeedback();
+        if (extractionUseRoutine != null)
+        {
+            StopCoroutine(extractionUseRoutine);
+            extractionUseRoutine = null;
+        }
 
         if (movement != null) movement.enabled = true;
         if (shooting != null) shooting.enabled = true;
+    }
+
+    IEnumerator HoldExtractionRoutine(ExtractionZone extractionZone)
+    {
+        float timer = 0f;
+
+        while (timer < collectTime)
+        {
+            if (!isCollecting || extractionZone == null || currentExtraction != extractionZone)
+            {
+                AbortCollection();
+                yield break;
+            }
+
+            timer += Time.deltaTime;
+            yield return null;
+        }
+
+        PhotonView ezView = extractionZone.GetComponent<PhotonView>();
+        if (ezView != null)
+            photonView.RPC(nameof(RequestUseExtraction), RpcTarget.MasterClient, ezView.ViewID);
+
+        FinishCollection();
     }
 
     IEnumerator CollectTreasureRoutine(Treasure treasureToCollect)
@@ -220,7 +285,7 @@ public class TreasureCollector : MonoBehaviourPun
         }
 
         AddScore(treasureToCollect.value);
-        StoreCollectedItem(InventoryItemCatalog.AsteroidResourceId);
+        StoreCollectedItem(treasureToCollect.itemId);
 
         PhotonView treasureView = treasureToCollect.GetComponent<PhotonView>();
         if (treasureView != null)

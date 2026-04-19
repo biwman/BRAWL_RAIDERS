@@ -61,7 +61,7 @@ public class BoosterBarUI : MonoBehaviourPun
 
         RectTransform hpRect = hpBarObject.GetComponent<RectTransform>();
         RectTransform boosterRect = clone.GetComponent<RectTransform>();
-        boosterRect.anchoredPosition = hpRect.anchoredPosition + new Vector2(0f, -55f);
+        boosterRect.anchoredPosition = hpRect.anchoredPosition + new Vector2(0f, -110f);
 
         boosterBar = clone.GetComponent<Slider>();
         boosterBar.minValue = 0f;
@@ -79,7 +79,7 @@ public class BoosterBarUI : MonoBehaviourPun
 
         if (fillImage != null)
         {
-            fillImage.color = new Color(0.2f, 0.8f, 1f, 1f);
+            fillImage.color = new Color(1f, 0.9f, 0.18f, 1f);
         }
 
         CreateLabel(clone.transform);
@@ -102,15 +102,17 @@ public class BoosterBarUI : MonoBehaviourPun
 
         if (normalized > 0.5f)
         {
-            fillImage.color = new Color(0.2f, 0.8f, 1f, 1f);
+            float t = Mathf.InverseLerp(0.5f, 1f, normalized);
+            fillImage.color = Color.Lerp(new Color(1f, 0.68f, 0.18f, 1f), new Color(1f, 0.9f, 0.18f, 1f), t);
         }
         else if (normalized > 0.2f)
         {
-            fillImage.color = new Color(1f, 0.75f, 0.2f, 1f);
+            float t = Mathf.InverseLerp(0.2f, 0.5f, normalized);
+            fillImage.color = Color.Lerp(new Color(0.95f, 0.26f, 0.18f, 1f), new Color(1f, 0.68f, 0.18f, 1f), t);
         }
         else
         {
-            fillImage.color = new Color(1f, 0.35f, 0.2f, 1f);
+            fillImage.color = new Color(0.9f, 0.18f, 0.18f, 1f);
         }
 
         if (handleImage != null)

@@ -289,7 +289,7 @@ public class EndGameWatcher : MonoBehaviour
         {
             foreach (RoundResultEntry entry in snapshot.entries.OrderBy(result => result.placement).ThenByDescending(result => result.finalScore))
             {
-                CreateScoreRow(listParent, entry.nickname + " - " + entry.finalScore + " XP", ui);
+                CreateScoreRow(listParent, entry.nickname + " - " + entry.finalScore + " XP - " + FormatOutcome(entry.outcome), ui);
             }
         }
         else
@@ -461,5 +461,23 @@ public class EndGameWatcher : MonoBehaviour
         }
 
         return "Player " + player.ActorNumber;
+    }
+
+    string FormatOutcome(string outcome)
+    {
+        switch (outcome)
+        {
+            case "extracted":
+                return "extracted";
+            case "evacuated":
+                return "evacuated";
+            case "dead":
+                return "dead";
+            case "lost_in_space":
+            case "time_up":
+                return "lost in space";
+            default:
+                return "active";
+        }
     }
 }

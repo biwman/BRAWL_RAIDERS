@@ -19,6 +19,9 @@ public static class RoomSettings
     public const string TimeUpRetainPercentKey = "timeUpRetainPercent";
     public const string MapSizeKey = "mapSize";
     public const string MovingObjectsEnabledKey = "movingObjectsEnabled";
+    public const string EnemyBotsEnabledKey = "enemyBotsEnabled";
+    public const string PirateBattleshipEventEnabledKey = "pirateBattleshipEventEnabled";
+    public const string PirateBattleshipEventSecondKey = "pirateBattleshipEventSecond";
     public const string ObstacleWeightFactorKey = "obstacleWeightFactor";
     public const string TreasureWeightFactorKey = "treasureWeightFactor";
     public const string RoundResultsKey = "roundResultsSnapshot";
@@ -41,6 +44,9 @@ public static class RoomSettings
     public const int DefaultTimeUpRetainPercent = 25;
     public const string DefaultMapSize = "medium";
     public const bool DefaultMovingObjectsEnabled = true;
+    public const bool DefaultEnemyBotsEnabled = true;
+    public const bool DefaultPirateBattleshipEventEnabled = true;
+    public const int DefaultPirateBattleshipEventSecond = 60;
     public const int DefaultObstacleWeightFactor = 6;
     public const int DefaultTreasureWeightFactor = 6;
 
@@ -151,6 +157,37 @@ public static class RoomSettings
         return GetInt(TreasureWeightFactorKey, DefaultTreasureWeightFactor, 1, 12);
     }
 
+    public static bool AreEnemyBotsEnabled()
+    {
+        if (PhotonNetwork.CurrentRoom != null &&
+            PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue(EnemyBotsEnabledKey, out object value) &&
+            value is bool enabled)
+        {
+            return enabled;
+        }
+
+        return DefaultEnemyBotsEnabled;
+    }
+
+    public static bool IsPirateBattleshipEventEnabled()
+    {
+        if (PhotonNetwork.CurrentRoom != null &&
+            PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue(PirateBattleshipEventEnabledKey, out object value) &&
+            value is bool enabled)
+        {
+            return enabled;
+        }
+
+        return DefaultPirateBattleshipEventEnabled;
+    }
+
+    public static int GetPirateBattleshipEventSecond()
+    {
+        int roundDuration = Mathf.RoundToInt(GetRoundDuration());
+        int maxValue = Mathf.Max(15, roundDuration - 5);
+        return GetInt(PirateBattleshipEventSecondKey, DefaultPirateBattleshipEventSecond, 15, maxValue);
+    }
+
     public static string GetMassLabel(int mass)
     {
         if (mass <= 2)
@@ -208,10 +245,10 @@ public static class RoomSettings
         if (player != null &&
             player.CustomProperties.TryGetValue(ShipSkinKey, out object value))
         {
-            return Mathf.Clamp(ConvertToInt(value, fallback), 0, 2);
+            return Mathf.Clamp(ConvertToInt(value, fallback), 0, 3);
         }
 
-        return Mathf.Clamp(fallback, 0, 2);
+        return Mathf.Clamp(fallback, 0, 3);
     }
 
     static int GetInt(string key, int defaultValue, int min, int max)
@@ -271,5 +308,68 @@ public static class RoomSettings
             return byteValue;
 
         return fallback;
+    }
+}
+
+public enum ShipType
+{
+    Explorer = 0,
+    Viper = 1
+}
+
+public static class ShipCatalog
+{
+    public static ShipType GetShipTypeFromSkinIndex(int skinIndex)
+    {
+        return skinIndex == 3 ? ShipType.Viper : ShipType.Explorer;
+    }
+
+    public static string GetShipTypeDisplayName(ShipType shipType)
+    {
+        return shipType == ShipType.Viper ? "Viper" : "Explorer";
+    }
+
+    public static int[] GetSkinsForShipType(ShipType shipType)
+    {
+        return shipType == ShipType.Viper
+            ? new[] { 3 }
+            : new[] { 0, 2, 1 };
+    }
+
+    public static string GetSkinDisplayName(int skinIndex)
+    {
+        switch (skinIndex)
+        {
+            case 0: return "Basic";
+            case 2: return "Silver Shine";
+            case 1: return "Gilded Armour";
+            case 3: return "Standard";
+            default: return "Skin";
+        }
+    }
+
+    public static int GetShipInventoryCapacity(int skinIndex)
+    {
+        return GetShipTypeFromSkinIndex(skinIndex) == ShipType.Viper ? 10 : 8;
+    }
+
+    public static int GetMainGunSlots(int skinIndex)
+    {
+        return GetShipTypeFromSkinIndex(skinIndex) == ShipType.Viper ? 2 : 1;
+    }
+
+    public static int GetShieldSlots(int skinIndex)
+    {
+        return 1;
+    }
+
+    public static int GetEngineSlots(int skinIndex)
+    {
+        return GetShipTypeFromSkinIndex(skinIndex) == ShipType.Viper ? 2 : 1;
+    }
+
+    public static int GetGadgetSlots(int skinIndex)
+    {
+        return GetShipTypeFromSkinIndex(skinIndex) == ShipType.Viper ? 0 : 1;
     }
 }

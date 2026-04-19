@@ -54,6 +54,11 @@ public class GameTimer : MonoBehaviourPun
         if (PhotonNetwork.IsMasterClient)
         {
             UpdateLoneShipTimerMode();
+            if (CountActivePlayers() <= 0 && !isEndingRound)
+            {
+                StartRoundEmptyFieldEnd();
+                return;
+            }
         }
 
         double elapsed = GetElapsedRoundTime();
@@ -87,6 +92,20 @@ public class GameTimer : MonoBehaviourPun
         StartCoroutine(EndGameAfterTimeUpSync());
     }
 
+    void StartRoundEmptyFieldEnd()
+    {
+        if (!IsGameStarted() || isEndingRound)
+            return;
+
+        isEndingRound = true;
+        GameManager manager = FindFirstObjectByType<GameManager>();
+        if (manager != null)
+        {
+            manager.EndGame("no_survivors");
+        }
+        isEndingRound = false;
+    }
+
     System.Collections.IEnumerator EndGameAfterTimeUpSync()
     {
         Debug.Log("KONIEC GRY");
@@ -103,7 +122,7 @@ public class GameTimer : MonoBehaviourPun
                 if (!p.IsBotControlled)
                 {
                     int currentScore = RoundResultsTracker.GetKnownScore(pv.Owner, p.gameObject);
-                    RoundResultsTracker.RecordOutcome(pv.Owner, currentScore, "time_up");
+                    RoundResultsTracker.RecordOutcome(pv.Owner, currentScore, "lost_in_space");
                 }
                 pv.RPC("OnTimeUp", pv.Owner);
             }
@@ -204,24 +223,6 @@ public class GameTimer : MonoBehaviourPun
         }
 
         return false;
-    }
-
-    public void ReduceTime(float amount)
-    {
-        if (!PhotonNetwork.IsMasterClient)
-            return;
-
-        if (PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue("startTime", out object value))
-        {
-            double currentStart = (double)value;
-            double newStart = currentStart + amount;
-
-            Hashtable props = new Hashtable();
-            props["startTime"] = newStart;
-            PhotonNetwork.CurrentRoom.SetCustomProperties(props);
-
-            Debug.Log("Timer skrocony o " + amount + " sekund");
-        }
     }
 
     float GetConfiguredRoundTime()

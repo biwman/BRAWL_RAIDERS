@@ -343,7 +343,7 @@ public class ShipInventoryHudUI : MonoBehaviourPun
             if (slotImage != null)
             {
                 slotImage.color = occupied
-                    ? new Color(0.18f, 0.39f, 0.58f, 0.98f)
+                    ? InventoryItemCatalog.GetRarityColor(itemId)
                     : new Color(0.11f, 0.16f, 0.22f, 0.98f);
             }
 

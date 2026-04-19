@@ -141,6 +141,9 @@ public class MovingSpaceObject : MonoBehaviour
         if (player == null || !player.photonView.IsMine)
             return;
 
+        if (player.GetComponent<AstronautSurvivor>() != null)
+            return;
+
         Rigidbody2D playerRb = player.GetComponent<Rigidbody2D>();
         Vector2 playerVelocity = playerRb != null ? playerRb.linearVelocity : Vector2.zero;
         if (playerVelocity.sqrMagnitude < 0.01f)

@@ -50,13 +50,7 @@ public class ExtractionZone : MonoBehaviourPun
             photonView.RPC(nameof(StartAlarmLoop), RpcTarget.All);
         }
 
-        float timer = 0f;
-
-        while (timer < activationTime)
-        {
-            timer += Time.deltaTime;
-            yield return null;
-        }
+        yield return null;
 
         if (!isActive)
         {
@@ -152,7 +146,8 @@ public class ExtractionZone : MonoBehaviourPun
 
                 Debug.Log("Evacuating: " + pv.Owner.NickName);
                 int finalScore = RoundResultsTracker.GetKnownScore(pv.Owner, pv.gameObject) + 5;
-                RoundResultsTracker.RecordOutcome(pv.Owner, finalScore, "evacuated");
+                string outcome = p.IsAstronautControlled ? "evacuated" : "extracted";
+                RoundResultsTracker.RecordOutcome(pv.Owner, finalScore, outcome);
 
                 // punkt tylko dla właściciela
                 pv.RPC("OnEvacuated", pv.Owner, 5);
@@ -173,11 +168,6 @@ public class ExtractionZone : MonoBehaviourPun
 
         // skrócenie czasu
         bool anyPlayerEvacuated = processedPlayers.Count > 0;
-        GameTimer timer = FindAnyObjectByType<GameTimer>();
-        if (timer != null && anyPlayerEvacuated)
-        {
-            timer.ReduceTime(30f);
-        }
 
         // KLUCZOWE — KONIEC GRY
         if (anyPlayerEvacuated)

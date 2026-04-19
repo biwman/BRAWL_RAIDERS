@@ -5,6 +5,7 @@ public class Treasure : MonoBehaviourPun
 {
     public const float CollectRange = 2.2f;
     public int value;
+    public string itemId = InventoryItemCatalog.AsteroidResourceId;
 
     private SpriteRenderer sr;
     private Color originalColor;
@@ -14,7 +15,8 @@ public class Treasure : MonoBehaviourPun
 
     void Start()
     {
-        value = Random.Range(1, 11);
+        InitializeFromPhotonData();
+        value = InventoryItemCatalog.GetSellValueAstrons(itemId);
 
         sr = GetComponent<SpriteRenderer>();
 
@@ -42,6 +44,31 @@ public class Treasure : MonoBehaviourPun
             ? "treasure_" + photonView.ViewID
             : "treasure_" + gameObject.name;
         movingObject.Configure(stableId, MovingSpaceObject.SpaceObjectType.Treasure);
+    }
+
+    void InitializeFromPhotonData()
+    {
+        if (photonView != null &&
+            photonView.InstantiationData != null &&
+            photonView.InstantiationData.Length > 0 &&
+            photonView.InstantiationData[0] is string instancedItemId &&
+            !string.IsNullOrWhiteSpace(instancedItemId))
+        {
+            itemId = instancedItemId;
+        }
+    }
+
+    public float GetColliderSizeMultiplier()
+    {
+        switch (itemId)
+        {
+            case InventoryItemCatalog.AsteroidGoldId:
+                return 0.76f;
+            case InventoryItemCatalog.AsteroidRareId:
+                return 0.78f;
+            default:
+                return 0.68f;
+        }
     }
 
     public void Highlight()

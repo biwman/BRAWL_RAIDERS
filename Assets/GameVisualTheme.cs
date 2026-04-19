@@ -10,6 +10,7 @@ using UnityEditor;
 public class GameVisualTheme : MonoBehaviour
 {
     const float PlayerTargetSize = 1.04f;
+    const float AstronautTargetSize = 0.56f;
     const float TreasureTargetSize = 1.5f;
     const float TreasureColliderSizeMultiplier = 0.9f;
     const float PlayerBodyColliderWidthFactor = 0.46f;
@@ -23,8 +24,12 @@ public class GameVisualTheme : MonoBehaviour
     static GameVisualTheme instance;
 
     Sprite[] shipSprites;
+    Sprite[] wreckSprites;
     Sprite enemyBotSprite;
+    Sprite astronautSprite;
     Sprite treasureSprite;
+    Sprite goldTreasureSprite;
+    Sprite rareTreasureSprite;
     Sprite[] obstacleSprites;
     Sprite extractionSprite;
     Sprite backgroundSprite;
@@ -165,11 +170,22 @@ public class GameVisualTheme : MonoBehaviour
         {
             LoadSpriteFromProjectOrResources("ship1.png", "Visuals/Ships/ship1_resource"),
             LoadSpriteFromProjectOrResources("ship2.png", "Visuals/Ships/ship2_resource"),
-            LoadSpriteFromProjectOrResources("ship3.png", "Visuals/Ships/ship3_resource")
+            LoadSpriteFromProjectOrResources("ship3.png", "Visuals/Ships/ship3_resource"),
+            LoadSpriteFromProjectOrResources("ship4.png", "ship4_resource")
+        };
+        wreckSprites = new[]
+        {
+            null,
+            LoadSpriteFromProjectOrResources("wrak2.png", "wrak2_resource"),
+            null,
+            null
         };
         enemyBotSprite = LoadSpriteFromProjectOrResources("droid1.png", "droid1_resource");
+        astronautSprite = LoadSpriteFromProjectOrResources("kosmonauta.png", "kosmonauta_resource");
 
         treasureSprite = LoadSpriteFromProjectOrResources("asteroida_treasure.png", "Visuals/Treasures/asteroid_treasure_resource");
+        goldTreasureSprite = LoadSpriteFromProjectOrResources("asteroida_zloto_clean.png", "asteroida_zloto_clean_resource");
+        rareTreasureSprite = LoadSpriteFromProjectOrResources("asteroida_rare_clean.png", "asteroida_rare_clean_resource");
         obstacleSprites = new[]
         {
             LoadObstacleSprite("asteroida_1_clean.png", "asteroida_1.png"),
@@ -272,8 +288,21 @@ public class GameVisualTheme : MonoBehaviour
             if (view == null || renderer == null || view.Owner == null)
                 continue;
 
+            bool isEnemyBot = player.IsBotControlled || EnemyBot.IsBotInstantiationData(view.InstantiationData);
+            bool isAstronaut = player.GetComponent<AstronautSurvivor>() != null || AstronautSurvivor.IsAstronautInstantiationData(view.InstantiationData);
+
             Sprite sprite;
-            if (player.IsBotControlled && enemyBotSprite != null)
+            if (player.IsWreck)
+            {
+                ShipWreck wreck = player.GetComponent<ShipWreck>();
+                int wreckSkinIndex = wreck != null ? wreck.SourceShipSkinIndex : RoomSettings.GetPlayerShipSkin(view.Owner, 0);
+                sprite = GetMappedWreckSprite(wreckSkinIndex, renderer.sprite);
+            }
+            else if (isAstronaut && astronautSprite != null)
+            {
+                sprite = astronautSprite;
+            }
+            else if (isEnemyBot && enemyBotSprite != null)
             {
                 sprite = enemyBotSprite;
             }
@@ -293,9 +322,9 @@ public class GameVisualTheme : MonoBehaviour
             if (renderer.sprite != sprite)
             {
                 renderer.sprite = sprite;
-                renderer.color = Color.white;
             }
-            FitSpriteToTargetSize(renderer, PlayerTargetSize);
+            renderer.color = Color.white;
+            FitSpriteToTargetSize(renderer, isAstronaut ? AstronautTargetSize : PlayerTargetSize);
 
             Vector2 spriteWorldSize = GetSpriteWorldSize(renderer);
             SetWorldBoxSize(bodyCollider, new Vector2(
@@ -322,19 +351,39 @@ public class GameVisualTheme : MonoBehaviour
 
             BoxCollider2D triggerCollider = treasure.GetComponent<BoxCollider2D>();
 
-            if (renderer.sprite != treasureSprite)
+            Sprite desiredSprite = GetTreasureSprite(treasure);
+            if (desiredSprite == null)
+                desiredSprite = treasureSprite;
+
+            if (renderer.sprite != desiredSprite)
             {
-                renderer.sprite = treasureSprite;
+                renderer.sprite = desiredSprite;
             }
             FitSpriteToTargetSize(renderer, TreasureTargetSize);
 
             if (triggerCollider != null)
             {
                 Vector2 spriteWorldSize = GetSpriteWorldSize(renderer);
-                Vector2 colliderSize = spriteWorldSize * TreasureColliderSizeMultiplier;
+                Vector2 colliderSize = spriteWorldSize * treasure.GetColliderSizeMultiplier();
                 triggerCollider.isTrigger = false;
                 SetWorldBoxSize(triggerCollider, colliderSize);
             }
+        }
+    }
+
+    Sprite GetTreasureSprite(Treasure treasure)
+    {
+        if (treasure == null)
+            return treasureSprite;
+
+        switch (treasure.itemId)
+        {
+            case InventoryItemCatalog.AsteroidGoldId:
+                return goldTreasureSprite != null ? goldTreasureSprite : treasureSprite;
+            case InventoryItemCatalog.AsteroidRareId:
+                return rareTreasureSprite != null ? rareTreasureSprite : treasureSprite;
+            default:
+                return treasureSprite;
         }
     }
 
@@ -465,6 +514,14 @@ public class GameVisualTheme : MonoBehaviour
         int hash = stableKey.GetHashCode();
         int index = Mathf.Abs(hash) % obstacleSprites.Length;
         return obstacleSprites[index];
+    }
+
+    Sprite GetMappedWreckSprite(int shipSkinIndex, Sprite fallback)
+    {
+        if (wreckSprites != null && shipSkinIndex >= 0 && shipSkinIndex < wreckSprites.Length && wreckSprites[shipSkinIndex] != null)
+            return wreckSprites[shipSkinIndex];
+
+        return fallback;
     }
 
     Vector2 GetWorldBoxSize(BoxCollider2D collider2D)

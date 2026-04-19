@@ -340,7 +340,7 @@ public class UIRuntimeStyler : MonoBehaviour
             rect.anchorMax = new Vector2(0.5f, 0.5f);
             rect.pivot = new Vector2(0.5f, 0.5f);
             rect.anchoredPosition = new Vector2(0f, 0f);
-            rect.sizeDelta = new Vector2(920f, 1110f);
+            rect.sizeDelta = new Vector2(920f, 1248f);
         }
 
         GameObject readyTextObject = FindSceneObjectByName("ReadyText");
@@ -410,8 +410,11 @@ public class UIRuntimeStyler : MonoBehaviour
         StyleLobbySettingButton("ShipDriftSettingButton", new Vector2(-205f, -518f));
         StyleLobbySettingButton("DeathTimerSettingButton", new Vector2(205f, -518f));
         StyleLobbySettingButton("MovingObjectsSettingButton", new Vector2(-205f, -580f));
-        StyleLobbySettingButton("ObstacleWeightSettingButton", new Vector2(205f, -580f));
-        StyleLobbySettingButton("TreasureWeightSettingButton", new Vector2(0f, -642f));
+        StyleLobbySettingButton("EnemyBotsSettingButton", new Vector2(205f, -580f));
+        StyleLobbySettingButton("ObstacleWeightSettingButton", new Vector2(-205f, -642f));
+        StyleLobbySettingButton("TreasureWeightSettingButton", new Vector2(205f, -642f));
+        StyleLobbySettingButton("PirateBattleshipSettingButton", new Vector2(-205f, -704f));
+        StyleLobbySettingButton("PirateBattleshipTimeSettingButton", new Vector2(205f, -704f));
     }
 
     void StyleLobbySettingButton(string objectName, Vector2 anchoredPosition)
@@ -606,6 +609,7 @@ public class UIRuntimeStyler : MonoBehaviour
         visual.sprite = null;
         visual.type = Image.Type.Sliced;
         visual.preserveAspect = false;
+        visual.raycastTarget = false;
 
         visual.gameObject.SetActive(true);
         visual.color = baseColor;
@@ -674,6 +678,8 @@ public class UIRuntimeStyler : MonoBehaviour
             visualObject.transform.SetAsFirstSibling();
         }
 
-        return visualObject.GetComponent<Image>();
+        Image image = visualObject.GetComponent<Image>();
+        image.raycastTarget = false;
+        return image;
     }
 }

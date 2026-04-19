@@ -37,6 +37,16 @@ public class PlayerMovement : MonoBehaviourPun
 
     void Start()
     {
+        bool isAstronaut = GetComponent<AstronautSurvivor>() != null || AstronautSurvivor.IsAstronautInstantiationData(photonView.InstantiationData);
+        if (isAstronaut)
+        {
+            AstronautSurvivor astronaut = GetComponent<AstronautSurvivor>();
+            if (astronaut == null)
+                astronaut = gameObject.AddComponent<AstronautSurvivor>();
+
+            astronaut.InitializeFromPhotonData();
+        }
+
         rb = GetComponent<Rigidbody2D>();
         if (rb != null)
         {
@@ -74,12 +84,12 @@ public class PlayerMovement : MonoBehaviourPun
 
         ResolveJoysticks();
 
-        if (GetComponent<BoosterBarUI>() == null)
+        if (!isAstronaut && GetComponent<BoosterBarUI>() == null)
         {
             gameObject.AddComponent<BoosterBarUI>();
         }
 
-        if (GetComponent<ShipInventoryHudUI>() == null)
+        if (!isAstronaut && GetComponent<ShipInventoryHudUI>() == null)
         {
             gameObject.AddComponent<ShipInventoryHudUI>();
         }
@@ -194,6 +204,14 @@ public class PlayerMovement : MonoBehaviourPun
 
     void UpdateBooster(float deltaTime)
     {
+        if (GetComponent<AstronautSurvivor>() != null)
+        {
+            boosterCharge = 0f;
+            boosterExhausted = false;
+            boosterRecoveryDelayTimer = 0f;
+            return;
+        }
+
         bool usingBooster = effectiveMoveInput.magnitude >= maxSpeedThreshold && !boosterExhausted;
 
         if (usingBooster)
@@ -289,6 +307,8 @@ public class PlayerMovement : MonoBehaviourPun
         lastFacingDirection = desiredDirection;
 
         float angle = Mathf.Atan2(lastFacingDirection.y, lastFacingDirection.x) * Mathf.Rad2Deg;
+        if (GetComponent<AstronautSurvivor>() != null)
+            angle += 180f;
         targetRotationAngle = angle - 90f;
 
         if (rb == null)
@@ -320,6 +340,9 @@ public class PlayerMovement : MonoBehaviourPun
 
     void SetupEngineAudio()
     {
+        if (GetComponent<AstronautSurvivor>() != null)
+            return;
+
         AudioClip engineClip = AudioManager.Instance.EngineClip;
         if (engineClip == null)
             return;
@@ -389,12 +412,14 @@ public class PlayerMovement : MonoBehaviourPun
 public class EngineThrusterVFX : MonoBehaviour
 {
     const string ThrusterRootName = "EngineVFX";
-    const string TrailObjectName = "EngineTrail";
 
     Rigidbody2D rb;
     SpriteRenderer shipRenderer;
-    TrailRenderer trailRenderer;
+    TrailRenderer[] trailRenderers;
     float referenceSpeed = 5f;
+    bool isEnemyBot;
+    bool isAstronaut;
+    bool isViper;
 
     void Start()
     {
@@ -402,9 +427,19 @@ public class EngineThrusterVFX : MonoBehaviour
         shipRenderer = GetComponent<SpriteRenderer>();
         PlayerMovement movement = GetComponent<PlayerMovement>();
         referenceSpeed = Mathf.Max(1f, movement != null ? movement.speed : 5f);
-
+        RefreshMode();
         CreateThrusterObjects();
         UpdateVisuals(0f);
+    }
+
+    public void RefreshMode()
+    {
+        isEnemyBot = GetComponent<EnemyBot>() != null;
+        isAstronaut = GetComponent<AstronautSurvivor>() != null;
+
+        PhotonView view = GetComponent<PhotonView>();
+        int skinIndex = view != null && view.Owner != null ? RoomSettings.GetPlayerShipSkin(view.Owner, 0) : 0;
+        isViper = !isEnemyBot && !isAstronaut && ShipCatalog.GetShipTypeFromSkinIndex(skinIndex) == ShipType.Viper;
     }
 
     void Update()
@@ -428,21 +463,40 @@ public class EngineThrusterVFX : MonoBehaviour
         }
 
         float shipHeight = shipRenderer != null ? shipRenderer.bounds.size.y : 1f;
-        rootObject.transform.localPosition = new Vector3(0f, -shipHeight * 0.46f, 0f);
-        rootObject.transform.localRotation = Quaternion.Euler(0f, 0f, 180f);
+        float shipWidth = shipRenderer != null ? shipRenderer.bounds.size.x : 1f;
+        rootObject.transform.localPosition = isEnemyBot
+            ? new Vector3(0f, shipHeight * 0.44f, 0f)
+            : isAstronaut
+                ? new Vector3(0f, -shipHeight * 0.34f, 0f)
+                : new Vector3(0f, -shipHeight * 0.46f, 0f);
+        rootObject.transform.localRotation = isEnemyBot
+            ? Quaternion.identity
+            : Quaternion.Euler(0f, 0f, 180f);
 
-        GameObject trailObject = new GameObject(TrailObjectName);
-        trailObject.transform.SetParent(rootObject.transform, false);
-        trailObject.transform.localPosition = new Vector3(0f, 0.02f, 0f);
-        trailRenderer = trailObject.AddComponent<TrailRenderer>();
-        ConfigureTrail(trailRenderer);
+        Vector3[] offsets = isViper
+            ? new[]
+            {
+                new Vector3(-shipWidth * 0.30f, 0.34f, 0f),
+                new Vector3(shipWidth * 0.30f, 0.34f, 0f)
+            }
+            : new[] { new Vector3(0f, 0.02f, 0f) };
+
+        trailRenderers = new TrailRenderer[offsets.Length];
+        for (int i = 0; i < offsets.Length; i++)
+        {
+            GameObject trailObject = new GameObject("EngineTrail" + i);
+            trailObject.transform.SetParent(rootObject.transform, false);
+            trailObject.transform.localPosition = offsets[i];
+            trailRenderers[i] = trailObject.AddComponent<TrailRenderer>();
+            ConfigureTrail(trailRenderers[i]);
+        }
     }
 
     void ConfigureTrail(TrailRenderer trail)
     {
-        trail.time = 0.42f;
+        trail.time = isAstronaut ? 0.24f : 0.42f;
         trail.minVertexDistance = 0.01f;
-        trail.widthMultiplier = 0.08f;
+        trail.widthMultiplier = isAstronaut ? 0.04f : 0.08f;
         trail.shadowCastingMode = ShadowCastingMode.Off;
         trail.receiveShadows = false;
         trail.alignment = LineAlignment.View;
@@ -453,21 +507,60 @@ public class EngineThrusterVFX : MonoBehaviour
         trail.generateLightingData = false;
 
         Gradient gradient = new Gradient();
-        gradient.SetKeys(
-            new[]
-            {
-                new GradientColorKey(new Color(1f, 1f, 1f), 0f),
-                new GradientColorKey(new Color(0.64f, 0.97f, 1f), 0.14f),
-                new GradientColorKey(new Color(0.2f, 0.8f, 1f), 0.45f),
-                new GradientColorKey(new Color(0.03f, 0.18f, 0.86f), 1f)
-            },
-            new[]
-            {
-                new GradientAlphaKey(0.95f, 0f),
-                new GradientAlphaKey(0.66f, 0.2f),
-                new GradientAlphaKey(0.26f, 0.62f),
-                new GradientAlphaKey(0f, 1f)
-            });
+        if (isAstronaut)
+        {
+            gradient.SetKeys(
+                new[]
+                {
+                    new GradientColorKey(new Color(1f, 0.94f, 0.76f), 0f),
+                    new GradientColorKey(new Color(1f, 0.7f, 0.3f), 0.2f),
+                    new GradientColorKey(new Color(0.96f, 0.42f, 0.12f), 0.55f),
+                    new GradientColorKey(new Color(0.42f, 0.11f, 0.02f), 1f)
+                },
+                new[]
+                {
+                    new GradientAlphaKey(0.78f, 0f),
+                    new GradientAlphaKey(0.44f, 0.26f),
+                    new GradientAlphaKey(0.18f, 0.7f),
+                    new GradientAlphaKey(0f, 1f)
+                });
+        }
+        else if (isEnemyBot)
+        {
+            gradient.SetKeys(
+                new[]
+                {
+                    new GradientColorKey(new Color(1f, 0.98f, 0.78f), 0f),
+                    new GradientColorKey(new Color(1f, 0.7f, 0.22f), 0.18f),
+                    new GradientColorKey(new Color(0.95f, 0.34f, 0.04f), 0.52f),
+                    new GradientColorKey(new Color(0.45f, 0.08f, 0.01f), 1f)
+                },
+                new[]
+                {
+                    new GradientAlphaKey(0.94f, 0f),
+                    new GradientAlphaKey(0.7f, 0.24f),
+                    new GradientAlphaKey(0.24f, 0.68f),
+                    new GradientAlphaKey(0f, 1f)
+                });
+        }
+        else
+        {
+            gradient.SetKeys(
+                new[]
+                {
+                    new GradientColorKey(new Color(1f, 1f, 1f), 0f),
+                    new GradientColorKey(new Color(0.64f, 0.97f, 1f), 0.14f),
+                    new GradientColorKey(new Color(0.2f, 0.8f, 1f), 0.45f),
+                    new GradientColorKey(new Color(0.03f, 0.18f, 0.86f), 1f)
+                },
+                new[]
+                {
+                    new GradientAlphaKey(0.95f, 0f),
+                    new GradientAlphaKey(0.66f, 0.2f),
+                    new GradientAlphaKey(0.26f, 0.62f),
+                    new GradientAlphaKey(0f, 1f)
+                });
+        }
         trail.colorGradient = gradient;
         trail.widthCurve = new AnimationCurve(
             new Keyframe(0f, 1f),
@@ -485,13 +578,29 @@ public class EngineThrusterVFX : MonoBehaviour
     void UpdateVisuals(float speedNormalized)
     {
         float clamped = Mathf.Clamp01(speedNormalized);
-        float intensity = Mathf.Lerp(0.18f, 1f, clamped);
+        float intensity = Mathf.Lerp(isAstronaut ? 0.28f : 0.18f, 1f, clamped);
 
-        if (trailRenderer != null)
+        if (trailRenderers == null)
+            return;
+
+        for (int i = 0; i < trailRenderers.Length; i++)
         {
-            trailRenderer.time = Mathf.Lerp(0.22f, 0.82f, intensity);
-            trailRenderer.widthMultiplier = Mathf.Lerp(0.03f, 0.16f, intensity);
-            trailRenderer.emitting = clamped > 0.04f;
+            TrailRenderer trailRenderer = trailRenderers[i];
+            if (trailRenderer == null)
+                continue;
+
+            if (isAstronaut)
+            {
+                trailRenderer.time = Mathf.Lerp(0.12f, 0.28f, intensity);
+                trailRenderer.widthMultiplier = Mathf.Lerp(0.015f, 0.055f, intensity);
+                trailRenderer.emitting = clamped > 0.08f;
+            }
+            else
+            {
+                trailRenderer.time = Mathf.Lerp(0.22f, 0.82f, intensity);
+                trailRenderer.widthMultiplier = Mathf.Lerp(0.03f, 0.16f, intensity);
+                trailRenderer.emitting = clamped > 0.04f;
+            }
         }
     }
 

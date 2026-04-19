@@ -81,7 +81,7 @@ public class TreasureSpawner : MonoBehaviourPun
             Collider2D hit = Physics2D.OverlapCircle(pos2D, 1f);
             if (hit == null)
             {
-                PhotonNetwork.Instantiate("TreasureNetwork", new Vector3(x, y, 0f), Quaternion.identity);
+                PhotonNetwork.Instantiate("TreasureNetwork", new Vector3(x, y, 0f), Quaternion.identity, 0, new object[] { RollTreasureItemId() });
                 spawned++;
             }
         }
@@ -143,6 +143,18 @@ public class TreasureSpawner : MonoBehaviourPun
         }
 
         return 1f;
+    }
+
+    string RollTreasureItemId()
+    {
+        float roll = Random.value;
+        if (roll < 0.1f)
+            return InventoryItemCatalog.AsteroidRareId;
+
+        if (roll < 0.4f)
+            return InventoryItemCatalog.AsteroidGoldId;
+
+        return InventoryItemCatalog.AsteroidResourceId;
     }
 
     bool IsRoundStarted()

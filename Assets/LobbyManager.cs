@@ -20,6 +20,7 @@ public class LobbyManager : MonoBehaviourPunCallbacks
     static readonly int[] MaxInputBoostPercentOptions = { 0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50 };
     static readonly int[] LastShipTimerMultiplierOptions = { 1, 2, 3, 4, 5 };
     static readonly int[] WeightFactorOptions = { 2, 6, 12 };
+    static readonly int[] PirateBattleshipSecondOptions = { 15, 30, 45, 60, 75, 90, 105, 120, 135, 150, 180 };
 
     public Button readyButton;
     public TMP_Text readyText;
@@ -37,6 +38,9 @@ public class LobbyManager : MonoBehaviourPunCallbacks
     public TMP_Text shipDriftSettingText;
     public TMP_Text deathTimerSettingText;
     public TMP_Text movingObjectsSettingText;
+    public TMP_Text enemyBotsSettingText;
+    public TMP_Text pirateBattleshipSettingText;
+    public TMP_Text pirateBattleshipTimeSettingText;
     public TMP_Text obstacleWeightSettingText;
     public TMP_Text treasureWeightSettingText;
     public Button roundSettingButton;
@@ -52,6 +56,9 @@ public class LobbyManager : MonoBehaviourPunCallbacks
     public Button shipDriftSettingButton;
     public Button deathTimerSettingButton;
     public Button movingObjectsSettingButton;
+    public Button enemyBotsSettingButton;
+    public Button pirateBattleshipSettingButton;
+    public Button pirateBattleshipTimeSettingButton;
     public Button obstacleWeightSettingButton;
     public Button treasureWeightSettingButton;
 
@@ -173,6 +180,9 @@ public class LobbyManager : MonoBehaviourPunCallbacks
             changedProps.ContainsKey(RoomSettings.ShipDriftEnabledKey) ||
             changedProps.ContainsKey(RoomSettings.LastShipTimerMultiplierKey) ||
             changedProps.ContainsKey(RoomSettings.MovingObjectsEnabledKey) ||
+            changedProps.ContainsKey(RoomSettings.EnemyBotsEnabledKey) ||
+            changedProps.ContainsKey(RoomSettings.PirateBattleshipEventEnabledKey) ||
+            changedProps.ContainsKey(RoomSettings.PirateBattleshipEventSecondKey) ||
             changedProps.ContainsKey(RoomSettings.ObstacleWeightFactorKey) ||
             changedProps.ContainsKey(RoomSettings.TreasureWeightFactorKey))
         {
@@ -238,6 +248,9 @@ public class LobbyManager : MonoBehaviourPunCallbacks
             propertiesThatChanged.ContainsKey(RoomSettings.ShipDriftEnabledKey) ||
             propertiesThatChanged.ContainsKey(RoomSettings.LastShipTimerMultiplierKey) ||
             propertiesThatChanged.ContainsKey(RoomSettings.MovingObjectsEnabledKey) ||
+            propertiesThatChanged.ContainsKey(RoomSettings.EnemyBotsEnabledKey) ||
+            propertiesThatChanged.ContainsKey(RoomSettings.PirateBattleshipEventEnabledKey) ||
+            propertiesThatChanged.ContainsKey(RoomSettings.PirateBattleshipEventSecondKey) ||
             propertiesThatChanged.ContainsKey(RoomSettings.ObstacleWeightFactorKey) ||
             propertiesThatChanged.ContainsKey(RoomSettings.TreasureWeightFactorKey))
         {
@@ -342,8 +355,11 @@ public class LobbyManager : MonoBehaviourPunCallbacks
         shipDriftSettingButton = EnsureSettingButton(ref shipDriftSettingText, shipDriftSettingButton, "ShipDriftSettingButton", "ShipDriftSettingText", new Vector2(-205f, -478f), CycleShipDriftEnabled);
         deathTimerSettingButton = EnsureSettingButton(ref deathTimerSettingText, deathTimerSettingButton, "DeathTimerSettingButton", "DeathTimerSettingText", new Vector2(205f, -478f), CycleLastShipTimerMultiplier);
         movingObjectsSettingButton = EnsureSettingButton(ref movingObjectsSettingText, movingObjectsSettingButton, "MovingObjectsSettingButton", "MovingObjectsSettingText", new Vector2(-205f, -532f), CycleMovingObjectsEnabled);
-        obstacleWeightSettingButton = EnsureSettingButton(ref obstacleWeightSettingText, obstacleWeightSettingButton, "ObstacleWeightSettingButton", "ObstacleWeightSettingText", new Vector2(205f, -532f), CycleObstacleWeightFactor);
-        treasureWeightSettingButton = EnsureSettingButton(ref treasureWeightSettingText, treasureWeightSettingButton, "TreasureWeightSettingButton", "TreasureWeightSettingText", new Vector2(0f, -586f), CycleTreasureWeightFactor);
+        enemyBotsSettingButton = EnsureSettingButton(ref enemyBotsSettingText, enemyBotsSettingButton, "EnemyBotsSettingButton", "EnemyBotsSettingText", new Vector2(205f, -532f), CycleEnemyBotsEnabled);
+        obstacleWeightSettingButton = EnsureSettingButton(ref obstacleWeightSettingText, obstacleWeightSettingButton, "ObstacleWeightSettingButton", "ObstacleWeightSettingText", new Vector2(-205f, -586f), CycleObstacleWeightFactor);
+        treasureWeightSettingButton = EnsureSettingButton(ref treasureWeightSettingText, treasureWeightSettingButton, "TreasureWeightSettingButton", "TreasureWeightSettingText", new Vector2(205f, -586f), CycleTreasureWeightFactor);
+        pirateBattleshipSettingButton = EnsureSettingButton(ref pirateBattleshipSettingText, pirateBattleshipSettingButton, "PirateBattleshipSettingButton", "PirateBattleshipSettingText", new Vector2(-205f, -640f), CyclePirateBattleshipEventEnabled);
+        pirateBattleshipTimeSettingButton = EnsureSettingButton(ref pirateBattleshipTimeSettingText, pirateBattleshipTimeSettingButton, "PirateBattleshipTimeSettingButton", "PirateBattleshipTimeSettingText", new Vector2(205f, -640f), CyclePirateBattleshipEventSecond);
     }
 
     void RefreshPlayerStatusList()
@@ -472,6 +488,24 @@ public class LobbyManager : MonoBehaviourPunCallbacks
         if (!PhotonNetwork.CurrentRoom.CustomProperties.ContainsKey(RoomSettings.MovingObjectsEnabledKey))
         {
             props[RoomSettings.MovingObjectsEnabledKey] = RoomSettings.DefaultMovingObjectsEnabled;
+            changed = true;
+        }
+
+        if (!PhotonNetwork.CurrentRoom.CustomProperties.ContainsKey(RoomSettings.EnemyBotsEnabledKey))
+        {
+            props[RoomSettings.EnemyBotsEnabledKey] = RoomSettings.DefaultEnemyBotsEnabled;
+            changed = true;
+        }
+
+        if (!PhotonNetwork.CurrentRoom.CustomProperties.ContainsKey(RoomSettings.PirateBattleshipEventEnabledKey))
+        {
+            props[RoomSettings.PirateBattleshipEventEnabledKey] = RoomSettings.DefaultPirateBattleshipEventEnabled;
+            changed = true;
+        }
+
+        if (!PhotonNetwork.CurrentRoom.CustomProperties.ContainsKey(RoomSettings.PirateBattleshipEventSecondKey))
+        {
+            props[RoomSettings.PirateBattleshipEventSecondKey] = RoomSettings.DefaultPirateBattleshipEventSecond;
             changed = true;
         }
 
@@ -703,6 +737,17 @@ public class LobbyManager : MonoBehaviourPunCallbacks
         RefreshHostSettingsUi();
     }
 
+    void CycleEnemyBotsEnabled()
+    {
+        if (!PhotonNetwork.IsMasterClient || PhotonNetwork.CurrentRoom == null)
+            return;
+
+        Hashtable props = new Hashtable();
+        props[RoomSettings.EnemyBotsEnabledKey] = !AreEnemyBotsEnabled();
+        PhotonNetwork.CurrentRoom.SetCustomProperties(props);
+        RefreshHostSettingsUi();
+    }
+
     void CycleObstacleWeightFactor()
     {
         CycleIntSetting(RoomSettings.ObstacleWeightFactorKey, WeightFactorOptions, GetObstacleWeightFactor(), RoomSettings.DefaultObstacleWeightFactor);
@@ -711,6 +756,26 @@ public class LobbyManager : MonoBehaviourPunCallbacks
     void CycleTreasureWeightFactor()
     {
         CycleIntSetting(RoomSettings.TreasureWeightFactorKey, WeightFactorOptions, GetTreasureWeightFactor(), RoomSettings.DefaultTreasureWeightFactor);
+    }
+
+    void CyclePirateBattleshipEventEnabled()
+    {
+        if (!PhotonNetwork.IsMasterClient || PhotonNetwork.CurrentRoom == null)
+            return;
+
+        Hashtable props = new Hashtable();
+        props[RoomSettings.PirateBattleshipEventEnabledKey] = !IsPirateBattleshipEventEnabled();
+        PhotonNetwork.CurrentRoom.SetCustomProperties(props);
+        RefreshHostSettingsUi();
+    }
+
+    void CyclePirateBattleshipEventSecond()
+    {
+        CycleIntSetting(
+            RoomSettings.PirateBattleshipEventSecondKey,
+            PirateBattleshipSecondOptions,
+            GetPirateBattleshipEventSecond(),
+            RoomSettings.DefaultPirateBattleshipEventSecond);
     }
 
     void CycleIntSetting(string key, int[] options, int current, int fallbackIndexValue)
@@ -796,6 +861,15 @@ public class LobbyManager : MonoBehaviourPunCallbacks
         if (movingObjectsSettingText != null)
             movingObjectsSettingText.text = "MOVING OBJECTS: " + (AreMovingObjectsEnabled() ? "ON" : "OFF");
 
+        if (enemyBotsSettingText != null)
+            enemyBotsSettingText.text = "PVE DRONES: " + (AreEnemyBotsEnabled() ? "ON" : "OFF");
+
+        if (pirateBattleshipSettingText != null)
+            pirateBattleshipSettingText.text = "PIRATE BATTLESHIP: " + (IsPirateBattleshipEventEnabled() ? "ON" : "OFF");
+
+        if (pirateBattleshipTimeSettingText != null)
+            pirateBattleshipTimeSettingText.text = "PIRATE BATTLESHIP TIME: " + GetPirateBattleshipEventSecond() + "s";
+
         if (obstacleWeightSettingText != null)
             obstacleWeightSettingText.text = "OBSTACLE MASS: " + RoomSettings.GetMassLabel(GetObstacleWeightFactor());
 
@@ -815,8 +889,11 @@ public class LobbyManager : MonoBehaviourPunCallbacks
         SetSettingButtonState(shipDriftSettingButton, isHost);
         SetSettingButtonState(deathTimerSettingButton, isHost);
         SetSettingButtonState(movingObjectsSettingButton, isHost);
+        SetSettingButtonState(enemyBotsSettingButton, isHost);
         SetSettingButtonState(obstacleWeightSettingButton, isHost);
         SetSettingButtonState(treasureWeightSettingButton, isHost);
+        SetSettingButtonState(pirateBattleshipSettingButton, isHost);
+        SetSettingButtonState(pirateBattleshipTimeSettingButton, isHost && IsPirateBattleshipEventEnabled());
     }
 
     void SetSettingButtonState(Button button, bool interactable)
@@ -905,6 +982,21 @@ public class LobbyManager : MonoBehaviourPunCallbacks
     bool AreMovingObjectsEnabled()
     {
         return RoomSettings.AreMovingObjectsEnabled();
+    }
+
+    bool AreEnemyBotsEnabled()
+    {
+        return RoomSettings.AreEnemyBotsEnabled();
+    }
+
+    bool IsPirateBattleshipEventEnabled()
+    {
+        return RoomSettings.IsPirateBattleshipEventEnabled();
+    }
+
+    int GetPirateBattleshipEventSecond()
+    {
+        return RoomSettings.GetPirateBattleshipEventSecond();
     }
 
     int GetObstacleWeightFactor()

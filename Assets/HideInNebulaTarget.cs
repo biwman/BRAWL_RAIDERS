@@ -6,11 +6,14 @@ using System.Collections.Generic;
 [DisallowMultipleComponent]
 public class HideInNebulaTarget : MonoBehaviour
 {
+    static readonly HashSet<int> LocalPlayerNebulas = new HashSet<int>();
+
     Renderer[] renderers;
     PhotonView photonView;
     PlayerHealth playerHealth;
     Coroutine damageRoutine;
     Dictionary<int, bool> nebulaStates = new Dictionary<int, bool>();
+    public bool IsHiddenForOthers => HasHiddenNebula();
 
     void Awake()
     {
@@ -23,6 +26,7 @@ public class HideInNebulaTarget : MonoBehaviour
     {
         CacheRenderers();
         nebulaStates[nebulaId] = shouldHide;
+        RefreshLocalNebulaCache();
         ApplyVisibility();
 
         if (playerHealth != null && photonView != null && photonView.IsMine && damageRoutine == null && nebulaStates.Count > 0)
@@ -34,6 +38,7 @@ public class HideInNebulaTarget : MonoBehaviour
     public void RemoveNebula(int nebulaId)
     {
         nebulaStates.Remove(nebulaId);
+        RefreshLocalNebulaCache();
         ApplyVisibility();
 
         if (nebulaStates.Count == 0 && damageRoutine != null)
@@ -53,19 +58,9 @@ public class HideInNebulaTarget : MonoBehaviour
 
     void ApplyVisibility()
     {
-        bool shouldHide = false;
-
-        foreach (bool value in nebulaStates.Values)
-        {
-            if (value)
-            {
-                shouldHide = true;
-                break;
-            }
-        }
-
+        bool shouldHide = HasHiddenNebula();
         bool keepLocallyVisible = photonView != null && photonView.IsMine;
-        bool shouldBeVisible = !shouldHide || keepLocallyVisible;
+        bool shouldBeVisible = !shouldHide || keepLocallyVisible || SharesNebulaWithLocalPlayer();
 
         for (int i = 0; i < renderers.Length; i++)
         {
@@ -74,6 +69,44 @@ public class HideInNebulaTarget : MonoBehaviour
                 renderers[i].enabled = shouldBeVisible;
             }
         }
+    }
+
+    bool HasHiddenNebula()
+    {
+        foreach (bool value in nebulaStates.Values)
+        {
+            if (value)
+                return true;
+        }
+
+        return false;
+    }
+
+    void RefreshLocalNebulaCache()
+    {
+        if (photonView == null || !photonView.IsMine)
+            return;
+
+        LocalPlayerNebulas.Clear();
+        foreach (KeyValuePair<int, bool> state in nebulaStates)
+        {
+            if (state.Value)
+                LocalPlayerNebulas.Add(state.Key);
+        }
+    }
+
+    bool SharesNebulaWithLocalPlayer()
+    {
+        if (LocalPlayerNebulas.Count == 0)
+            return false;
+
+        foreach (KeyValuePair<int, bool> state in nebulaStates)
+        {
+            if (state.Value && LocalPlayerNebulas.Contains(state.Key))
+                return true;
+        }
+
+        return false;
     }
 
     IEnumerator ApplyNebulaDamage()

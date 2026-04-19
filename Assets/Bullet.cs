@@ -1,9 +1,12 @@
-using UnityEngine;
 using Photon.Pun;
 using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
 
 public class Bullet : MonoBehaviourPun
 {
+    static readonly List<Collider2D> ActiveBulletColliders = new List<Collider2D>();
+
     public int damage = 10;
     public int ownerViewID;
     public float rangeMultiplier = 15f;
@@ -39,6 +42,20 @@ public class Bullet : MonoBehaviourPun
             {
                 SetWorldRadius(collider2D, minimumWorldRadius);
             }
+
+            for (int i = ActiveBulletColliders.Count - 1; i >= 0; i--)
+            {
+                Collider2D other = ActiveBulletColliders[i];
+                if (other == null)
+                {
+                    ActiveBulletColliders.RemoveAt(i);
+                    continue;
+                }
+
+                Physics2D.IgnoreCollision(collider2D, other, true);
+            }
+
+            ActiveBulletColliders.Add(collider2D);
         }
 
         if (maxTravelDistance <= 0f)
@@ -62,14 +79,15 @@ public class Bullet : MonoBehaviourPun
 
     void OnCollisionEnter2D(Collision2D collision)
     {
-        if (!photonView.IsMine) return;
+        if (!photonView.IsMine)
+            return;
 
-        // ważne: szukamy w parent (na wypadek colliderów)
+        if (collision.gameObject.GetComponentInParent<Bullet>() != null)
+            return;
+
         PlayerHealth hp = collision.gameObject.GetComponentInParent<PlayerHealth>();
-
         if (hp != null && hp.photonView.ViewID != ownerViewID)
         {
-            // tylko MASTER dostaje damage
             hp.photonView.RPC("TakeDamage", RpcTarget.MasterClient, damage, ownerViewID);
         }
 
@@ -108,6 +126,15 @@ public class Bullet : MonoBehaviourPun
         else
         {
             Destroy(gameObject);
+        }
+    }
+
+    void OnDestroy()
+    {
+        Collider2D collider2D = GetComponent<Collider2D>();
+        if (collider2D != null)
+        {
+            ActiveBulletColliders.Remove(collider2D);
         }
     }
 

@@ -115,6 +115,7 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 
         EnsureDroppedCargoManagerExists();
         EnsureEnemyBotManagerExists();
+        EnsurePirateBattleshipManagerExists();
         EnsureNebulaSpawnerExists();
         if (PhotonNetwork.IsMasterClient)
         {
@@ -135,6 +136,8 @@ public class NetworkManager : MonoBehaviourPunCallbacks
         PlayerProfileService.Instance.ApplyProfileToPhoton();
         EnsureDroppedCargoManagerExists();
         EnsureEnemyBotManagerExists();
+        EnsurePirateBattleshipManagerExists();
+        EnsureNebulaSpawnerExists();
 
         if (PhotonNetwork.LocalPlayer != null && string.IsNullOrWhiteSpace(PhotonNetwork.NickName))
         {
@@ -162,6 +165,7 @@ public class NetworkManager : MonoBehaviourPunCallbacks
         foreach (PlayerHealth player in players)
         {
             if (player != null &&
+                !player.IsWreck &&
                 !player.IsBotControlled &&
                 player.photonView != null &&
                 player.photonView.IsMine)
@@ -231,7 +235,7 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 
     void EnsureNebulaSpawnerExists()
     {
-        if (FindFirstObjectByType<NebulaSpawner>() != null)
+        if (FindAnyObjectByType<NebulaSpawner>() != null)
             return;
 
         GameObject spawner = new GameObject("NebulaSpawner");
@@ -246,5 +250,10 @@ public class NetworkManager : MonoBehaviourPunCallbacks
     void EnsureEnemyBotManagerExists()
     {
         EnemyBotManager.EnsureExists();
+    }
+
+    void EnsurePirateBattleshipManagerExists()
+    {
+        PirateBattleshipEventManager.EnsureExists();
     }
 }
