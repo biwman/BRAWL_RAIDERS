@@ -42,11 +42,20 @@ public class MovingSpaceObject : MonoBehaviour
     const float ObstaclePushMaxSpeed = 4.2f;
     const float SimulationModeRefreshInterval = 0.25f;
     const float LowSimulationModeRefreshInterval = 0.35f;
+    const float MobileNearFieldActivationRadius = 30f;
+    const float MobileNearFieldDeactivationRadius = 38f;
+    const float MobilePlayerPositionCacheInterval = 0.35f;
+    const float MobileFarFieldVisualAngularMultiplier = 0.72f;
+    const float MobileFarFieldWakeDuration = 1.25f;
+    const int MaxCachedPlayerPositions = 16;
 
     static readonly Dictionary<string, MovingSpaceObject> ObjectsById = new Dictionary<string, MovingSpaceObject>();
     static PhysicsMaterial2D sharedBouncyMaterial;
     static PhysicsMaterial2D sharedSoftBoundaryMaterial;
     static Collider2D[] cachedWallColliders;
+    static readonly Vector2[] cachedPlayerPositions = new Vector2[MaxCachedPlayerPositions];
+    static int cachedPlayerPositionCount;
+    static float nextPlayerPositionCacheTime;
 
     string stableId;
     SpaceObjectType objectType;
@@ -81,6 +90,9 @@ public class MovingSpaceObject : MonoBehaviour
     bool simulationModeApplied;
     float nextSimulationModeRefreshTime;
     float cachedMassFactor = 1f;
+    bool nearActivePlayers = true;
+    bool farFieldVisualModeApplied;
+    float farFieldWakeUntil;
 
     public string StableId => stableId;
     public SpaceObjectType ObjectType => objectType;
@@ -155,6 +167,16 @@ public class MovingSpaceObject : MonoBehaviour
 
         ApplySimulationMode();
 
+        if (ShouldUseFarFieldVisualMode())
+        {
+            ApplyFarFieldVisualMode();
+            UpdateFarFieldVisualRotation();
+            return;
+        }
+
+        if (farFieldVisualModeApplied)
+            RestoreNearFieldSimulation();
+
         if (isAuthority)
         {
             SimulateAuthorityMotion();
@@ -217,6 +239,7 @@ public class MovingSpaceObject : MonoBehaviour
         if (rb == null)
             return;
 
+        WakeNearFieldSimulation();
         ApplySimulationMode();
         if (!isAuthority)
             return;
@@ -246,6 +269,7 @@ public class MovingSpaceObject : MonoBehaviour
         if (rb == null)
             return;
 
+        WakeNearFieldSimulation();
         ApplySimulationMode();
         if (!isAuthority || !movingEnabled || !translateEnabled)
             return;
@@ -286,6 +310,7 @@ public class MovingSpaceObject : MonoBehaviour
         if (rb == null || strength <= 0f || deltaTime <= 0f)
             return;
 
+        WakeNearFieldSimulation();
         ApplySimulationMode();
         if (!isAuthority || !movingEnabled || !translateEnabled)
             return;
@@ -313,6 +338,7 @@ public class MovingSpaceObject : MonoBehaviour
         if (rb == null || strength <= 0f || deltaTime <= 0f)
             return;
 
+        WakeNearFieldSimulation();
         ApplySimulationMode();
         if (!isAuthority || !movingEnabled || !translateEnabled)
             return;
@@ -376,6 +402,7 @@ public class MovingSpaceObject : MonoBehaviour
         if (isAuthority || rb == null || impulse.sqrMagnitude < 0.0001f)
             return;
 
+        WakeNearFieldSimulation();
         float predictionScale = GetRemotePredictionScale();
         Vector2 offset = impulse * predictionScale;
         float maxOffset = GetRemotePredictionMaxOffset();
@@ -523,6 +550,121 @@ public class MovingSpaceObject : MonoBehaviour
             rb.linearVelocity = Vector2.zero;
             rb.angularVelocity = 0f;
         }
+    }
+
+    bool ShouldUseFarFieldVisualMode()
+    {
+        if (!Application.isMobilePlatform || rb == null || !movingEnabled || !rotateEnabled)
+        {
+            nearActivePlayers = true;
+            return false;
+        }
+
+        if (Time.time < farFieldWakeUntil)
+            return false;
+
+        RefreshCachedPlayerPositionsIfNeeded();
+        if (cachedPlayerPositionCount <= 0)
+        {
+            nearActivePlayers = true;
+            return false;
+        }
+
+        float radius = nearActivePlayers ? MobileNearFieldDeactivationRadius : MobileNearFieldActivationRadius;
+        bool isNearPlayer = IsNearCachedPlayer(rb.position, radius);
+        nearActivePlayers = isNearPlayer;
+        return !isNearPlayer;
+    }
+
+    void ApplyFarFieldVisualMode()
+    {
+        if (rb == null)
+            return;
+
+        if (farFieldVisualModeApplied)
+            return;
+
+        rb.bodyType = RigidbodyType2D.Kinematic;
+        rb.constraints = RigidbodyConstraints2D.None;
+        rb.linearVelocity = Vector2.zero;
+        rb.angularVelocity = 0f;
+        farFieldVisualModeApplied = true;
+    }
+
+    void RestoreNearFieldSimulation()
+    {
+        farFieldVisualModeApplied = false;
+        simulationModeApplied = false;
+        ApplySimulationMode(true);
+        ResetSnapshotTracking();
+        nextSnapshotTime = Time.time;
+    }
+
+    void UpdateFarFieldVisualRotation()
+    {
+        if (rb == null || !rotateEnabled)
+            return;
+
+        float rotationDelta = baseAngularSpeed * MobileFarFieldVisualAngularMultiplier * Time.fixedDeltaTime;
+        if (Mathf.Abs(rotationDelta) <= 0.0001f)
+            return;
+
+        rb.MoveRotation(rb.rotation + rotationDelta);
+    }
+
+    void WakeNearFieldSimulation()
+    {
+        farFieldWakeUntil = Time.time + MobileFarFieldWakeDuration;
+        nearActivePlayers = true;
+
+        if (farFieldVisualModeApplied)
+            RestoreNearFieldSimulation();
+    }
+
+    static void RefreshCachedPlayerPositionsIfNeeded()
+    {
+        float now = Time.unscaledTime;
+        if (now < nextPlayerPositionCacheTime)
+            return;
+
+        nextPlayerPositionCacheTime = now + MobilePlayerPositionCacheInterval;
+        cachedPlayerPositionCount = 0;
+
+        PlayerHealth[] players = FindObjectsByType<PlayerHealth>(FindObjectsInactive.Exclude);
+        for (int i = 0; i < players.Length && cachedPlayerPositionCount < cachedPlayerPositions.Length; i++)
+        {
+            PlayerHealth player = players[i];
+            if (!ShouldTrackPlayerForMovingObjects(player))
+                continue;
+
+            cachedPlayerPositions[cachedPlayerPositionCount] = player.transform.position;
+            cachedPlayerPositionCount++;
+        }
+    }
+
+    static bool ShouldTrackPlayerForMovingObjects(PlayerHealth player)
+    {
+        if (player == null || player.IsWreck || player.IsEvacuationAnimating || player.CurrentHP <= 0)
+            return false;
+
+        if (!player.IsHumanShipControlled)
+            return false;
+
+        GameObject playerObject = player.gameObject;
+        return playerObject.GetComponent<PlayerDeployableBase>() == null &&
+               playerObject.GetComponent<LureBeaconDecoy>() == null;
+    }
+
+    static bool IsNearCachedPlayer(Vector2 position, float radius)
+    {
+        float radiusSquared = radius * radius;
+        for (int i = 0; i < cachedPlayerPositionCount; i++)
+        {
+            if ((position - cachedPlayerPositions[i]).sqrMagnitude <= radiusSquared)
+                return true;
+        }
+
+        return false;
     }
 
     void RefreshBoundaryCollisionIgnore(bool ignoreWalls)

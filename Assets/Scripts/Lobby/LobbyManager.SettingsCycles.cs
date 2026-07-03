@@ -899,6 +899,18 @@ public partial class LobbyManager
         RefreshHostSettingsUi();
     }
 
+    void CycleFpsLimit()
+    {
+        int nextValue = GetNextOptionValue(
+            FpsLimitOptions,
+            DeveloperInputSettings.FpsLimit,
+            DeveloperInputSettings.DefaultFpsLimit);
+
+        DeveloperInputSettings.FpsLimit = nextValue;
+        MobilePerformanceSettings.ReapplyTargetFrameRate();
+        RefreshHostSettingsUi();
+    }
+
     void CycleDiagnosticsGcEnabled()
     {
         ToggleDiagnosticsSetting(RoomSettings.DiagnosticsGcEnabledKey, RoomSettings.IsDiagnosticsGcEnabled());

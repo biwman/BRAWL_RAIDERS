@@ -22,12 +22,14 @@ public class NebulaField : MonoBehaviour
     const int ToxicNebulaVariantCount = 1;
     const float TargetVisualSize = 3.36f;
     const float CloudDriftSpeed = 0.22f;
+    const float MobileCloudDriftRefreshInterval = 0.12f;
     const float CloudWrapPadding = 7f;
     const float ColliderRadiusFactor = 0.4f;
     const float CloudColliderRadiusFactor = 0.52f;
     const float CloudHideSampleExtentFactor = 0.45f;
     const int CloudHideRequiredSamples = 3;
     const float TriggerStayRefreshInterval = 0.08f;
+    const float MobileCloudTriggerStayRefreshInterval = 0.16f;
     const float PlayerDeepHideFactor = 1.25f;
     const float PlayerDamageFactor = 1f;
     const float MinSizeMultiplier = 1f;
@@ -71,6 +73,7 @@ public class NebulaField : MonoBehaviour
     int cloudWrapGeneration;
     bool cloudDriftConfigured;
     bool cloudUsesNetworkClock;
+    float nextCloudDriftRefreshTime;
     readonly Dictionary<HideInNebulaTarget, float> nextTriggerStayRefreshByTarget = new Dictionary<HideInNebulaTarget, float>();
 
     public NebulaFieldKind FieldKind => fieldKind;
@@ -99,8 +102,13 @@ public class NebulaField : MonoBehaviour
 
     void FixedUpdate()
     {
-        if (fieldKind == NebulaFieldKind.Cloud && cloudDriftConfigured)
-            UpdateCloudDrift(false);
+        if (fieldKind != NebulaFieldKind.Cloud || !cloudDriftConfigured)
+            return;
+
+        if (ShouldSkipCloudDriftUpdate())
+            return;
+
+        UpdateCloudDrift(false);
     }
 
     void OnEnable()
@@ -278,8 +286,28 @@ public class NebulaField : MonoBehaviour
         if (nextTriggerStayRefreshByTarget.TryGetValue(target, out float nextRefresh) && now < nextRefresh)
             return false;
 
-        nextTriggerStayRefreshByTarget[target] = now + TriggerStayRefreshInterval;
+        nextTriggerStayRefreshByTarget[target] = now + GetTriggerStayRefreshInterval();
         return true;
+    }
+
+    bool ShouldSkipCloudDriftUpdate()
+    {
+        if (!Application.isMobilePlatform)
+            return false;
+
+        float now = Time.time;
+        if (now < nextCloudDriftRefreshTime)
+            return true;
+
+        nextCloudDriftRefreshTime = now + MobileCloudDriftRefreshInterval;
+        return false;
+    }
+
+    float GetTriggerStayRefreshInterval()
+    {
+        return fieldKind == NebulaFieldKind.Cloud && Application.isMobilePlatform
+            ? MobileCloudTriggerStayRefreshInterval
+            : TriggerStayRefreshInterval;
     }
 
     void RefreshTargetState(HideInNebulaTarget target)

@@ -3,7 +3,7 @@ using System;
 using System.Collections.Generic;
 using Photon.Pun;
 
-public class PlayerMovement : MonoBehaviourPun
+public class PlayerMovement : MonoBehaviourPun, IPunInstantiateMagicCallback
 {
     public static bool gameStarted = false;
 
@@ -126,6 +126,47 @@ public class PlayerMovement : MonoBehaviourPun
     public string CurrentEngineTrailItemId => equippedEngineTrailItemId;
     public float CurrentSpeedReference => speed;
     float CurrentDepletedSpeedMultiplier => 1f - (RoomSettings.GetBoosterSlowdownPercent() / 100f);
+
+    void Awake()
+    {
+        BootstrapRuntimeComponentsFromPhotonData();
+    }
+
+    public void OnPhotonInstantiate(PhotonMessageInfo info)
+    {
+        BootstrapRuntimeComponentsFromPhotonData();
+    }
+
+    void BootstrapRuntimeComponentsFromPhotonData()
+    {
+        object[] data = photonView != null ? photonView.InstantiationData : null;
+        if (data == null || data.Length == 0)
+            return;
+
+        if (PlayerDeployableRuntime.IsInstantiationData(data))
+        {
+            PlayerDeployableRuntime.EnsureAttached(gameObject);
+            return;
+        }
+
+        if (LureBeaconDecoy.IsInstantiationData(data))
+        {
+            LureBeaconDecoy.EnsureAttached(gameObject);
+            return;
+        }
+
+        EnsureBotBootstrap();
+        EnsureNeutralRiderBootstrap();
+
+        if (AstronautSurvivor.IsAstronautInstantiationData(data))
+        {
+            AstronautSurvivor astronaut = GetComponent<AstronautSurvivor>();
+            if (astronaut == null)
+                astronaut = gameObject.AddComponent<AstronautSurvivor>();
+
+            astronaut.InitializeFromPhotonData();
+        }
+    }
 
     void Start()
     {

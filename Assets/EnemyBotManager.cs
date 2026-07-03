@@ -4,8 +4,10 @@ using UnityEngine;
 
 public class EnemyBotManager : MonoBehaviour
 {
-    const float ScanInterval = 0.2f;
-    const float RuntimeComponentScanInterval = 1f;
+    const float ScanInterval = 0.5f;
+    const float RuntimeComponentInitialScanInterval = 1f;
+    const float RuntimeComponentFallbackScanInterval = 8f;
+    const float RuntimeComponentFastScanDuration = 6f;
     const float EnemySpawnProtectionDuration = 1.35f;
     const int MilitaryVanEventConvoySize = 4;
     const double MilitaryVanRespawnDelaySeconds = 18d;
@@ -18,8 +20,10 @@ public class EnemyBotManager : MonoBehaviour
     double lastHandledStartTime = double.MinValue;
     float nextScanTime;
     float nextRuntimeComponentScanTime;
+    float runtimeComponentFastScanUntil;
     readonly System.Collections.Generic.Dictionary<EnemyBotKind, int> spawnedThisRound = new System.Collections.Generic.Dictionary<EnemyBotKind, int>();
     readonly System.Collections.Generic.Dictionary<EnemyBotKind, int> lastHandledRespawnTick = new System.Collections.Generic.Dictionary<EnemyBotKind, int>();
+    readonly System.Collections.Generic.HashSet<EnemyBotKind> clearedDisabledEnemyKinds = new System.Collections.Generic.HashSet<EnemyBotKind>();
     bool rescueShipSummonUnlockedThisRound;
     bool hasRescueShipSummonFocus;
     Vector2 rescueShipSummonFocusPosition;
@@ -80,6 +84,8 @@ public class EnemyBotManager : MonoBehaviour
         }
 
         instance = this;
+        runtimeComponentFastScanUntil = Time.unscaledTime + RuntimeComponentFastScanDuration;
+        nextRuntimeComponentScanTime = 0f;
     }
 
     void OnDestroy()
@@ -93,8 +99,11 @@ public class EnemyBotManager : MonoBehaviour
         float now = Time.unscaledTime;
         if (now >= nextRuntimeComponentScanTime)
         {
-            nextRuntimeComponentScanTime = now + RuntimeComponentScanInterval;
-            EnsureRuntimeComponents();
+            bool attachedMissingComponents = EnsureRuntimeComponents();
+            float nextInterval = now < runtimeComponentFastScanUntil || attachedMissingComponents
+                ? RuntimeComponentInitialScanInterval
+                : RuntimeComponentFallbackScanInterval;
+            nextRuntimeComponentScanTime = now + nextInterval;
         }
 
         if (now < nextScanTime)
@@ -104,8 +113,9 @@ public class EnemyBotManager : MonoBehaviour
         HandleSpawnLifecycle();
     }
 
-    void EnsureRuntimeComponents()
+    bool EnsureRuntimeComponents()
     {
+        bool attachedMissingComponents = false;
         PhotonView[] views = FindObjectsByType<PhotonView>(FindObjectsInactive.Exclude);
         for (int i = 0; i < views.Length; i++)
         {
@@ -115,7 +125,17 @@ public class EnemyBotManager : MonoBehaviour
 
             if (PlayerDeployableRuntime.IsInstantiationData(view.InstantiationData))
             {
+                bool hadDeployable = view.GetComponent<PlayerDeployableBase>() != null;
                 PlayerDeployableRuntime.EnsureAttached(view.gameObject);
+                attachedMissingComponents |= !hadDeployable;
+                continue;
+            }
+
+            if (LureBeaconDecoy.IsInstantiationData(view.InstantiationData))
+            {
+                bool hadBeacon = view.GetComponent<LureBeaconDecoy>() != null;
+                LureBeaconDecoy.EnsureAttached(view.gameObject);
+                attachedMissingComponents |= !hadBeacon;
                 continue;
             }
 
@@ -123,9 +143,25 @@ public class EnemyBotManager : MonoBehaviour
             {
                 EnemyBot bot = view.GetComponent<EnemyBot>();
                 if (bot == null)
+                {
                     bot = view.gameObject.AddComponent<EnemyBot>();
+                    attachedMissingComponents = true;
+                }
 
                 bot.InitializeFromPhotonData();
+                continue;
+            }
+
+            if (NeutralRiderController.IsNeutralRiderInstantiationData(view.InstantiationData))
+            {
+                NeutralRiderController rider = view.GetComponent<NeutralRiderController>();
+                if (rider == null)
+                {
+                    rider = view.gameObject.AddComponent<NeutralRiderController>();
+                    attachedMissingComponents = true;
+                }
+
+                rider.InitializeFromPhotonData();
                 continue;
             }
 
@@ -133,11 +169,16 @@ public class EnemyBotManager : MonoBehaviour
             {
                 AstronautSurvivor astronaut = view.GetComponent<AstronautSurvivor>();
                 if (astronaut == null)
+                {
                     astronaut = view.gameObject.AddComponent<AstronautSurvivor>();
+                    attachedMissingComponents = true;
+                }
 
                 astronaut.InitializeFromPhotonData();
             }
         }
+
+        return attachedMissingComponents;
     }
 
     void HandleSpawnLifecycle()
@@ -154,6 +195,7 @@ public class EnemyBotManager : MonoBehaviour
             lastHandledStartTime = double.MinValue;
             spawnedThisRound.Clear();
             lastHandledRespawnTick.Clear();
+            clearedDisabledEnemyKinds.Clear();
             ResetRescueShipSummonState();
             ResetMilitaryVanConvoyState();
             return;
@@ -168,6 +210,7 @@ public class EnemyBotManager : MonoBehaviour
             lastHandledStartTime = currentStartTime;
             spawnedThisRound.Clear();
             lastHandledRespawnTick.Clear();
+            clearedDisabledEnemyKinds.Clear();
             ResetRescueShipSummonState();
             ResetMilitaryVanConvoyState();
             if (!SeedSpawnStateFromRoomProperties(currentStartTime))
@@ -201,11 +244,11 @@ public class EnemyBotManager : MonoBehaviour
 
         if (!RoomSettings.GetEnemyEnabled(definition.Kind))
         {
-            DestroyExistingBots(definition.Kind);
-            SetSpawnedCount(definition.Kind, 0);
+            ClearDisabledEnemyKind(definition.Kind);
             lastHandledRespawnTick.Remove(definition.Kind);
             return;
         }
+        clearedDisabledEnemyKinds.Remove(definition.Kind);
 
         double elapsed = currentStartTime > 0d ? PhotonNetwork.Time - currentStartTime : 0d;
         int spawnSecond = RoomSettings.GetEnemySpawnSecond(definition.Kind);
@@ -274,12 +317,12 @@ public class EnemyBotManager : MonoBehaviour
     {
         if (!RoomSettings.GetEnemyEnabled(definition.Kind))
         {
-            DestroyExistingBots(definition.Kind);
-            SetSpawnedCount(definition.Kind, 0);
+            if (ClearDisabledEnemyKind(definition.Kind))
+                ResetRescueShipSummonState();
             lastHandledRespawnTick.Remove(definition.Kind);
-            ResetRescueShipSummonState();
             return;
         }
+        clearedDisabledEnemyKinds.Remove(definition.Kind);
 
         double elapsed = currentStartTime > 0d ? PhotonNetwork.Time - currentStartTime : 0d;
         int spawnSecond = RoomSettings.GetEnemySpawnSecond(definition.Kind);
@@ -352,11 +395,11 @@ public class EnemyBotManager : MonoBehaviour
     {
         if (!RoomSettings.GetEnemyEnabled(definition.Kind))
         {
-            DestroyExistingBots(definition.Kind);
-            ResetMilitaryVanConvoyState();
-            SetSpawnedCount(definition.Kind, 0);
+            if (ClearDisabledEnemyKind(definition.Kind))
+                ResetMilitaryVanConvoyState();
             return;
         }
+        clearedDisabledEnemyKinds.Remove(definition.Kind);
 
         double elapsed = currentStartTime > 0d ? PhotonNetwork.Time - currentStartTime : 0d;
         int spawnSecond = RoomSettings.GetEnemySpawnSecond(definition.Kind);
@@ -482,6 +525,18 @@ public class EnemyBotManager : MonoBehaviour
         militaryVanDestroyedThisRound = 0;
         militaryVanRespawnAt = -1d;
         militaryVanRemovedViewIds.Clear();
+    }
+
+    bool ClearDisabledEnemyKind(EnemyBotKind kind)
+    {
+        bool firstClear = clearedDisabledEnemyKinds.Add(kind);
+        if (firstClear)
+            DestroyExistingBots(kind);
+
+        if (GetSpawnedCount(kind) != 0 || firstClear)
+            SetSpawnedCount(kind, 0);
+
+        return firstClear;
     }
 
     void RegisterMilitaryVanRemoved(EnemyBot van, bool destroyed)
@@ -745,6 +800,9 @@ public class EnemyBotManager : MonoBehaviour
     void SetSpawnedCount(EnemyBotKind kind, int count)
     {
         int clamped = Mathf.Max(0, count);
+        if (spawnedThisRound.TryGetValue(kind, out int existingCount) && existingCount == clamped)
+            return;
+
         spawnedThisRound[kind] = clamped;
 
         if (!PhotonNetwork.IsMasterClient || PhotonNetwork.CurrentRoom == null || lastHandledStartTime <= 0d)

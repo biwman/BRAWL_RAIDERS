@@ -216,6 +216,7 @@ public partial class LobbyManager : MonoBehaviourPunCallbacks
     static readonly int[] BoosterRecoveryDelayOptions = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
     static readonly float[] LastShipTimerMultiplierOptions = { 1f, 1.5f, 2f, 3f, 4f, 5f };
     static readonly string[] MovingObjectsModeOptions = { RoomSettings.MovingObjectsModeOn, RoomSettings.MovingObjectsModeOff, RoomSettings.MovingObjectsModeOnlyRotate };
+    static readonly int[] FpsLimitOptions = { DeveloperInputSettings.AutoFpsLimit, 30, 40, 45, 60 };
     static readonly int[] NeutralRiderCountOptions = { 1, 2, 3 };
     static readonly string[] NeutralRiderAggressionOptions =
     {
@@ -359,6 +360,7 @@ public partial class LobbyManager : MonoBehaviourPunCallbacks
     public TMP_Text collectKeepAliveRangeBonusSettingText;
     public TMP_Text hapticsSettingText;
     public TMP_Text pcTouchJoystickTestModeSettingText;
+    public TMP_Text fpsLimitSettingText;
     public TMP_Text fpsCounterSettingText;
     public TMP_Text diagnosticsGcSettingText;
     public TMP_Text diagnosticsSceneCountsSettingText;
@@ -445,6 +447,7 @@ public partial class LobbyManager : MonoBehaviourPunCallbacks
     public Button collectKeepAliveRangeBonusSettingButton;
     public Button hapticsSettingButton;
     public Button pcTouchJoystickTestModeSettingButton;
+    public Button fpsLimitSettingButton;
     public Button fpsCounterSettingButton;
     public Button diagnosticsGcSettingButton;
     public Button diagnosticsSceneCountsSettingButton;

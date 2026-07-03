@@ -49,15 +49,32 @@ public static class MobilePerformanceSettings
     public static void ApplyProfile(MobilePerformanceProfile profile)
     {
         ProfileSettings settings = GetSettings(profile);
+        int targetFrameRate = ResolveTargetFrameRate(settings.TargetFrameRate);
 
         CurrentProfile = profile;
-        CurrentTargetFrameRate = settings.TargetFrameRate;
+        CurrentTargetFrameRate = targetFrameRate;
         CurrentRenderScale = settings.RenderScale;
 
         QualitySettings.vSyncCount = 0;
-        Application.targetFrameRate = settings.TargetFrameRate;
+        Application.targetFrameRate = targetFrameRate;
         ApplyRenderScale(settings.RenderScale);
-        LogProfile(settings);
+        LogProfile(settings, targetFrameRate);
+    }
+
+    public static void Reapply()
+    {
+        ApplyProfile(CurrentProfile);
+    }
+
+    public static void ReapplyTargetFrameRate()
+    {
+        ProfileSettings settings = GetSettings(CurrentProfile);
+        int targetFrameRate = ResolveTargetFrameRate(settings.TargetFrameRate);
+
+        CurrentTargetFrameRate = targetFrameRate;
+        QualitySettings.vSyncCount = 0;
+        Application.targetFrameRate = targetFrameRate;
+        LogTargetFrameRate(targetFrameRate);
     }
 
     static MobilePerformanceProfile ResolveProfile()
@@ -137,6 +154,14 @@ public static class MobilePerformanceSettings
         }
     }
 
+    static int ResolveTargetFrameRate(int profileTargetFrameRate)
+    {
+        int overrideFpsLimit = DeveloperInputSettings.FpsLimit;
+        return overrideFpsLimit == DeveloperInputSettings.AutoFpsLimit
+            ? profileTargetFrameRate
+            : overrideFpsLimit;
+    }
+
     static void ApplyRenderScale(float scale)
     {
         object pipelineAsset = UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline;
@@ -152,11 +177,12 @@ public static class MobilePerformanceSettings
         renderScaleProperty.SetValue(pipelineAsset, Mathf.Clamp(scale, 0.55f, 1f), null);
     }
 
-    static void LogProfile(ProfileSettings settings)
+    static void LogProfile(ProfileSettings settings, int targetFrameRate)
     {
 #if DEVELOPMENT_BUILD || UNITY_EDITOR
+        string fpsLimit = DeveloperInputSettings.FormatFpsLimit();
         Debug.Log(
-            $"Mobile performance profile: {CurrentProfile}, target FPS: {settings.TargetFrameRate}, " +
+            $"Mobile performance profile: {CurrentProfile}, target FPS: {targetFrameRate}, FPS limit: {fpsLimit}, " +
             $"render scale: {settings.RenderScale:0.##}, RAM: {SystemInfo.systemMemorySize} MB, " +
             $"CPU cores: {SystemInfo.processorCount}, GPU memory: {SystemInfo.graphicsMemorySize} MB");
 #endif
@@ -166,6 +192,13 @@ public static class MobilePerformanceSettings
     {
 #if DEVELOPMENT_BUILD || UNITY_EDITOR
         Debug.LogWarning($"Ignoring unknown mobile performance profile override '{value}'. Use low, balanced, or high.");
+#endif
+    }
+
+    static void LogTargetFrameRate(int targetFrameRate)
+    {
+#if DEVELOPMENT_BUILD || UNITY_EDITOR
+        Debug.Log($"Mobile target FPS updated: {targetFrameRate}, FPS limit: {DeveloperInputSettings.FormatFpsLimit()}");
 #endif
     }
 

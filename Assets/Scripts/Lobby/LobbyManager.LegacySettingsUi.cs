@@ -121,6 +121,7 @@ public partial class LobbyManager
         collectKeepAliveRangeBonusSettingButton = EnsureSettingButton(ref collectKeepAliveRangeBonusSettingText, collectKeepAliveRangeBonusSettingButton, "CollectKeepAliveRangeBonusSettingButton", "CollectKeepAliveRangeBonusSettingText", Vector2.zero, CycleCollectKeepAliveRangeBonus);
         hapticsSettingButton = EnsureSettingButton(ref hapticsSettingText, hapticsSettingButton, "HapticsSettingButton", "HapticsSettingText", Vector2.zero, CycleHapticsEnabled);
         pcTouchJoystickTestModeSettingButton = EnsureSettingButton(ref pcTouchJoystickTestModeSettingText, pcTouchJoystickTestModeSettingButton, "PcTouchJoystickTestModeSettingButton", "PcTouchJoystickTestModeSettingText", Vector2.zero, TogglePcTouchJoystickTestMode);
+        fpsLimitSettingButton = EnsureSettingButton(ref fpsLimitSettingText, fpsLimitSettingButton, "FpsLimitSettingButton", "FpsLimitSettingText", Vector2.zero, CycleFpsLimit);
         fpsCounterSettingButton = EnsureSettingButton(ref fpsCounterSettingText, fpsCounterSettingButton, "FpsCounterSettingButton", "FpsCounterSettingText", Vector2.zero, CycleFpsCounterEnabled);
         diagnosticsGcSettingButton = EnsureSettingButton(ref diagnosticsGcSettingText, diagnosticsGcSettingButton, "DiagnosticsGcSettingButton", "DiagnosticsGcSettingText", Vector2.zero, CycleDiagnosticsGcEnabled);
         diagnosticsSceneCountsSettingButton = EnsureSettingButton(ref diagnosticsSceneCountsSettingText, diagnosticsSceneCountsSettingButton, "DiagnosticsSceneCountsSettingButton", "DiagnosticsSceneCountsSettingText", Vector2.zero, CycleDiagnosticsSceneCountsEnabled);
@@ -202,6 +203,8 @@ public partial class LobbyManager
         AttachLeftSectionButton(dynamicCameraZoomSettingButton, "VISUALS");
         AttachLeftSectionButton(parallaxBackgroundSettingButton, "VISUALS");
         AttachLeftSectionButton(backgroundObjectSettingButton, "VISUALS");
+
+        AttachLeftSectionButton(fpsLimitSettingButton, "PERFORMANCE");
 
         AttachLeftSectionButton(boosterSettingButton, "SHIP FEEL");
         AttachLeftSectionButton(boosterDelaySettingButton, "SHIP FEEL");
@@ -316,6 +319,7 @@ public partial class LobbyManager
         EnsureLeftSectionContainer("MAP OBJECTS");
         EnsureLeftSectionContainer("MAP PLOTS");
         EnsureLeftSectionContainer("VISUALS");
+        EnsureLeftSectionContainer("PERFORMANCE");
         EnsureLeftSectionContainer("SHIP FEEL");
         EnsureLeftSectionContainer("COMBAT FEEL");
         EnsureLeftSectionContainer("NEUTRAL RIDERS");

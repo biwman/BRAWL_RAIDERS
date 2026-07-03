@@ -104,6 +104,7 @@ public partial class PlayerProfilePanelUI
 
         RestoreProfileHangarSceneVfxTargets();
         ApplyPanelBackgroundForCurrentScreen();
+        ApplyProfileLayoutRootMetrics();
         LayoutTopBar();
         LayoutRightActions();
         LayoutLeftNavigation();
@@ -527,6 +528,69 @@ public partial class PlayerProfilePanelUI
         RectTransform rootRect = topBarRootObject.GetComponent<RectTransform>();
         float rootWidth = rootRect != null && rootRect.rect.width > 0f ? rootRect.rect.width : 1440f;
         sharedTopBar.Layout(rootWidth);
+    }
+
+    void ApplyProfileLayoutRootMetrics()
+    {
+        RectTransform panelRect = panelObject != null ? panelObject.GetComponent<RectTransform>() : null;
+        float panelWidth = panelRect != null && panelRect.rect.width > 1f ? panelRect.rect.width : ProfileReferenceLayoutWidth;
+        float panelHeight = panelRect != null && panelRect.rect.height > 1f ? panelRect.rect.height : 1080f;
+        float layoutScale = panelWidth < ProfileReferenceLayoutWidth
+            ? Mathf.Clamp(panelWidth / ProfileReferenceLayoutWidth, ProfileMinimumLayoutScale, 1f)
+            : 1f;
+        float layoutWidth = layoutScale < 0.999f ? ProfileReferenceLayoutWidth : panelWidth;
+        float layoutHeight = panelHeight / Mathf.Max(0.001f, layoutScale);
+
+        ApplyProfilePrimaryRootMetrics(topBarRootObject, layoutWidth, layoutHeight, layoutScale);
+        ApplyProfilePrimaryRootMetrics(leftNavigationRootObject, layoutWidth, layoutHeight, layoutScale);
+        ApplyProfilePrimaryRootMetrics(rightActionRootObject, layoutWidth, layoutHeight, layoutScale);
+        ApplyProfilePrimaryRootMetrics(homeViewRootObject, layoutWidth, layoutHeight, layoutScale);
+        ApplyProfilePrimaryRootMetrics(inventoryViewRootObject, layoutWidth, layoutHeight, layoutScale);
+        ApplyProfilePrimaryRootMetrics(craftingViewRootObject, layoutWidth, layoutHeight, layoutScale);
+        ApplyProfilePrimaryRootMetrics(traderViewRootObject, layoutWidth, layoutHeight, layoutScale);
+        ApplyProfilePrimaryRootMetrics(playerViewRootObject, layoutWidth, layoutHeight, layoutScale);
+        ApplyProfilePrimaryRootMetrics(projectsViewRootObject, layoutWidth, layoutHeight, layoutScale);
+        ApplyProfilePrimaryRootMetrics(projectDetailsViewObject, layoutWidth, layoutHeight, layoutScale);
+        ApplyProfilePrimaryRootMetrics(shipSelectionViewObject, layoutWidth, layoutHeight, layoutScale);
+        ApplyProfilePrimaryRootMetrics(pilotSelectionViewObject, layoutWidth, layoutHeight, layoutScale);
+
+        ResetProfileNestedRootMetrics(storageViewRootObject);
+        ResetProfileNestedRootMetrics(shipWorkspaceRootObject);
+    }
+
+    void ApplyProfilePrimaryRootMetrics(GameObject rootObject, float layoutWidth, float layoutHeight, float layoutScale)
+    {
+        if (rootObject == null)
+            return;
+
+        RectTransform rect = rootObject.GetComponent<RectTransform>();
+        if (rect == null)
+            return;
+
+        rect.anchorMin = new Vector2(0.5f, 1f);
+        rect.anchorMax = new Vector2(0.5f, 1f);
+        rect.pivot = new Vector2(0.5f, 1f);
+        rect.anchoredPosition = Vector2.zero;
+        rect.sizeDelta = new Vector2(layoutWidth, layoutHeight);
+        rect.localScale = new Vector3(layoutScale, layoutScale, 1f);
+    }
+
+    void ResetProfileNestedRootMetrics(GameObject rootObject)
+    {
+        if (rootObject == null)
+            return;
+
+        RectTransform rect = rootObject.GetComponent<RectTransform>();
+        if (rect == null)
+            return;
+
+        rect.anchorMin = Vector2.zero;
+        rect.anchorMax = Vector2.one;
+        rect.pivot = new Vector2(0.5f, 0.5f);
+        rect.anchoredPosition = Vector2.zero;
+        rect.offsetMin = Vector2.zero;
+        rect.offsetMax = Vector2.zero;
+        rect.localScale = Vector3.one;
     }
 
     void EnsureTopStatBanner()

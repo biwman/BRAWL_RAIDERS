@@ -226,6 +226,9 @@ public partial class LobbyManager
         if (pcTouchJoystickTestModeSettingText != null)
             pcTouchJoystickTestModeSettingText.text = "PC TOUCH JOYSTICKS: " + (DeveloperInputSettings.PcTouchJoystickTestModeEnabled ? "ON" : "OFF");
 
+        if (fpsLimitSettingText != null)
+            fpsLimitSettingText.text = "FPS LIMIT: " + DeveloperInputSettings.FormatFpsLimit();
+
         if (fpsCounterSettingText != null)
             fpsCounterSettingText.text = "FPS METER: " + (RoomSettings.IsFpsCounterEnabled() ? "ON" : "OFF");
 
@@ -321,6 +324,7 @@ public partial class LobbyManager
         SetSettingButtonState(enemyAttackCooldownMultiplierSettingButton, isHost);
         SetSettingButtonState(hapticsSettingButton, isHost);
         SetSettingButtonState(pcTouchJoystickTestModeSettingButton, true);
+        SetSettingButtonState(fpsLimitSettingButton, true);
         SetSettingButtonState(fpsCounterSettingButton, isHost);
         SetSettingButtonState(diagnosticsGcSettingButton, isHost);
         SetSettingButtonState(diagnosticsSceneCountsSettingButton, isHost);

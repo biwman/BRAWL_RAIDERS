@@ -205,6 +205,8 @@ public partial class PlayerProfilePanelUI : MonoBehaviour
     };
 
     static readonly Vector2 ShipPreviewImagePosition = new Vector2(0f, 22f);
+    const float ProfileReferenceLayoutWidth = 1920f;
+    const float ProfileMinimumLayoutScale = 0.78f;
     static readonly Vector2 PlayerInventoryGridPosition = new Vector2(-938f, -578f);
     static readonly Vector2 PlayerInventoryViewportSize = new Vector2(830f, 362f);
     static readonly Vector2 PlayerInventoryFilterButtonSize = new Vector2(206f, 56f);
