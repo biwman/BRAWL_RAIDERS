@@ -30,6 +30,7 @@ public partial class PlayerProfileService
     const string CloudPathfinderResearchProgressKey = "profile_pathfinder_research_progress";
     const string CloudMissEnigmaPurchasedBlueprintsKey = "profile_miss_enigma_purchased_blueprints";
     const string CloudMissEnigmaRecoverableUniqueItemsKey = "profile_miss_enigma_recoverable_unique_items";
+    const string CloudCheatUnlockAllTraderItemsKey = "profile_cheat_unlock_all_trader_items";
     const string CloudPilotDroneKillsKey = "profile_pilot_drone_kills";
     const string CloudPilotSoldItemsAstronsKey = "profile_pilot_sold_items_astrons";
     const string CloudPilotPirateBayReturnsKey = "profile_pilot_pirate_bay_returns";
@@ -142,6 +143,7 @@ public partial class PlayerProfileService
             CloudPathfinderResearchProgressKey,
             CloudMissEnigmaPurchasedBlueprintsKey,
             CloudMissEnigmaRecoverableUniqueItemsKey,
+            CloudCheatUnlockAllTraderItemsKey,
             CloudPilotDroneKillsKey,
             CloudPilotSoldItemsAstronsKey,
             CloudPilotPirateBayReturnsKey,
@@ -174,6 +176,7 @@ public partial class PlayerProfileService
         PathfinderResearchProgressData pathfinderResearchProgress = PathfinderResearchProgressData.Empty();
         string[] missEnigmaPurchasedBlueprintIds = Array.Empty<string>();
         string[] missEnigmaRecoverableUniqueItemIds = Array.Empty<string>();
+        bool cheatUnlockAllTraderItems = false;
         int pilotDroneKills = 0;
         int pilotSoldItemsAstrons = 0;
         int pilotPirateBayReturns = 0;
@@ -240,6 +243,9 @@ public partial class PlayerProfileService
             if (data.TryGetValue(CloudMissEnigmaRecoverableUniqueItemsKey, out Item missEnigmaRecoverableUniqueItemsItem) && missEnigmaRecoverableUniqueItemsItem?.Value != null)
                 missEnigmaRecoverableUniqueItemIds = DeserializeMissEnigmaUniqueItemRecoveries(missEnigmaRecoverableUniqueItemsItem.Value.GetAsString());
 
+            if (data.TryGetValue(CloudCheatUnlockAllTraderItemsKey, out Item cheatUnlockAllTraderItemsItem) && cheatUnlockAllTraderItemsItem?.Value != null)
+                cheatUnlockAllTraderItems = cheatUnlockAllTraderItemsItem.Value.GetAs<bool>();
+
             if (data.TryGetValue(CloudPilotDroneKillsKey, out Item droneKillsItem) && droneKillsItem?.Value != null)
                 pilotDroneKills = Mathf.Max(0, droneKillsItem.Value.GetAs<int>());
 
@@ -291,6 +297,7 @@ public partial class PlayerProfileService
             PathfinderResearchProgress = NormalizePathfinderResearchProgress(pathfinderResearchProgress, unlockedShipIds),
             MissEnigmaPurchasedBlueprintIds = NormalizeMissEnigmaBlueprintPurchases(missEnigmaPurchasedBlueprintIds),
             MissEnigmaRecoverableUniqueItemIds = NormalizeMissEnigmaUniqueItemRecoveries(missEnigmaRecoverableUniqueItemIds),
+            CheatUnlockAllTraderItems = cheatUnlockAllTraderItems,
             PilotDroneKills = pilotDroneKills,
             PilotSoldItemsAstrons = pilotSoldItemsAstrons,
             PilotPirateBayReturns = pilotPirateBayReturns,
@@ -353,6 +360,7 @@ public partial class PlayerProfileService
                 [CloudPathfinderResearchProgressKey] = SerializePathfinderResearchProgress(CurrentProfile.PathfinderResearchProgress),
                 [CloudMissEnigmaPurchasedBlueprintsKey] = SerializeMissEnigmaBlueprintPurchases(CurrentProfile.MissEnigmaPurchasedBlueprintIds),
                 [CloudMissEnigmaRecoverableUniqueItemsKey] = SerializeMissEnigmaUniqueItemRecoveries(CurrentProfile.MissEnigmaRecoverableUniqueItemIds),
+                [CloudCheatUnlockAllTraderItemsKey] = CurrentProfile.CheatUnlockAllTraderItems,
                 [CloudPilotDroneKillsKey] = CurrentProfile.PilotDroneKills,
                 [CloudPilotSoldItemsAstronsKey] = CurrentProfile.PilotSoldItemsAstrons,
                 [CloudPilotPirateBayReturnsKey] = CurrentProfile.PilotPirateBayReturns,

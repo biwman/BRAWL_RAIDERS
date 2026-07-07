@@ -47,7 +47,9 @@ public sealed class ActorIdentity : MonoBehaviour
     public bool CanCollect => CanUseHud && Form == ActorForm.Ship;
     public bool CanDock => CanUseHud && Form == ActorForm.Ship;
     public bool CanActivateExtraction => CanUseHud && (Form == ActorForm.Ship || Form == ActorForm.Astronaut);
-    public bool CanBeTargetedByEnemyShips => ((IsPlayer && IsHumanControlled) || (Team == ActorTeam.Neutral && IsAiControlled)) && Form == ActorForm.Ship;
+    public bool IsEscapePod => IsEscapePodActor(gameObject);
+    public bool CanBeTargetedByEnemyShips => (IsPlayer && IsHumanControlled && (Form == ActorForm.Ship || Form == ActorForm.Astronaut)) ||
+                                             (Team == ActorTeam.Neutral && IsAiControlled && Form == ActorForm.Ship);
     public bool CanBeTargetedByMonsters => CanBeTargetedByEnemyShips || (IsEnemy && IsAiControlled && Form == ActorForm.Astronaut);
     public bool CanDropAstronauts => IsEnemy && IsAiControlled && Form == ActorForm.Ship;
 
@@ -192,6 +194,19 @@ public sealed class ActorIdentity : MonoBehaviour
     {
         ActorIdentity identity = Ensure(target);
         return identity != null && identity.IsEnemy && identity.IsAstronaut;
+    }
+
+    public static bool IsEscapePodActor(GameObject target)
+    {
+        if (target == null)
+            return false;
+
+        AstronautSurvivor survivor = target.GetComponent<AstronautSurvivor>();
+        if (survivor != null && survivor.IsEscapePodMode)
+            return true;
+
+        PhotonView view = target.GetComponent<PhotonView>();
+        return AstronautSurvivor.IsEscapePodInstantiationData(view != null ? view.InstantiationData : null);
     }
 
     public static bool CanUsePlayerUseButtonActor(GameObject target)

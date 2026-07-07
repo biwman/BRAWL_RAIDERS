@@ -346,6 +346,7 @@ public class PlayerProfileData
     public PathfinderResearchProgressData PathfinderResearchProgress;
     public string[] MissEnigmaPurchasedBlueprintIds;
     public string[] MissEnigmaRecoverableUniqueItemIds;
+    public bool CheatUnlockAllTraderItems;
     public int PilotDroneKills;
     public int PilotSoldItemsAstrons;
     public int PilotPirateBayReturns;
@@ -378,6 +379,7 @@ public class PlayerProfileData
             PathfinderResearchProgress = PathfinderResearchProgressData.Empty(),
             MissEnigmaPurchasedBlueprintIds = Array.Empty<string>(),
             MissEnigmaRecoverableUniqueItemIds = Array.Empty<string>(),
+            CheatUnlockAllTraderItems = false,
             PilotDroneKills = 0,
             PilotSoldItemsAstrons = 0,
             PilotPirateBayReturns = 0,

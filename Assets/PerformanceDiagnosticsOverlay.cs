@@ -10,6 +10,9 @@ using UnityEngine.UI;
 public sealed class PerformanceDiagnosticsOverlay : MonoBehaviour
 {
     const float StatsRefreshInterval = 0.5f;
+    static readonly Vector2 PanelPadding = new Vector2(32f, 28f);
+    static readonly Vector2 PanelMinSize = new Vector2(265f, 78f);
+    static readonly Vector2 PanelMaxSize = new Vector2(560f, 520f);
 
     static PerformanceDiagnosticsOverlay instance;
     static int motionSnapshotsSentSinceLastSample;
@@ -17,6 +20,7 @@ public sealed class PerformanceDiagnosticsOverlay : MonoBehaviour
     readonly StringBuilder builder = new StringBuilder(768);
 
     Canvas canvas;
+    RectTransform panelRect;
     TextMeshProUGUI text;
     ProfilerRecorder gcAllocatedRecorder;
 
@@ -164,12 +168,12 @@ public sealed class PerformanceDiagnosticsOverlay : MonoBehaviour
         GameObject panelObject = new GameObject("DiagnosticsPanel", typeof(RectTransform), typeof(Image));
         panelObject.transform.SetParent(canvasObject.transform, false);
 
-        RectTransform panelRect = panelObject.GetComponent<RectTransform>();
+        panelRect = panelObject.GetComponent<RectTransform>();
         panelRect.anchorMin = new Vector2(0f, 1f);
         panelRect.anchorMax = new Vector2(0f, 1f);
         panelRect.pivot = new Vector2(0f, 1f);
         panelRect.anchoredPosition = new Vector2(18f, -18f);
-        panelRect.sizeDelta = new Vector2(395f, 440f);
+        panelRect.sizeDelta = PanelMinSize;
 
         Image panelImage = panelObject.GetComponent<Image>();
         panelImage.color = new Color(0.025f, 0.035f, 0.05f, 0.86f);
@@ -447,6 +451,18 @@ public sealed class PerformanceDiagnosticsOverlay : MonoBehaviour
             builder.Append("No diagnostic modules enabled.");
 
         text.text = builder.ToString();
+        ResizePanelToText();
+    }
+
+    void ResizePanelToText()
+    {
+        if (panelRect == null || text == null)
+            return;
+
+        Vector2 preferredSize = text.GetPreferredValues(text.text);
+        float width = Mathf.Clamp(preferredSize.x + PanelPadding.x, PanelMinSize.x, PanelMaxSize.x);
+        float height = Mathf.Clamp(preferredSize.y + PanelPadding.y, PanelMinSize.y, PanelMaxSize.y);
+        panelRect.sizeDelta = new Vector2(width, height);
     }
 
     static int CountActive<T>() where T : Object

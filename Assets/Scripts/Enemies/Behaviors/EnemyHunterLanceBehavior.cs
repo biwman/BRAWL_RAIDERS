@@ -315,7 +315,7 @@ public class EnemyHunterLanceBehavior : EnemyBotBehaviorBase
             return deployable.CanBeTargeted;
 
         PlayerHealth targetHealth = targetView.GetComponent<PlayerHealth>();
-        return targetHealth != null && targetHealth != health && !targetHealth.IsWreck && !targetHealth.IsBotControlled && !targetHealth.IsAstronautControlled && !targetHealth.IsEvacuationAnimating;
+        return targetHealth != null && targetHealth != health && !targetHealth.IsWreck && ActorIdentity.CanBeTargetedByEnemyShipsActor(targetHealth) && !targetHealth.IsEvacuationAnimating;
     }
 
     Vector2 ResolveMuzzlePosition(Vector2 direction)
@@ -373,7 +373,7 @@ public class EnemyHunterLanceBehavior : EnemyBotBehaviorBase
             if (candidate == null || targetView == null || candidate == health || candidate.IsWreck || candidate.IsEvacuationAnimating)
                 continue;
 
-            if (candidate.IsBotControlled || candidate.IsAstronautControlled || candidate.GetComponent<LureBeaconDecoy>() != null)
+            if (!ActorIdentity.CanBeTargetedByEnemyShipsActor(candidate) || candidate.GetComponent<LureBeaconDecoy>() != null)
                 continue;
 
             if (!damagedThisShot.Add(targetView.ViewID))

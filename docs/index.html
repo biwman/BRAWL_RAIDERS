@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>STARJACKERS | Kosmiczny raid o łup i przetrwanie</title>
+  <meta name="description" content="STARJACKERS to kosmiczna gra akcji o lootowaniu, ulepszaniu statku, ryzykownych mapach i ucieczce z ładownią pełną skarbów.">
+  <meta property="og:title" content="STARJACKERS">
+  <meta property="og:description" content="Kosmiczny raid o łup, crafting, statki i przetrwanie w niebezpiecznych sektorach.">
+  <meta property="og:image" content="assets/images/starjackers-hero.jpg">
+  <meta property="og:type" content="website">
+  <meta name="theme-color" content="#05070b">
+  <link rel="icon" href="assets/images/favicon.png" type="image/png">
+  <link rel="stylesheet" href="styles.css">
+  <script src="script.js" defer></script>
+</head>
+<body>
+  <header class="site-header" data-header>
+    <a class="brand" href="#top" aria-label="STARJACKERS - początek strony">STARJACKERS</a>
+    <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="site-nav" data-menu-toggle>
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+    <nav class="site-nav" id="site-nav" data-nav>
+      <a href="#game">Gra</a>
+      <a href="#gallery">Galeria</a>
+      <a href="#ships">Statki</a>
+      <a href="#world">Świat</a>
+      <a href="#status">Status</a>
+    </nav>
+  </header>
+
+  <main id="top">
+    <section class="hero" aria-labelledby="hero-title">
+      <img class="hero-image" src="assets/images/starjackers-hero.jpg" alt="Flota statków STARJACKERS nad planetą i polem asteroidów">
+      <div class="hero-shade"></div>
+      <div class="hero-inner">
+        <p class="eyebrow">Android alpha v0.81</p>
+        <h1 id="hero-title">STARJACKERS</h1>
+        <p class="hero-lead">
+          Wejdź w sektor, zgarnij ładunek, przetrwaj piratów i uciekaj zanim kosmos zabierze wszystko, co właśnie zdobyłeś.
+        </p>
+        <div class="hero-actions" aria-label="Główne akcje">
+          <a class="button button-primary" href="https://github.com/biwman/STARJACKERS/releases">Buildy testowe</a>
+          <a class="button button-secondary" href="#gallery">Zobacz galerię</a>
+        </div>
+      </div>
+      <div class="hero-stats" aria-label="Najważniejsze cechy">
+        <div>
+          <strong>7</strong>
+          <span>klas statków</span>
+        </div>
+        <div>
+          <strong>11</strong>
+          <span>sektorów</span>
+        </div>
+        <div>
+          <strong>0.81</strong>
+          <span>aktualna alpha</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="section intro" id="game">
+      <div class="section-heading">
+        <p class="eyebrow">Loot, ryzyko, ucieczka</p>
+        <h2>Każdy lot jest zakładem o własny statek.</h2>
+      </div>
+      <div class="intro-copy">
+        <p>
+          STARJACKERS łączy szybką kosmiczną akcję z progresją opartą o cargo, schematy, crafting i misje projektowe. Zaczynasz skromnie, ale każdy wrak, minerał i piracka skrzynia może zmienić kolejny wypad.
+        </p>
+        <p>
+          Im głębiej lecisz, tym mocniejsze są nagrody i tym boleśniejsza porażka. Deep Space, Pirate Bay, Toxic Area czy Gravity Well nie wybaczają chciwości.
+        </p>
+      </div>
+      <div class="feature-grid">
+        <article class="feature-card reveal">
+          <span>01</span>
+          <h3>Wypady po łup</h3>
+          <p>Zbieraj asteroidy, kontenery, złom po przeciwnikach i rzadkie przedmioty, a potem dowieź je do ekstrakcji.</p>
+        </article>
+        <article class="feature-card reveal">
+          <span>02</span>
+          <h3>Statki z rolą</h3>
+          <p>Explorer, Viper, Avenger, Arrow, Invader, BISON i Pathfinder mają własny rytm, sloty, cargo i styl ryzyka.</p>
+        </article>
+        <article class="feature-card reveal">
+          <span>03</span>
+          <h3>Crafting i projekty</h3>
+          <p>Odblokowuj schematy, zbieraj blueprint scrap i rozwijaj projekty takie jak Space Mayhem, Omerta czy Alien Secrets.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section gallery" id="gallery">
+      <div class="section-heading">
+        <p class="eyebrow">Z gry</p>
+        <h2>Galaktyka ma więcej niż jeden problem.</h2>
+      </div>
+      <div class="gallery-grid">
+        <button class="gallery-item gallery-large reveal" type="button" data-full="assets/images/space-mayhem.jpg" data-title="SPACE MAYHEM">
+          <img src="assets/images/space-mayhem.jpg" alt="Bitwa w czerwonej mgławicy pełnej asteroidów">
+          <span>SPACE MAYHEM</span>
+        </button>
+        <button class="gallery-item reveal" type="button" data-full="assets/images/hangar.jpg" data-title="HANGAR">
+          <img src="assets/images/hangar.jpg" alt="Hangar statku kosmicznego widziany z góry">
+          <span>HANGAR</span>
+        </button>
+        <button class="gallery-item reveal" type="button" data-full="assets/images/omerta.jpg" data-title="OMERTA">
+          <img src="assets/images/omerta.jpg" alt="Piracka baza dryfująca w kosmosie">
+          <span>OMERTA</span>
+        </button>
+        <button class="gallery-item reveal" type="button" data-full="assets/images/projects.jpg" data-title="DEEP SPACE">
+          <img src="assets/images/projects.jpg" alt="Statki lecące przez pole asteroidów nad planetą">
+          <span>DEEP SPACE</span>
+        </button>
+        <button class="gallery-item reveal" type="button" data-full="assets/images/portal.jpg" data-title="ANCIENT GATE">
+          <img src="assets/images/portal.jpg" alt="Zielony portal kosmiczny aktywowany obok statków">
+          <span>ANCIENT GATE</span>
+        </button>
+      </div>
+    </section>
+
+    <section class="section ships" id="ships">
+      <div class="section-heading">
+        <p class="eyebrow">Hangar</p>
+        <h2>Wybierz maszynę pod własny apetyt na ryzyko.</h2>
+      </div>
+      <div class="ship-grid">
+        <article class="ship-card reveal">
+          <img src="assets/images/ship-arrow.png" alt="Statek Arrow w skórce Shark">
+          <div>
+            <h3>Arrow</h3>
+            <p>Szybki, lekki, stworzony do ostrych wejść i jeszcze szybszych ucieczek.</p>
+          </div>
+        </article>
+        <article class="ship-card reveal">
+          <img src="assets/images/ship-avenger.png" alt="Biały statek Avenger NASA">
+          <div>
+            <h3>Avenger</h3>
+            <p>Wojskowy charakter, solidna ochrona i miejsce na uzbrojenie dla agresywnego stylu gry.</p>
+          </div>
+        </article>
+        <article class="ship-card reveal">
+          <img src="assets/images/ship-bison.png" alt="Ciężki statek cargo BISON">
+          <div>
+            <h3>BISON</h3>
+            <p>Ciężarówka kosmosu. Więcej cargo, więcej łupu, więcej powodów, żeby nie zginąć.</p>
+          </div>
+        </article>
+        <article class="ship-card reveal">
+          <img src="assets/images/ship-pathfinder.png" alt="Statek Pathfinder Angel">
+          <div>
+            <h3>Pathfinder</h3>
+            <p>Zwrotny zwiadowca pod misje specjalne, skanowanie i precyzyjne wejścia w trudne sektory.</p>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="section loadout" id="loadout">
+      <div class="section-heading">
+        <p class="eyebrow">Wyposażenie</p>
+        <h2>Nie chodzi tylko o większe działa.</h2>
+      </div>
+      <div class="loadout-grid">
+        <article class="item-card reveal">
+          <img src="assets/images/item-rocket-launcher.png" alt="Ikona Rocket Launcher">
+          <h3>Rocket Launcher</h3>
+          <p>Rakiety z namierzaniem dla celów, które nie chcą stać spokojnie.</p>
+        </article>
+        <article class="item-card reveal">
+          <img src="assets/images/item-space-torpedo.png" alt="Ikona Space Torpedo">
+          <h3>Space Torpedo</h3>
+          <p>Szybki strzał z nosa statku i kompaktowy wybuch przy trafieniu.</p>
+        </article>
+        <article class="item-card reveal">
+          <img src="assets/images/item-stasis-buoy.png" alt="Ikona Stasis Buoy">
+          <h3>Stasis Buoy</h3>
+          <p>Puls spowalniający wrogów i ich broń, gdy robi się zbyt ciasno.</p>
+        </article>
+        <article class="item-card reveal">
+          <img src="assets/images/item-tractor-beam.png" alt="Ikona Tractor Beam">
+          <h3>Tractor Beam</h3>
+          <p>Przyciągaj łup i holuj obiekty, kiedy droga do ekstrakcji jest krótka.</p>
+        </article>
+        <article class="item-card reveal">
+          <img src="assets/images/item-auto-turret.png" alt="Ikona Auto Turret">
+          <h3>Auto Turret</h3>
+          <p>Rozstaw wieżyczkę, która osłoni plecy w trakcie rabunku.</p>
+        </article>
+        <article class="item-card reveal">
+          <img src="assets/images/item-treasure-scanner.png" alt="Ikona Treasure Scanner">
+          <h3>Treasure Scanner</h3>
+          <p>Sygnał prowadzący do ukrytych skarbów i lepszych decyzji w locie.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section world" id="world">
+      <div class="section-heading">
+        <p class="eyebrow">Sektory i zagrożenia</p>
+        <h2>Mapa decyduje, ile możesz wygrać i ile możesz stracić.</h2>
+      </div>
+      <div class="world-layout">
+        <div class="map-list reveal" aria-label="Dostępne sektory">
+          <span>Just Space</span>
+          <span>Noob Haven</span>
+          <span>Minefield</span>
+          <span>Snow Field</span>
+          <span>Deep Space</span>
+          <span>Pirate Bay</span>
+          <span>Ancient Space</span>
+          <span>The Threat</span>
+          <span>Toxic Area</span>
+          <span>Gravity Well</span>
+          <span>Hidden Dimension</span>
+        </div>
+        <div class="threat-panel reveal">
+          <img src="assets/images/enemy-space-manta.png" alt="Space Manta z gry">
+          <div>
+            <h3>Piraci, bestie i ciężkie cele</h3>
+            <p>
+              Na trasie czekają Pirate Fighters, Hunter Lance, Radar Ship, Space Manta, Gravity Squid, Pirate Base, Mothership, Cosmic Worm i Rift Warden. Każdy sektor dokłada własny zestaw problemów.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section status" id="status">
+      <div class="status-copy">
+        <p class="eyebrow">Projekt na GitHubie</p>
+        <h2>Strona jest gotowa pod GitHub Pages.</h2>
+        <p>
+          Kod strony żyje w katalogu <strong>docs</strong>, więc można ją opublikować bez osobnego frameworka i bez procesu builda.
+        </p>
+      </div>
+      <div class="status-actions">
+        <a class="button button-primary" href="https://github.com/biwman/STARJACKERS">Repozytorium</a>
+        <a class="button button-secondary" href="https://github.com/biwman/STARJACKERS/releases">Releases</a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p>STARJACKERS - alpha v0.81</p>
+    <a href="https://github.com/biwman/STARJACKERS">github.com/biwman/STARJACKERS</a>
+  </footer>
+
+  <dialog class="media-dialog" data-dialog aria-label="Podgląd grafiki">
+    <button class="dialog-close" type="button" data-dialog-close aria-label="Zamknij podgląd">×</button>
+    <img src="assets/images/starjackers-hero.jpg" alt="" data-dialog-image>
+    <p data-dialog-title>STARJACKERS</p>
+  </dialog>
+</body>
+</html>

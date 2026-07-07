@@ -232,6 +232,7 @@ public partial class PlayerProfilePanelUI
             if (shopAstronsText != null)
                 shopAstronsText.gameObject.SetActive(false);
 
+            PlayerProfileService profileService = PlayerProfileService.Instance;
             IReadOnlyList<InventoryItemDefinition> definitions = InventoryItemCatalog.GetAllDefinitions();
             List<ShopOfferViewModel> shopOffers = new List<ShopOfferViewModel>();
 
@@ -245,11 +246,15 @@ public partial class PlayerProfilePanelUI
                 if (price <= 0)
                     continue;
 
+                int requiredLevel = profileService.GetTraderItemRequiredLevel(definition.Id);
+                bool levelUnlocked = profileService.IsTraderItemUnlocked(definition.Id);
                 shopOffers.Add(new ShopOfferViewModel
                 {
                     Definition = definition,
                     Price = price,
-                    CanAfford = astrons >= price
+                    CanAfford = astrons >= price,
+                    RequiredLevel = requiredLevel,
+                    LevelUnlocked = levelUnlocked
                 });
             }
 
@@ -266,7 +271,18 @@ public partial class PlayerProfilePanelUI
                 int rightPrice = rightOffer != null ? rightOffer.Price : 0;
                 bool rightCanAfford = rightOffer != null && rightOffer.CanAfford;
 
-                GameObject row = CreateShopRow(shopRowObjects.Count, leftDefinition, leftPrice, leftCanAfford, rightDefinition, rightPrice, rightCanAfford);
+                GameObject row = CreateShopRow(
+                    shopRowObjects.Count,
+                    leftDefinition,
+                    leftPrice,
+                    leftCanAfford,
+                    leftOffer.RequiredLevel,
+                    leftOffer.LevelUnlocked,
+                    rightDefinition,
+                    rightPrice,
+                    rightCanAfford,
+                    rightOffer != null ? rightOffer.RequiredLevel : 1,
+                    rightOffer == null || rightOffer.LevelUnlocked);
                 if (row != null)
                     shopRowObjects.Add(row);
             }
@@ -308,6 +324,7 @@ public partial class PlayerProfilePanelUI
             : 0;
         PlayerProfileData profile = PlayerProfileService.Instance.CurrentProfile;
         int astrons = profile != null ? profile.Astrons : 0;
+        PlayerProfileService profileService = PlayerProfileService.Instance;
         List<ShopOfferViewModel> uniqueRecoveryOffers = new List<ShopOfferViewModel>();
         string[] recoverableUniqueItemIds = PlayerProfileService.Instance.GetMissEnigmaRecoverableUniqueItemIds();
         for (int i = 0; i < recoverableUniqueItemIds.Length; i++)
@@ -321,11 +338,15 @@ public partial class PlayerProfilePanelUI
             if (price <= 0)
                 continue;
 
+            int requiredLevel = profileService.GetTraderItemRequiredLevel(itemId);
+            bool levelUnlocked = profileService.IsTraderItemUnlocked(itemId);
             uniqueRecoveryOffers.Add(new ShopOfferViewModel
             {
                 Definition = definition,
                 Price = price,
-                CanAfford = astrons >= price
+                CanAfford = astrons >= price,
+                RequiredLevel = requiredLevel,
+                LevelUnlocked = levelUnlocked
             });
         }
 
@@ -347,13 +368,17 @@ public partial class PlayerProfilePanelUI
 
             string targetItemId = InventoryItemCatalog.GetBlueprintTargetItemId(offer.BlueprintItemId);
             InventoryItemDefinition targetDefinition = InventoryItemCatalog.GetDefinition(targetItemId);
+            int requiredLevel = profileService.GetTraderItemRequiredLevel(offer.BlueprintItemId);
+            bool levelUnlocked = profileService.IsTraderItemUnlocked(offer.BlueprintItemId);
             visibleOffers.Add(new MissEnigmaOfferViewModel
             {
                 Offer = offer,
                 CanAfford = PlayerProfileService.Instance.CanAffordItemTrade(offer.CostItemIds),
                 BlueprintDefinition = blueprintDefinition,
                 TargetDefinition = targetDefinition,
-                EstimatedTradeValue = GetMissEnigmaTradeValue(offer.CostItemIds)
+                EstimatedTradeValue = GetMissEnigmaTradeValue(offer.CostItemIds),
+                RequiredLevel = requiredLevel,
+                LevelUnlocked = levelUnlocked
             });
         }
 
@@ -371,7 +396,20 @@ public partial class PlayerProfilePanelUI
         if (showAvengerCodesOffer && avengerCodesPrice > 0)
         {
             bool canAffordCodes = profile != null && profile.Astrons >= avengerCodesPrice;
-            GameObject codesRow = CreateShopRow(shopRowObjects.Count, avengerCodesDefinition, avengerCodesPrice, canAffordCodes, null, 0, false);
+            int requiredLevel = profileService.GetTraderItemRequiredLevel(avengerCodesDefinition.Id);
+            bool levelUnlocked = profileService.IsTraderItemUnlocked(avengerCodesDefinition.Id);
+            GameObject codesRow = CreateShopRow(
+                shopRowObjects.Count,
+                avengerCodesDefinition,
+                avengerCodesPrice,
+                canAffordCodes,
+                requiredLevel,
+                levelUnlocked,
+                null,
+                0,
+                false,
+                1,
+                true);
             if (codesRow != null)
                 shopRowObjects.Add(codesRow);
         }
@@ -386,9 +424,13 @@ public partial class PlayerProfilePanelUI
                 leftOffer.Definition,
                 leftOffer.Price,
                 leftOffer.CanAfford,
+                leftOffer.RequiredLevel,
+                leftOffer.LevelUnlocked,
                 rightOffer != null ? rightOffer.Definition : null,
                 rightOffer != null ? rightOffer.Price : 0,
-                rightOffer != null && rightOffer.CanAfford);
+                rightOffer != null && rightOffer.CanAfford,
+                rightOffer != null ? rightOffer.RequiredLevel : 1,
+                rightOffer == null || rightOffer.LevelUnlocked);
             if (row != null)
                 shopRowObjects.Add(row);
         }
@@ -404,8 +446,12 @@ public partial class PlayerProfilePanelUI
                 shopRowObjects.Count,
                 leftOffer.Offer,
                 leftOffer.CanAfford,
+                leftOffer.RequiredLevel,
+                leftOffer.LevelUnlocked,
                 rightOffer != null ? rightOffer.Offer : null,
-                rightOffer != null && rightOffer.CanAfford);
+                rightOffer != null && rightOffer.CanAfford,
+                rightOffer != null ? rightOffer.RequiredLevel : 1,
+                rightOffer == null || rightOffer.LevelUnlocked);
             if (row != null)
                 shopRowObjects.Add(row);
         }
@@ -430,6 +476,9 @@ public partial class PlayerProfilePanelUI
             return 1;
         if (b == null)
             return -1;
+
+        if (a.LevelUnlocked != b.LevelUnlocked)
+            return a.LevelUnlocked ? -1 : 1;
 
         int result;
         switch (mode)
@@ -474,6 +523,9 @@ public partial class PlayerProfilePanelUI
             return 1;
         if (b == null)
             return -1;
+
+        if (a.LevelUnlocked != b.LevelUnlocked)
+            return a.LevelUnlocked ? -1 : 1;
 
         InventoryItemDefinition aDefinition = GetMissEnigmaSortDefinition(a);
         InventoryItemDefinition bDefinition = GetMissEnigmaSortDefinition(b);
@@ -579,8 +631,12 @@ public partial class PlayerProfilePanelUI
         int rowIndex,
         BlueprintTradeOffer leftOffer,
         bool leftCanAfford,
+        int leftRequiredLevel,
+        bool leftLevelUnlocked,
         BlueprintTradeOffer rightOffer,
-        bool rightCanAfford)
+        bool rightCanAfford,
+        int rightRequiredLevel,
+        bool rightLevelUnlocked)
     {
         if (shopContentRect == null || leftOffer == null)
             return null;
@@ -598,8 +654,8 @@ public partial class PlayerProfilePanelUI
         rowObject.GetComponent<LayoutElement>().preferredHeight = 326f;
         rowObject.GetComponent<Image>().color = new Color(0.12f, 0.16f, 0.21f, 0.98f);
 
-        UpdateMissEnigmaBlueprintCard(rowView.Left, leftOffer, leftCanAfford);
-        UpdateMissEnigmaBlueprintCard(rowView.Right, rightOffer, rightCanAfford);
+        UpdateMissEnigmaBlueprintCard(rowView.Left, leftOffer, leftCanAfford, leftRequiredLevel, leftLevelUnlocked);
+        UpdateMissEnigmaBlueprintCard(rowView.Right, rightOffer, rightCanAfford, rightRequiredLevel, rightLevelUnlocked);
 
         return rowObject;
     }
@@ -673,7 +729,7 @@ public partial class PlayerProfilePanelUI
         return view;
     }
 
-    void UpdateMissEnigmaBlueprintCard(MissEnigmaCardView view, BlueprintTradeOffer offer, bool canAfford)
+    void UpdateMissEnigmaBlueprintCard(MissEnigmaCardView view, BlueprintTradeOffer offer, bool canAfford, int requiredLevel, bool levelUnlocked)
     {
         if (view == null)
             return;
@@ -698,16 +754,23 @@ public partial class PlayerProfilePanelUI
         });
         view.CardButton.interactable = !inventoryActionInProgress;
 
+        Color rarityColor = InventoryItemCatalog.GetRarityColor(definition.Rarity);
         if (view.CardImage != null)
-            view.CardImage.color = InventoryItemCatalog.GetRarityColor(definition.Rarity);
+            view.CardImage.color = levelUnlocked ? rarityColor : Color.Lerp(rarityColor, new Color(0.08f, 0.09f, 0.11f, 1f), 0.62f);
         if (view.IconImage != null)
+        {
             view.IconImage.sprite = definition.GetIcon();
+            view.IconImage.color = levelUnlocked ? Color.white : new Color(0.45f, 0.48f, 0.52f, 0.76f);
+        }
         if (view.NameText != null)
+        {
             view.NameText.text = definition.DisplayName.ToUpperInvariant();
+            view.NameText.color = levelUnlocked ? new Color(0.95f, 0.97f, 1f, 1f) : new Color(0.56f, 0.6f, 0.66f, 1f);
+        }
         if (view.CostText != null)
         {
-            view.CostText.text = FormatTradeCost(offer.CostItemIds);
-            view.CostText.color = canAfford ? new Color(0.94f, 0.84f, 0.44f, 1f) : new Color(0.78f, 0.46f, 0.46f, 1f);
+            view.CostText.text = levelUnlocked ? FormatTradeCost(offer.CostItemIds) : "LVL " + Mathf.Max(1, requiredLevel) + " REQUIRED";
+            view.CostText.color = !levelUnlocked ? new Color(0.74f, 0.46f, 0.48f, 1f) : canAfford ? new Color(0.94f, 0.84f, 0.44f, 1f) : new Color(0.78f, 0.46f, 0.46f, 1f);
         }
 
         view.TradeButton.onClick.RemoveAllListeners();
@@ -715,9 +778,9 @@ public partial class PlayerProfilePanelUI
         {
             OnMissEnigmaTradeClicked(blueprintItemId);
         });
-        view.TradeButton.interactable = canAfford && !inventoryActionInProgress;
+        view.TradeButton.interactable = levelUnlocked && canAfford && !inventoryActionInProgress;
         if (view.TradeText != null)
-            view.TradeText.text = "TRADE";
+            view.TradeText.text = levelUnlocked ? "TRADE" : "LVL " + Mathf.Max(1, requiredLevel);
     }
 
     void CreateMissEnigmaBlueprintCard(Transform parent, BlueprintTradeOffer offer, bool canAfford, float centerX)
@@ -816,9 +879,13 @@ public partial class PlayerProfilePanelUI
         InventoryItemDefinition leftDefinition,
         int leftPrice,
         bool leftCanAfford,
+        int leftRequiredLevel,
+        bool leftLevelUnlocked,
         InventoryItemDefinition rightDefinition,
         int rightPrice,
-        bool rightCanAfford)
+        bool rightCanAfford,
+        int rightRequiredLevel,
+        bool rightLevelUnlocked)
     {
         if (shopContentRect == null || leftDefinition == null)
             return null;
@@ -842,8 +909,8 @@ public partial class PlayerProfilePanelUI
         Image rowImage = rowObject.GetComponent<Image>();
         rowImage.color = new Color(0.12f, 0.16f, 0.21f, 0.98f);
 
-        UpdateShopCard(rowView.Left, leftDefinition, leftPrice, leftCanAfford);
-        UpdateShopCard(rowView.Right, rightDefinition, rightPrice, rightCanAfford);
+        UpdateShopCard(rowView.Left, leftDefinition, leftPrice, leftCanAfford, leftRequiredLevel, leftLevelUnlocked);
+        UpdateShopCard(rowView.Right, rightDefinition, rightPrice, rightCanAfford, rightRequiredLevel, rightLevelUnlocked);
 
         return rowObject;
     }
@@ -939,7 +1006,7 @@ public partial class PlayerProfilePanelUI
         return view;
     }
 
-    void UpdateShopCard(ShopCardView view, InventoryItemDefinition definition, int price, bool canAfford)
+    void UpdateShopCard(ShopCardView view, InventoryItemDefinition definition, int price, bool canAfford, int requiredLevel, bool levelUnlocked)
     {
         if (view == null)
             return;
@@ -961,18 +1028,28 @@ public partial class PlayerProfilePanelUI
         });
         view.CardButton.interactable = !inventoryActionInProgress;
 
+        Color rarityColor = InventoryItemCatalog.GetRarityColor(definition.Rarity);
         if (view.CardImage != null)
-            view.CardImage.color = InventoryItemCatalog.GetRarityColor(definition.Rarity);
+            view.CardImage.color = levelUnlocked ? rarityColor : Color.Lerp(rarityColor, new Color(0.08f, 0.09f, 0.11f, 1f), 0.62f);
         if (view.IconImage != null)
+        {
             view.IconImage.sprite = definition.GetIcon();
+            view.IconImage.color = levelUnlocked ? Color.white : new Color(0.45f, 0.48f, 0.52f, 0.76f);
+        }
         if (view.NameText != null)
+        {
             view.NameText.text = definition.DisplayName.ToUpperInvariant();
+            view.NameText.color = levelUnlocked ? new Color(0.95f, 0.97f, 1f, 1f) : new Color(0.56f, 0.6f, 0.66f, 1f);
+        }
         if (view.TypeText != null)
-            view.TypeText.text = InventoryItemCatalog.GetCategoryLabel(definition.Id);
+        {
+            view.TypeText.text = levelUnlocked ? InventoryItemCatalog.GetCategoryLabel(definition.Id) : "LVL " + Mathf.Max(1, requiredLevel) + " REQUIRED";
+            view.TypeText.color = levelUnlocked ? new Color(0.92f, 0.96f, 1f, 0.96f) : new Color(0.88f, 0.48f, 0.5f, 1f);
+        }
         if (view.PriceText != null)
         {
             view.PriceText.text = price.ToString();
-            view.PriceText.color = canAfford ? new Color(0.94f, 0.84f, 0.44f, 1f) : new Color(0.78f, 0.46f, 0.46f, 1f);
+            view.PriceText.color = !levelUnlocked ? new Color(0.5f, 0.54f, 0.6f, 1f) : canAfford ? new Color(0.94f, 0.84f, 0.44f, 1f) : new Color(0.78f, 0.46f, 0.46f, 1f);
         }
 
         view.BuyButton.onClick.RemoveAllListeners();
@@ -980,9 +1057,9 @@ public partial class PlayerProfilePanelUI
         {
             OnShopBuyClicked(itemId);
         });
-        view.BuyButton.interactable = canAfford && !inventoryActionInProgress;
+        view.BuyButton.interactable = levelUnlocked && canAfford && !inventoryActionInProgress;
         if (view.BuyText != null)
-            view.BuyText.text = "BUY";
+            view.BuyText.text = levelUnlocked ? "BUY" : "LVL " + Mathf.Max(1, requiredLevel);
     }
 
     void CreateShopCard(Transform parent, InventoryItemDefinition definition, int price, bool canAfford, float centerX)
@@ -1074,13 +1151,23 @@ public partial class PlayerProfilePanelUI
         }
 
         ShowItemPreview(ProfileItemSource.ShopListing, -1, itemId);
-        SetStatus("Shop item selected.");
+        if (PlayerProfileService.Instance != null && !PlayerProfileService.Instance.IsTraderItemUnlocked(itemId))
+            SetStatus("Requires Level " + PlayerProfileService.Instance.GetTraderItemRequiredLevel(itemId) + ".");
+        else
+            SetStatus("Shop item selected.");
     }
 
     async void OnShopBuyClicked(string itemId)
     {
         if (inventoryActionInProgress || string.IsNullOrWhiteSpace(itemId))
             return;
+
+        if (PlayerProfileService.Instance != null && !PlayerProfileService.Instance.IsTraderItemUnlocked(itemId))
+        {
+            SetStatus("Requires Level " + PlayerProfileService.Instance.GetTraderItemRequiredLevel(itemId) + ".");
+            RefreshShopBrowser();
+            return;
+        }
 
         inventoryActionInProgress = true;
         SetInventoryInteractable(false);
@@ -1121,6 +1208,13 @@ public partial class PlayerProfilePanelUI
         BlueprintTradeOffer offer = BlueprintCatalog.GetMissEnigmaOffer(blueprintItemId);
         if (offer == null)
             return;
+
+        if (PlayerProfileService.Instance != null && !PlayerProfileService.Instance.IsTraderItemUnlocked(blueprintItemId))
+        {
+            SetStatus("Requires Level " + PlayerProfileService.Instance.GetTraderItemRequiredLevel(blueprintItemId) + ".");
+            RefreshShopBrowser();
+            return;
+        }
 
         inventoryActionInProgress = true;
         SetInventoryInteractable(false);

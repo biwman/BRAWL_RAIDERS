@@ -60,6 +60,9 @@ public partial class PlayerProfileService
         if (offer == null || IsBlueprintUnlocked(blueprintItemId) || IsMissEnigmaBlueprintPurchased(blueprintItemId) || !CanAffordItemTrade(offer.CostItemIds))
             return false;
 
+        if (!IsTraderItemUnlocked(blueprintItemId))
+            return false;
+
         PlayerInventoryData workingInventory = CurrentProfile.Inventory.Clone();
         if (!RemoveRequiredItems(workingInventory, offer.CostItemIds))
             return false;

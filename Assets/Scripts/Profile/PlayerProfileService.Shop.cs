@@ -1,11 +1,33 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Unity.Services.CloudSave;
 using UnityEngine;
 
 public partial class PlayerProfileService
 {
     public const int MissEnigmaUniqueItemRecoveryPriceAstrons = 100000;
+
+    public int GetTraderItemRequiredLevel(string itemId)
+    {
+        return TraderItemUnlockCatalog.GetRequiredLevel(itemId);
+    }
+
+    public bool IsTraderItemUnlocked(string itemId)
+    {
+        EnsureTraderItemUnlocks();
+        return TraderItemUnlockCatalog.IsUnlocked(CurrentProfile, itemId);
+    }
+
+    public async Task UnlockAllTraderItemsAsync()
+    {
+        await SetTraderItemUnlockCheatAsync(true, "save trader item unlock cheat");
+    }
+
+    public async Task LockAllTraderItemsToLevelAsync()
+    {
+        await SetTraderItemUnlockCheatAsync(false, "save trader item level locks");
+    }
 
     public int GetShopBuyPriceAstrons(string itemId)
     {
@@ -50,6 +72,9 @@ public partial class PlayerProfileService
         {
             return false;
         }
+
+        if (!IsTraderItemUnlocked(itemId))
+            return false;
 
         int price = GetShopBuyPriceAstrons(itemId);
         if (price <= 0 || CurrentProfile.Astrons < price)
@@ -174,6 +199,46 @@ public partial class PlayerProfileService
             CurrentProfile = PlayerProfileData.Default();
 
         CurrentProfile.MissEnigmaRecoverableUniqueItemIds = NormalizeMissEnigmaUniqueItemRecoveries(CurrentProfile.MissEnigmaRecoverableUniqueItemIds);
+    }
+
+    void EnsureTraderItemUnlocks()
+    {
+        if (CurrentProfile == null)
+            CurrentProfile = PlayerProfileData.Default();
+    }
+
+    async Task SetTraderItemUnlockCheatAsync(bool unlocked, string operationName)
+    {
+        await EnsureInitializedAsync();
+        EnsureTraderItemUnlocks();
+
+        if (CurrentProfile.CheatUnlockAllTraderItems == unlocked)
+            return;
+
+        try
+        {
+            IsBusy = true;
+            CurrentProfile.CheatUnlockAllTraderItems = unlocked;
+
+            var data = new Dictionary<string, object>
+            {
+                [CloudCheatUnlockAllTraderItemsKey] = CurrentProfile.CheatUnlockAllTraderItems
+            };
+
+            await RunCloudOperationWithRetryAsync(
+                () => CloudSaveService.Instance.Data.Player.SaveAsync(data),
+                operationName);
+            NotifyProfileChanged();
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError("PlayerProfileService trader item unlock cheat save failed: " + ex);
+            throw;
+        }
+        finally
+        {
+            IsBusy = false;
+        }
     }
 
     public static string[] NormalizeMissEnigmaUniqueItemRecoveries(string[] itemIds)

@@ -113,7 +113,7 @@ public class EnemyGravitySquidBehavior : EnemyBotBehaviorBase
             return;
 
         PlayerHealth attackerHealth = attackerView.GetComponent<PlayerHealth>();
-        if (attackerHealth != null && attackerHealth.IsAstronautControlled && !attackerHealth.IsEnemyAstronautControlled)
+        if (IsAstronautOrEscapePodTarget(attackerHealth))
             return;
 
         currentTarget = attackerView.transform;
@@ -281,10 +281,10 @@ public class EnemyGravitySquidBehavior : EnemyBotBehaviorBase
     Transform ResolveTarget()
     {
         float allowedRange = currentTarget != null ? movement.DisengageRadius : movement.DetectionRadius;
-        if (EnemyTargetingUtility.IsTargetValid(currentTarget, health, rb.position, allowedRange, true, true))
+        if (EnemyTargetingUtility.IsTargetValid(currentTarget, health, rb.position, allowedRange, true, true, CanTargetPlayer))
             return currentTarget;
 
-        return EnemyTargetingUtility.FindClosestTarget(rb.position, health, movement.DetectionRadius, true, true);
+        return EnemyTargetingUtility.FindClosestTarget(rb.position, health, movement.DetectionRadius, true, true, CanTargetPlayer);
     }
 
     Vector2 ResolvePatrolDirection()
@@ -372,8 +372,7 @@ public class EnemyGravitySquidBehavior : EnemyBotBehaviorBase
         if (deployable != null)
             return deployable.CanBeTargeted;
 
-        PlayerHealth player = targetView.GetComponent<PlayerHealth>();
-        return player != null && player != health && !player.IsWreck && !player.IsBotControlled && ActorIdentity.CanBeTargetedByMonstersActor(player) && !player.IsEvacuationAnimating;
+        return CanTargetPlayer(targetView.GetComponent<PlayerHealth>());
     }
 
     Transform ResolveActiveTargetTransform()
@@ -425,7 +424,7 @@ public class EnemyGravitySquidBehavior : EnemyBotBehaviorBase
         }
 
         PlayerHealth targetHealth = targetView.GetComponent<PlayerHealth>();
-        if (targetHealth != null && targetHealth != health && !targetHealth.IsWreck && !targetHealth.IsBotControlled && ActorIdentity.CanBeTargetedByMonstersActor(targetHealth) && !targetHealth.IsEvacuationAnimating)
+        if (CanTargetPlayer(targetHealth))
             targetView.RPC(
                 nameof(PlayerHealth.TakeDamageProfileWithContextAt),
                 RpcTarget.MasterClient,
@@ -450,7 +449,7 @@ public class EnemyGravitySquidBehavior : EnemyBotBehaviorBase
             return;
 
         PlayerHealth targetHealth = targetView.GetComponent<PlayerHealth>();
-        if (targetHealth == null || targetHealth == health || targetHealth.IsWreck || targetHealth.IsBotControlled || !ActorIdentity.CanBeTargetedByMonstersActor(targetHealth) || targetHealth.IsEvacuationAnimating)
+        if (!CanTargetPlayer(targetHealth))
             return;
 
         int sourceViewId = bot.photonView != null ? bot.photonView.ViewID : 0;
@@ -475,6 +474,24 @@ public class EnemyGravitySquidBehavior : EnemyBotBehaviorBase
             return collider.ClosestPoint(rb.position);
 
         return target.position;
+    }
+
+    bool CanTargetPlayer(PlayerHealth player)
+    {
+        return player != null &&
+               player != health &&
+               !player.IsWreck &&
+               !player.IsBotControlled &&
+               !player.IsEvacuationAnimating &&
+               ActorIdentity.CanBeTargetedByMonstersActor(player) &&
+               !IsAstronautOrEscapePodTarget(player);
+    }
+
+    static bool IsAstronautOrEscapePodTarget(PlayerHealth player)
+    {
+        return player != null &&
+               (ActorIdentity.IsAstronautActor(player.gameObject) ||
+                ActorIdentity.IsEscapePodActor(player.gameObject));
     }
 
     Vector2 ApplyAvoidance(Vector2 desiredDirection)

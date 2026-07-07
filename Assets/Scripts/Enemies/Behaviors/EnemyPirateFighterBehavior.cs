@@ -256,7 +256,7 @@ public class EnemyPirateFighterBehavior : EnemyBotBehaviorBase
 
     bool IsValidUnprotectedPlayerTarget(PlayerHealth candidate, float maxDistance)
     {
-        if (candidate == null || !candidate.gameObject.activeInHierarchy || candidate == health || candidate.IsWreck || candidate.IsBotControlled || candidate.IsAstronautControlled || candidate.IsEvacuationAnimating)
+        if (candidate == null || !candidate.gameObject.activeInHierarchy || candidate == health || candidate.IsWreck || !ActorIdentity.CanBeTargetedByEnemyShipsActor(candidate) || candidate.IsEvacuationAnimating)
             return false;
 
         if (candidate.GetComponent<LureBeaconDecoy>() != null)

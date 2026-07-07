@@ -682,7 +682,7 @@ public class EnemyPirateBaseBehavior : EnemyBotBehaviorBase
             return 0;
 
         PlayerHealth targetHealth = targetView.GetComponent<PlayerHealth>();
-        if (targetHealth == null || targetHealth.IsWreck || targetHealth.IsBotControlled || targetHealth.IsAstronautControlled || targetHealth.IsEvacuationAnimating)
+        if (targetHealth == null || targetHealth.IsWreck || !ActorIdentity.CanBeTargetedByEnemyShipsActor(targetHealth) || targetHealth.IsEvacuationAnimating)
             return 0;
 
         return targetView.ViewID;
@@ -700,7 +700,7 @@ public class EnemyPirateBaseBehavior : EnemyBotBehaviorBase
         for (int i = 0; i < players.Length; i++)
         {
             PlayerHealth candidate = players[i];
-            if (candidate == null || !candidate.gameObject.activeInHierarchy || candidate.IsWreck || candidate.IsBotControlled || candidate.IsAstronautControlled || candidate.IsEvacuationAnimating)
+            if (candidate == null || !candidate.gameObject.activeInHierarchy || candidate.IsWreck || !ActorIdentity.CanBeTargetedByEnemyShipsActor(candidate) || candidate.IsEvacuationAnimating)
                 continue;
 
             PhotonView candidateView = candidate.GetComponent<PhotonView>();

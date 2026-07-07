@@ -146,12 +146,16 @@ public partial class PlayerProfilePanelUI : MonoBehaviour
         public InventoryItemDefinition Definition;
         public int Price;
         public bool CanAfford;
+        public int RequiredLevel;
+        public bool LevelUnlocked;
     }
 
     sealed class MissEnigmaOfferViewModel
     {
         public BlueprintTradeOffer Offer;
         public bool CanAfford;
+        public int RequiredLevel;
+        public bool LevelUnlocked;
         public InventoryItemDefinition BlueprintDefinition;
         public InventoryItemDefinition TargetDefinition;
         public int EstimatedTradeValue;

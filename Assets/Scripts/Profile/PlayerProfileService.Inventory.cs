@@ -575,6 +575,7 @@ public partial class PlayerProfileService
             PathfinderResearchProgress = PathfinderResearchProgressData.Empty(),
             MissEnigmaPurchasedBlueprintIds = Array.Empty<string>(),
             MissEnigmaRecoverableUniqueItemIds = Array.Empty<string>(),
+            CheatUnlockAllTraderItems = false,
             PilotDroneKills = 0,
             PilotSoldItemsAstrons = 0,
             PilotPirateBayReturns = 0,

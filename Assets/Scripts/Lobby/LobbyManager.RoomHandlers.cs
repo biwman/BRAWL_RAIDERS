@@ -299,6 +299,52 @@ public partial class LobbyManager
         }
     }
 
+    async void OnDeveloperCheatUnlockTraderItemsClicked()
+    {
+        if (PlayerProfileService.Instance == null || developerCheatOverlayObject == null)
+            return;
+
+        try
+        {
+            RefreshDeveloperCheatOverlay("Unlocking trader items...", true);
+            await PlayerProfileService.Instance.UnlockAllTraderItemsAsync();
+            PlayerProfilePanelUI.RefreshOpenPanel();
+            RefreshDeveloperCheatOverlay("All trader items unlocked.");
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogError("Developer cheat unlock trader items failed: " + ex);
+            RefreshDeveloperCheatOverlay("Could not unlock trader items.");
+        }
+        finally
+        {
+            RefreshDeveloperCheatOverlay();
+        }
+    }
+
+    async void OnDeveloperCheatLockTraderItemsClicked()
+    {
+        if (PlayerProfileService.Instance == null || developerCheatOverlayObject == null)
+            return;
+
+        try
+        {
+            RefreshDeveloperCheatOverlay("Restoring trader item locks...", true);
+            await PlayerProfileService.Instance.LockAllTraderItemsToLevelAsync();
+            PlayerProfilePanelUI.RefreshOpenPanel();
+            RefreshDeveloperCheatOverlay("Trader item locks restored.");
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogError("Developer cheat lock trader items failed: " + ex);
+            RefreshDeveloperCheatOverlay("Could not lock trader items.");
+        }
+        finally
+        {
+            RefreshDeveloperCheatOverlay();
+        }
+    }
+
     void EnsureActiveRoomMapUnlockedAfterMapProgressChange()
     {
         if (!PhotonNetwork.IsMasterClient || !PhotonNetwork.InRoom || PhotonNetwork.CurrentRoom == null)
