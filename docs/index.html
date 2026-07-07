@@ -16,15 +16,16 @@
 </head>
 <body>
   <header class="site-header" data-header>
-    <a class="brand" href="#top" aria-label="STARJACKERS home">STARJACKERS</a>
     <div class="header-actions">
       <nav class="site-nav" id="site-nav" data-nav>
         <a href="#game" data-en="Game" data-pl="Gra">Game</a>
+        <a href="#trailer" data-en="Trailer" data-pl="Zwiastun">Trailer</a>
         <a href="#gallery" data-en="Gallery" data-pl="Galeria">Gallery</a>
         <a href="#ships" data-en="Ships" data-pl="Statki">Ships</a>
         <a href="#gadgets" data-en="Gadgets" data-pl="Gadżety">Gadgets</a>
         <a href="#world" data-en="World" data-pl="Świat">World</a>
         <a href="#status" data-en="Status" data-pl="Status">Status</a>
+        <a href="#privacy" data-en="Privacy Policy" data-pl="Prywatność">Privacy Policy</a>
       </nav>
       <div class="language-switch" aria-label="Language switch">
         <button class="language-option is-active" type="button" data-lang-option="en">EN</button>
@@ -44,27 +45,13 @@
       <div class="hero-shade"></div>
       <div class="hero-inner">
         <p class="eyebrow" data-en="Android alpha v0.81" data-pl="Android alpha v0.81">Android alpha v0.81</p>
-        <h1 id="hero-title">STARJACKERS</h1>
+        <h1 id="hero-title" class="sr-only">STARJACKERS</h1>
         <p class="hero-lead" data-en="Enter a hostile sector, fill the cargo hold, survive pirates and creatures, then escape before deep space takes everything back." data-pl="Wleć do wrogiego sektora, wypełnij ładownię, przetrwaj piratów i kosmiczne bestie, a potem uciekaj zanim głęboki kosmos odbierze wszystko.">
           Enter a hostile sector, fill the cargo hold, survive pirates and creatures, then escape before deep space takes everything back.
         </p>
         <div class="hero-actions" aria-label="Main actions">
-          <a class="button button-primary" href="https://github.com/biwman/STARJACKERS/releases" data-en="Test builds" data-pl="Buildy testowe">Test builds</a>
+          <a class="button button-primary" href="#trailer" data-en="Watch trailer" data-pl="Zobacz zwiastun">Watch trailer</a>
           <a class="button button-secondary" href="#gallery" data-en="View gallery" data-pl="Zobacz galerię">View gallery</a>
-        </div>
-      </div>
-      <div class="hero-stats" aria-label="Key features">
-        <div>
-          <strong>7</strong>
-          <span data-en="ship classes" data-pl="klas statków">ship classes</span>
-        </div>
-        <div>
-          <strong>11</strong>
-          <span data-en="sectors" data-pl="sektorów">sectors</span>
-        </div>
-        <div>
-          <strong>16+</strong>
-          <span data-en="gear pieces" data-pl="elementów sprzętu">gear pieces</span>
         </div>
       </div>
     </section>
@@ -107,43 +94,61 @@
       </div>
     </section>
 
+    <section class="section trailer" id="trailer">
+      <div class="section-heading">
+        <p class="eyebrow" data-en="Official video" data-pl="Oficjalny zwiastun">Official video</p>
+        <h2 data-en="See the raid loop in motion." data-pl="Zobacz pętlę raidów w ruchu.">See the raid loop in motion.</h2>
+      </div>
+      <div class="trailer-layout">
+        <div class="video-frame reveal">
+          <iframe src="https://www.youtube-nocookie.com/embed/bSTHNJ9o-oE" title="STARJACKERS trailer" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+        </div>
+        <div class="trailer-copy reveal">
+          <h3 data-en="Fast extraction, risky cargo, hostile sectors" data-pl="Szybka ekstrakcja, ryzykowne cargo, wrogie sektory">Fast extraction, risky cargo, hostile sectors</h3>
+          <p data-en="The trailer shows the core rhythm of STARJACKERS: fly in, grab what you can, fight through pressure, upgrade the ship and decide when greed becomes a problem." data-pl="Zwiastun pokazuje główny rytm STARJACKERS: wleć do sektora, zgarnij co się da, przebij się przez presję, ulepsz statek i zdecyduj, kiedy chciwość robi się problemem.">
+            The trailer shows the core rhythm of STARJACKERS: fly in, grab what you can, fight through pressure, upgrade the ship and decide when greed becomes a problem.
+          </p>
+        </div>
+      </div>
+    </section>
+
     <section class="section gallery" id="gallery">
       <div class="section-heading">
-        <p class="eyebrow" data-en="Projects and loading screens" data-pl="Projekty i ekrany wczytywania">Projects and loading screens</p>
-        <h2 data-en="The game is built around risky contracts and dangerous routes." data-pl="Gra jest zbudowana wokół ryzykownych kontraktów i niebezpiecznych tras.">The game is built around risky contracts and dangerous routes.</h2>
+        <p class="eyebrow" data-en="Gameplay gallery" data-pl="Galeria z gry">Gameplay gallery</p>
+        <h2 data-en="Screens from sectors, hangar, pilots and map selection." data-pl="Screeny z sektorów, hangaru, pilotów i wyboru map.">Screens from sectors, hangar, pilots and map selection.</h2>
       </div>
       <div class="gallery-grid">
-        <button class="gallery-item gallery-large reveal" type="button" data-full="assets/images/space-mayhem.jpg" data-title="SPACE MAYHEM" data-title-pl="SPACE MAYHEM">
-          <img src="assets/images/space-mayhem.jpg" alt="Space Mayhem project battle in an orange nebula">
-          <span>SPACE MAYHEM</span>
+        <button class="gallery-item gallery-large reveal" type="button" data-full="assets/images/screen-fire-nebula.jpg" data-title="FIRE NEBULA RAID" data-title-pl="RAJD W OGNISTEJ MGŁAWICY">
+          <img src="assets/images/screen-fire-nebula.jpg" alt="STARJACKERS gameplay in a red fire nebula with asteroids and enemies">
+          <span data-en="FIRE NEBULA RAID" data-pl="RAJD W OGNISTEJ MGŁAWICY">FIRE NEBULA RAID</span>
         </button>
-        <button class="gallery-item reveal" type="button" data-full="assets/images/project-supply-to-survive.jpg" data-title="SUPPLY TO SURVIVE" data-title-pl="SUPPLY TO SURVIVE">
-          <img src="assets/images/project-supply-to-survive.jpg" alt="Supply to Survive project artwork with ships near a planet">
-          <span>SUPPLY TO SURVIVE</span>
+        <button class="gallery-item reveal" type="button" data-full="assets/images/screen-asteroid-salvage.jpg" data-title="ASTEROID SALVAGE" data-title-pl="ZŁOMOWANIE ASTEROID">
+          <img src="assets/images/screen-asteroid-salvage.jpg" alt="STARJACKERS gameplay near a grey moon, asteroids and a station">
+          <span data-en="ASTEROID SALVAGE" data-pl="ZŁOMOWANIE ASTEROID">ASTEROID SALVAGE</span>
         </button>
-        <button class="gallery-item reveal" type="button" data-full="assets/images/omerta.jpg" data-title="OMERTA" data-title-pl="OMERTA">
-          <img src="assets/images/omerta.jpg" alt="Omerta pirate base artwork">
-          <span>OMERTA</span>
+        <button class="gallery-item reveal" type="button" data-full="assets/images/screen-toxic-station.jpg" data-title="TOXIC AREA STATION" data-title-pl="STACJA W TOXIC AREA">
+          <img src="assets/images/screen-toxic-station.jpg" alt="STARJACKERS gameplay with a station over a toxic green planet">
+          <span data-en="TOXIC AREA STATION" data-pl="STACJA W TOXIC AREA">TOXIC AREA STATION</span>
         </button>
-        <button class="gallery-item reveal" type="button" data-full="assets/images/project-alien-secrets.jpg" data-title="ALIEN SECRETS" data-title-pl="ALIEN SECRETS">
-          <img src="assets/images/project-alien-secrets.jpg" alt="Alien Secrets project artwork">
-          <span>ALIEN SECRETS</span>
+        <button class="gallery-item reveal" type="button" data-full="assets/images/screen-repair-station.jpg" data-title="REPAIR STATION" data-title-pl="STACJA NAPRAWCZA">
+          <img src="assets/images/screen-repair-station.jpg" alt="STARJACKERS gameplay landing at a repair station over an icy moon">
+          <span data-en="REPAIR STATION" data-pl="STACJA NAPRAWCZA">REPAIR STATION</span>
         </button>
-        <button class="gallery-item reveal" type="button" data-full="assets/images/project-cryoshade-meats.jpg" data-title="CRYOSHADE MEATS" data-title-pl="CRYOSHADE MEATS">
-          <img src="assets/images/project-cryoshade-meats.jpg" alt="Cryoshade Meats project artwork">
-          <span>CRYOSHADE MEATS</span>
+        <button class="gallery-item reveal" type="button" data-full="assets/images/screen-viper-hangar.jpg" data-title="VIPER HANGAR" data-title-pl="HANGAR VIPER">
+          <img src="assets/images/screen-viper-hangar.jpg" alt="STARJACKERS hangar screen with the Viper ship and pilot stats">
+          <span data-en="VIPER HANGAR" data-pl="HANGAR VIPER">VIPER HANGAR</span>
         </button>
-        <button class="gallery-item reveal" type="button" data-full="assets/images/loading-asteroid-run.jpg" data-title="LOADING: ASTEROID RUN" data-title-pl="WCZYTYWANIE: ASTEROID RUN">
-          <img src="assets/images/loading-asteroid-run.jpg" alt="Loading screen with ships crossing an asteroid field">
-          <span data-en="LOADING SCREEN" data-pl="EKRAN WCZYTYWANIA">LOADING SCREEN</span>
+        <button class="gallery-item reveal" type="button" data-full="assets/images/screen-pilot-selection.jpg" data-title="PILOT SELECTION" data-title-pl="WYBÓR PILOTA">
+          <img src="assets/images/screen-pilot-selection.jpg" alt="STARJACKERS pilot selection screen with Nova in the center">
+          <span data-en="PILOT SELECTION" data-pl="WYBÓR PILOTA">PILOT SELECTION</span>
         </button>
-        <button class="gallery-item reveal" type="button" data-full="assets/images/portal.jpg" data-title="LOADING: ANCIENT GATE" data-title-pl="WCZYTYWANIE: ANCIENT GATE">
-          <img src="assets/images/portal.jpg" alt="Loading screen with an ancient green portal">
-          <span>ANCIENT GATE</span>
+        <button class="gallery-item reveal" type="button" data-full="assets/images/screen-ancient-structure.jpg" data-title="ANCIENT STRUCTURE" data-title-pl="STAROŻYTNA STRUKTURA">
+          <img src="assets/images/screen-ancient-structure.jpg" alt="STARJACKERS gameplay near a blue ancient structure and asteroids">
+          <span data-en="ANCIENT STRUCTURE" data-pl="STAROŻYTNA STRUKTURA">ANCIENT STRUCTURE</span>
         </button>
-        <button class="gallery-item reveal" type="button" data-full="assets/images/loading-fleet-approach.jpg" data-title="LOADING: FLEET APPROACH" data-title-pl="WCZYTYWANIE: FLEET APPROACH">
-          <img src="assets/images/loading-fleet-approach.jpg" alt="Loading screen with a fleet approach in space">
-          <span>FLEET APPROACH</span>
+        <button class="gallery-item reveal" type="button" data-full="assets/images/screen-map-selection.jpg" data-title="MAP SELECTION" data-title-pl="WYBÓR MAPY">
+          <img src="assets/images/screen-map-selection.jpg" alt="STARJACKERS map selection screen with sector tiles">
+          <span data-en="MAP SELECTION" data-pl="WYBÓR MAPY">MAP SELECTION</span>
         </button>
       </div>
     </section>
@@ -362,6 +367,42 @@
         <a class="button button-primary" href="https://github.com/biwman/STARJACKERS" data-en="Repository" data-pl="Repozytorium">Repository</a>
         <a class="button button-secondary" href="https://github.com/biwman/STARJACKERS/releases" data-en="Releases" data-pl="Releases">Releases</a>
       </div>
+    </section>
+
+    <section class="section privacy" id="privacy">
+      <div class="section-heading">
+        <p class="eyebrow" data-en="Privacy Policy" data-pl="Polityka prywatności">Privacy Policy</p>
+        <h2 data-en="STARJACKERS keeps player data limited to what the game needs." data-pl="STARJACKERS ogranicza dane graczy do tego, czego potrzebuje gra.">STARJACKERS keeps player data limited to what the game needs.</h2>
+      </div>
+      <div class="privacy-grid">
+        <article class="privacy-card reveal">
+          <h3 data-en="What we collect" data-pl="Co zbieramy">What we collect</h3>
+          <p data-en="We do not collect sensitive personal data. The game may store player nicknames and basic progress data such as level, XP, unlocks, inventory or cargo state, project progress, match results and similar gameplay statistics." data-pl="Nie zbieramy wrażliwych danych osobowych. Gra może przechowywać nicki graczy oraz podstawowe dane progresu, takie jak poziom, XP, odblokowania, stan ekwipunku lub cargo, postęp projektów, wyniki meczów i podobne statystyki rozgrywki.">
+            We do not collect sensitive personal data. The game may store player nicknames and basic progress data such as level, XP, unlocks, inventory or cargo state, project progress, match results and similar gameplay statistics.
+          </p>
+        </article>
+        <article class="privacy-card reveal">
+          <h3 data-en="Why we use it" data-pl="Po co to robimy">Why we use it</h3>
+          <p data-en="This data is used to run player progression, multiplayer lobbies, unlocks, rewards, balancing, bug diagnostics and support for test builds." data-pl="Te dane służą do obsługi progresu gracza, lobby multiplayer, odblokowań, nagród, balansu, diagnostyki błędów i wsparcia buildów testowych.">
+            This data is used to run player progression, multiplayer lobbies, unlocks, rewards, balancing, bug diagnostics and support for test builds.
+          </p>
+        </article>
+        <article class="privacy-card reveal">
+          <h3 data-en="What we do not collect" data-pl="Czego nie zbieramy">What we do not collect</h3>
+          <p data-en="We do not intentionally collect payment data, exact location, health data, private messages, government identifiers or other sensitive categories through this website or the game." data-pl="Nie zbieramy celowo danych płatniczych, dokładnej lokalizacji, danych zdrowotnych, prywatnych wiadomości, numerów dokumentów ani innych wrażliwych kategorii przez tę stronę lub grę.">
+            We do not intentionally collect payment data, exact location, health data, private messages, government identifiers or other sensitive categories through this website or the game.
+          </p>
+        </article>
+        <article class="privacy-card reveal">
+          <h3 data-en="External services" data-pl="Usługi zewnętrzne">External services</h3>
+          <p data-en="This page embeds a YouTube trailer using the privacy-enhanced YouTube domain. When you play the video, YouTube/Google may process data under their own privacy terms." data-pl="Ta strona osadza trailer YouTube przez domenę YouTube o podwyższonej prywatności. Po odtworzeniu filmu YouTube/Google mogą przetwarzać dane według własnych zasad prywatności.">
+            This page embeds a YouTube trailer using the privacy-enhanced YouTube domain. When you play the video, YouTube/Google may process data under their own privacy terms.
+          </p>
+        </article>
+      </div>
+      <p class="privacy-note" data-en="Last updated: July 7, 2026. For privacy questions, use the GitHub repository contact path." data-pl="Ostatnia aktualizacja: 7 lipca 2026. W sprawach prywatności skorzystaj z kontaktu przez repozytorium GitHub.">
+        Last updated: July 7, 2026. For privacy questions, use the GitHub repository contact path.
+      </p>
     </section>
   </main>
 
