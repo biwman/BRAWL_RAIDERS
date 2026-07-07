@@ -2,6 +2,8 @@
 
 Statyczna strona promocyjna gry STARJACKERS przygotowana pod GitHub Pages.
 
+Strona ma domyślną wersję angielską, przełącznik języka EN/PL, galerię opartą głównie o grafiki projektów i loading screeny oraz przewijane poziomo sekcje statków i gadżetów.
+
 Publikacja:
 
 1. Wejdź w repozytorium na GitHubie: `https://github.com/biwman/STARJACKERS`.

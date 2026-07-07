@@ -1,12 +1,12 @@
 <!doctype html>
-<html lang="pl">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>STARJACKERS | Kosmiczny raid o łup i przetrwanie</title>
-  <meta name="description" content="STARJACKERS to kosmiczna gra akcji o lootowaniu, ulepszaniu statku, ryzykownych mapach i ucieczce z ładownią pełną skarbów.">
+  <title>STARJACKERS | Space raid for loot and survival</title>
+  <meta name="description" content="STARJACKERS is a space action game about raiding sectors, hauling cargo, crafting gear, upgrading ships, and escaping before the loot is lost.">
   <meta property="og:title" content="STARJACKERS">
-  <meta property="og:description" content="Kosmiczny raid o łup, crafting, statki i przetrwanie w niebezpiecznych sektorach.">
+  <meta property="og:description" content="A space raid about loot, crafting, ships, gadgets, and survival in hostile sectors.">
   <meta property="og:image" content="assets/images/starjackers-hero.jpg">
   <meta property="og:type" content="website">
   <meta name="theme-color" content="#05070b">
@@ -16,196 +16,316 @@
 </head>
 <body>
   <header class="site-header" data-header>
-    <a class="brand" href="#top" aria-label="STARJACKERS - początek strony">STARJACKERS</a>
-    <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="site-nav" data-menu-toggle>
-      <span></span>
-      <span></span>
-      <span></span>
-    </button>
-    <nav class="site-nav" id="site-nav" data-nav>
-      <a href="#game">Gra</a>
-      <a href="#gallery">Galeria</a>
-      <a href="#ships">Statki</a>
-      <a href="#world">Świat</a>
-      <a href="#status">Status</a>
-    </nav>
+    <a class="brand" href="#top" aria-label="STARJACKERS home">STARJACKERS</a>
+    <div class="header-actions">
+      <nav class="site-nav" id="site-nav" data-nav>
+        <a href="#game" data-en="Game" data-pl="Gra">Game</a>
+        <a href="#gallery" data-en="Gallery" data-pl="Galeria">Gallery</a>
+        <a href="#ships" data-en="Ships" data-pl="Statki">Ships</a>
+        <a href="#gadgets" data-en="Gadgets" data-pl="Gadżety">Gadgets</a>
+        <a href="#world" data-en="World" data-pl="Świat">World</a>
+        <a href="#status" data-en="Status" data-pl="Status">Status</a>
+      </nav>
+      <div class="language-switch" aria-label="Language switch">
+        <button class="language-option is-active" type="button" data-lang-option="en">EN</button>
+        <button class="language-option" type="button" data-lang-option="pl">PL</button>
+      </div>
+      <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="site-nav" data-menu-toggle aria-label="Open menu">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
   </header>
 
   <main id="top">
     <section class="hero" aria-labelledby="hero-title">
-      <img class="hero-image" src="assets/images/starjackers-hero.jpg" alt="Flota statków STARJACKERS nad planetą i polem asteroidów">
+      <img class="hero-image" src="assets/images/starjackers-hero.jpg" alt="STARJACKERS fleet flying over a planet and asteroid field">
       <div class="hero-shade"></div>
       <div class="hero-inner">
-        <p class="eyebrow">Android alpha v0.81</p>
+        <p class="eyebrow" data-en="Android alpha v0.81" data-pl="Android alpha v0.81">Android alpha v0.81</p>
         <h1 id="hero-title">STARJACKERS</h1>
-        <p class="hero-lead">
-          Wejdź w sektor, zgarnij ładunek, przetrwaj piratów i uciekaj zanim kosmos zabierze wszystko, co właśnie zdobyłeś.
+        <p class="hero-lead" data-en="Enter a hostile sector, fill the cargo hold, survive pirates and creatures, then escape before deep space takes everything back." data-pl="Wleć do wrogiego sektora, wypełnij ładownię, przetrwaj piratów i kosmiczne bestie, a potem uciekaj zanim głęboki kosmos odbierze wszystko.">
+          Enter a hostile sector, fill the cargo hold, survive pirates and creatures, then escape before deep space takes everything back.
         </p>
-        <div class="hero-actions" aria-label="Główne akcje">
-          <a class="button button-primary" href="https://github.com/biwman/STARJACKERS/releases">Buildy testowe</a>
-          <a class="button button-secondary" href="#gallery">Zobacz galerię</a>
+        <div class="hero-actions" aria-label="Main actions">
+          <a class="button button-primary" href="https://github.com/biwman/STARJACKERS/releases" data-en="Test builds" data-pl="Buildy testowe">Test builds</a>
+          <a class="button button-secondary" href="#gallery" data-en="View gallery" data-pl="Zobacz galerię">View gallery</a>
         </div>
       </div>
-      <div class="hero-stats" aria-label="Najważniejsze cechy">
+      <div class="hero-stats" aria-label="Key features">
         <div>
           <strong>7</strong>
-          <span>klas statków</span>
+          <span data-en="ship classes" data-pl="klas statków">ship classes</span>
         </div>
         <div>
           <strong>11</strong>
-          <span>sektorów</span>
+          <span data-en="sectors" data-pl="sektorów">sectors</span>
         </div>
         <div>
-          <strong>0.81</strong>
-          <span>aktualna alpha</span>
+          <strong>16+</strong>
+          <span data-en="gear pieces" data-pl="elementów sprzętu">gear pieces</span>
         </div>
       </div>
     </section>
 
     <section class="section intro" id="game">
       <div class="section-heading">
-        <p class="eyebrow">Loot, ryzyko, ucieczka</p>
-        <h2>Każdy lot jest zakładem o własny statek.</h2>
+        <p class="eyebrow" data-en="Loot, risk, extraction" data-pl="Łup, ryzyko, ekstrakcja">Loot, risk, extraction</p>
+        <h2 data-en="Every run is a bet placed against your own ship." data-pl="Każdy lot jest zakładem o własny statek.">Every run is a bet placed against your own ship.</h2>
       </div>
       <div class="intro-copy">
-        <p>
-          STARJACKERS łączy szybką kosmiczną akcję z progresją opartą o cargo, schematy, crafting i misje projektowe. Zaczynasz skromnie, ale każdy wrak, minerał i piracka skrzynia może zmienić kolejny wypad.
+        <p data-en="STARJACKERS mixes fast space combat with cargo-based progression, blueprints, crafting, traders, and story projects. A cheap wreck, a mineral chunk, or a pirate case can change the next run." data-pl="STARJACKERS łączy szybką kosmiczną walkę z progresją opartą o cargo, blueprinty, crafting, handlarzy i projekty fabularne. Tani wrak, kawał minerału albo piracka skrzynia mogą zmienić kolejny wypad.">
+          STARJACKERS mixes fast space combat with cargo-based progression, blueprints, crafting, traders, and story projects. A cheap wreck, a mineral chunk, or a pirate case can change the next run.
         </p>
-        <p>
-          Im głębiej lecisz, tym mocniejsze są nagrody i tym boleśniejsza porażka. Deep Space, Pirate Bay, Toxic Area czy Gravity Well nie wybaczają chciwości.
+        <p data-en="The deeper the sector, the better the payout and the harsher the loss. Deep Space, Pirate Bay, Toxic Area, Gravity Well, and Hidden Dimension reward greed only when you make it home." data-pl="Im głębszy sektor, tym lepsza wypłata i tym boleśniejsza strata. Deep Space, Pirate Bay, Toxic Area, Gravity Well i Hidden Dimension nagradzają chciwość tylko wtedy, gdy wrócisz żywy.">
+          The deeper the sector, the better the payout and the harsher the loss. Deep Space, Pirate Bay, Toxic Area, Gravity Well, and Hidden Dimension reward greed only when you make it home.
         </p>
       </div>
       <div class="feature-grid">
         <article class="feature-card reveal">
           <span>01</span>
-          <h3>Wypady po łup</h3>
-          <p>Zbieraj asteroidy, kontenery, złom po przeciwnikach i rzadkie przedmioty, a potem dowieź je do ekstrakcji.</p>
+          <h3 data-en="Raid for cargo" data-pl="Wypady po cargo">Raid for cargo</h3>
+          <p data-en="Collect asteroids, containers, enemy salvage, contraband and rare artifacts, then decide when the hold is full enough to extract." data-pl="Zbieraj asteroidy, kontenery, złom po przeciwnikach, kontrabandę i rzadkie artefakty, a potem zdecyduj, kiedy ładownia jest wystarczająco pełna.">
+            Collect asteroids, containers, enemy salvage, contraband and rare artifacts, then decide when the hold is full enough to extract.
+          </p>
         </article>
         <article class="feature-card reveal">
           <span>02</span>
-          <h3>Statki z rolą</h3>
-          <p>Explorer, Viper, Avenger, Arrow, Invader, BISON i Pathfinder mają własny rytm, sloty, cargo i styl ryzyka.</p>
+          <h3 data-en="Build your ship" data-pl="Buduj swój statek">Build your ship</h3>
+          <p data-en="Explorer, Viper, Avenger, Arrow, Invader, BISON and Pathfinder use different cargo slots, safe pockets, weapons, engines, gadgets and shields." data-pl="Explorer, Viper, Avenger, Arrow, Invader, BISON i Pathfinder mają różne cargo, safe pockety, bronie, silniki, gadżety i tarcze.">
+            Explorer, Viper, Avenger, Arrow, Invader, BISON and Pathfinder use different cargo slots, safe pockets, weapons, engines, gadgets and shields.
+          </p>
         </article>
         <article class="feature-card reveal">
           <span>03</span>
-          <h3>Crafting i projekty</h3>
-          <p>Odblokowuj schematy, zbieraj blueprint scrap i rozwijaj projekty takie jak Space Mayhem, Omerta czy Alien Secrets.</p>
+          <h3 data-en="Unlock projects" data-pl="Odblokowuj projekty">Unlock projects</h3>
+          <p data-en="Deliver exact items to projects such as Supply to Survive, Space Mayhem, Omerta, Alien Secrets and Cryoshade Meats to unlock rewards." data-pl="Dostarczaj konkretne przedmioty do projektów Supply to Survive, Space Mayhem, Omerta, Alien Secrets i Cryoshade Meats, aby odblokować nagrody.">
+            Deliver exact items to projects such as Supply to Survive, Space Mayhem, Omerta, Alien Secrets and Cryoshade Meats to unlock rewards.
+          </p>
         </article>
       </div>
     </section>
 
     <section class="section gallery" id="gallery">
       <div class="section-heading">
-        <p class="eyebrow">Z gry</p>
-        <h2>Galaktyka ma więcej niż jeden problem.</h2>
+        <p class="eyebrow" data-en="Projects and loading screens" data-pl="Projekty i ekrany wczytywania">Projects and loading screens</p>
+        <h2 data-en="The game is built around risky contracts and dangerous routes." data-pl="Gra jest zbudowana wokół ryzykownych kontraktów i niebezpiecznych tras.">The game is built around risky contracts and dangerous routes.</h2>
       </div>
       <div class="gallery-grid">
-        <button class="gallery-item gallery-large reveal" type="button" data-full="assets/images/space-mayhem.jpg" data-title="SPACE MAYHEM">
-          <img src="assets/images/space-mayhem.jpg" alt="Bitwa w czerwonej mgławicy pełnej asteroidów">
+        <button class="gallery-item gallery-large reveal" type="button" data-full="assets/images/space-mayhem.jpg" data-title="SPACE MAYHEM" data-title-pl="SPACE MAYHEM">
+          <img src="assets/images/space-mayhem.jpg" alt="Space Mayhem project battle in an orange nebula">
           <span>SPACE MAYHEM</span>
         </button>
-        <button class="gallery-item reveal" type="button" data-full="assets/images/hangar.jpg" data-title="HANGAR">
-          <img src="assets/images/hangar.jpg" alt="Hangar statku kosmicznego widziany z góry">
-          <span>HANGAR</span>
+        <button class="gallery-item reveal" type="button" data-full="assets/images/project-supply-to-survive.jpg" data-title="SUPPLY TO SURVIVE" data-title-pl="SUPPLY TO SURVIVE">
+          <img src="assets/images/project-supply-to-survive.jpg" alt="Supply to Survive project artwork with ships near a planet">
+          <span>SUPPLY TO SURVIVE</span>
         </button>
-        <button class="gallery-item reveal" type="button" data-full="assets/images/omerta.jpg" data-title="OMERTA">
-          <img src="assets/images/omerta.jpg" alt="Piracka baza dryfująca w kosmosie">
+        <button class="gallery-item reveal" type="button" data-full="assets/images/omerta.jpg" data-title="OMERTA" data-title-pl="OMERTA">
+          <img src="assets/images/omerta.jpg" alt="Omerta pirate base artwork">
           <span>OMERTA</span>
         </button>
-        <button class="gallery-item reveal" type="button" data-full="assets/images/projects.jpg" data-title="DEEP SPACE">
-          <img src="assets/images/projects.jpg" alt="Statki lecące przez pole asteroidów nad planetą">
-          <span>DEEP SPACE</span>
+        <button class="gallery-item reveal" type="button" data-full="assets/images/project-alien-secrets.jpg" data-title="ALIEN SECRETS" data-title-pl="ALIEN SECRETS">
+          <img src="assets/images/project-alien-secrets.jpg" alt="Alien Secrets project artwork">
+          <span>ALIEN SECRETS</span>
         </button>
-        <button class="gallery-item reveal" type="button" data-full="assets/images/portal.jpg" data-title="ANCIENT GATE">
-          <img src="assets/images/portal.jpg" alt="Zielony portal kosmiczny aktywowany obok statków">
+        <button class="gallery-item reveal" type="button" data-full="assets/images/project-cryoshade-meats.jpg" data-title="CRYOSHADE MEATS" data-title-pl="CRYOSHADE MEATS">
+          <img src="assets/images/project-cryoshade-meats.jpg" alt="Cryoshade Meats project artwork">
+          <span>CRYOSHADE MEATS</span>
+        </button>
+        <button class="gallery-item reveal" type="button" data-full="assets/images/loading-asteroid-run.jpg" data-title="LOADING: ASTEROID RUN" data-title-pl="WCZYTYWANIE: ASTEROID RUN">
+          <img src="assets/images/loading-asteroid-run.jpg" alt="Loading screen with ships crossing an asteroid field">
+          <span data-en="LOADING SCREEN" data-pl="EKRAN WCZYTYWANIA">LOADING SCREEN</span>
+        </button>
+        <button class="gallery-item reveal" type="button" data-full="assets/images/portal.jpg" data-title="LOADING: ANCIENT GATE" data-title-pl="WCZYTYWANIE: ANCIENT GATE">
+          <img src="assets/images/portal.jpg" alt="Loading screen with an ancient green portal">
           <span>ANCIENT GATE</span>
+        </button>
+        <button class="gallery-item reveal" type="button" data-full="assets/images/loading-fleet-approach.jpg" data-title="LOADING: FLEET APPROACH" data-title-pl="WCZYTYWANIE: FLEET APPROACH">
+          <img src="assets/images/loading-fleet-approach.jpg" alt="Loading screen with a fleet approach in space">
+          <span>FLEET APPROACH</span>
         </button>
       </div>
     </section>
 
     <section class="section ships" id="ships">
-      <div class="section-heading">
-        <p class="eyebrow">Hangar</p>
-        <h2>Wybierz maszynę pod własny apetyt na ryzyko.</h2>
+      <div class="section-heading heading-with-controls">
+        <div>
+          <p class="eyebrow" data-en="Hangar" data-pl="Hangar">Hangar</p>
+          <h2 data-en="Seven ships, seven ways to risk the cargo." data-pl="Siedem statków, siedem sposobów na ryzykowanie ładunku.">Seven ships, seven ways to risk the cargo.</h2>
+        </div>
+        <div class="carousel-controls" aria-label="Ship carousel controls">
+          <button class="carousel-button" type="button" data-scroll-target="ship-carousel" data-scroll-dir="-1" aria-label="Previous ships">‹</button>
+          <button class="carousel-button" type="button" data-scroll-target="ship-carousel" data-scroll-dir="1" aria-label="Next ships">›</button>
+        </div>
       </div>
-      <div class="ship-grid">
+      <div class="carousel-track ship-carousel" id="ship-carousel" data-carousel>
         <article class="ship-card reveal">
-          <img src="assets/images/ship-arrow.png" alt="Statek Arrow w skórce Shark">
+          <img src="assets/images/ship-explorer.png" alt="Explorer ship">
           <div>
-            <h3>Arrow</h3>
-            <p>Szybki, lekki, stworzony do ostrych wejść i jeszcze szybszych ucieczek.</p>
+            <p class="card-kicker" data-en="Starter hauler" data-pl="Startowy transporter">Starter hauler</p>
+            <h3>Explorer</h3>
+            <p data-en="Balanced and dependable. A forgiving first ship with enough cargo to learn when to push and when to run." data-pl="Zbalansowany i przewidywalny. Dobry pierwszy statek z cargo wystarczającym do nauki, kiedy cisnąć dalej, a kiedy uciekać.">Balanced and dependable. A forgiving first ship with enough cargo to learn when to push and when to run.</p>
           </div>
         </article>
         <article class="ship-card reveal">
-          <img src="assets/images/ship-avenger.png" alt="Biały statek Avenger NASA">
+          <img src="assets/images/ship-viper.png" alt="Viper ship">
           <div>
+            <p class="card-kicker" data-en="Fast gunship" data-pl="Szybki gunship">Fast gunship</p>
+            <h3>Viper</h3>
+            <p data-en="Quick, agile and armed for aggressive pickups. It rewards pilots who can dodge pressure instead of absorbing it." data-pl="Szybki, zwrotny i gotowy do agresywnego zbierania łupu. Nagradza pilotów, którzy unikają presji zamiast ją przyjmować.">Quick, agile and armed for aggressive pickups. It rewards pilots who can dodge pressure instead of absorbing it.</p>
+          </div>
+        </article>
+        <article class="ship-card reveal">
+          <img src="assets/images/ship-avenger.png" alt="Avenger ship">
+          <div>
+            <p class="card-kicker" data-en="Armored fighter" data-pl="Opancerzony fighter">Armored fighter</p>
             <h3>Avenger</h3>
-            <p>Wojskowy charakter, solidna ochrona i miejsce na uzbrojenie dla agresywnego stylu gry.</p>
+            <p data-en="A military hull with heavier protection and a direct combat feel. Slower turns, harder decisions, bigger teeth." data-pl="Wojskowy kadłub z mocniejszą ochroną i bezpośrednim stylem walki. Wolniejsze skręty, trudniejsze decyzje, większy pazur.">A military hull with heavier protection and a direct combat feel. Slower turns, harder decisions, bigger teeth.</p>
           </div>
         </article>
         <article class="ship-card reveal">
-          <img src="assets/images/ship-bison.png" alt="Ciężki statek cargo BISON">
+          <img src="assets/images/ship-arrow.png" alt="Arrow ship">
           <div>
+            <p class="card-kicker" data-en="Speed runner" data-pl="Maszyna prędkości">Speed runner</p>
+            <h3>Arrow</h3>
+            <p data-en="Light cargo, high speed and sharp handling. Built for daring routes, quick grabs and clean extraction lines." data-pl="Mało cargo, wysoka prędkość i ostre prowadzenie. Stworzony do odważnych tras, szybkich skoków po łup i czystej ekstrakcji.">Light cargo, high speed and sharp handling. Built for daring routes, quick grabs and clean extraction lines.</p>
+          </div>
+        </article>
+        <article class="ship-card reveal">
+          <img src="assets/images/ship-invader.png" alt="Invader ship">
+          <div>
+            <p class="card-kicker" data-en="Utility raider" data-pl="Użytkowy raider">Utility raider</p>
+            <h3>Invader</h3>
+            <p data-en="A flexible black-market platform with extra safe storage and support options for tricky sector objectives." data-pl="Elastyczna platforma z czarnego rynku, z dodatkowymi safe slotami i wsparciem pod trudniejsze cele sektorów.">A flexible black-market platform with extra safe storage and support options for tricky sector objectives.</p>
+          </div>
+        </article>
+        <article class="ship-card reveal">
+          <img src="assets/images/ship-bison.png" alt="BISON cargo ship">
+          <div>
+            <p class="card-kicker" data-en="Heavy cargo truck" data-pl="Ciężka ciężarówka cargo">Heavy cargo truck</p>
             <h3>BISON</h3>
-            <p>Ciężarówka kosmosu. Więcej cargo, więcej łupu, więcej powodów, żeby nie zginąć.</p>
+            <p data-en="The big hold. More cargo, more salvage, more profit and more reasons to panic when the route collapses." data-pl="Duża ładownia. Więcej cargo, więcej złomu, większy zysk i więcej powodów do paniki, gdy trasa się zamyka.">The big hold. More cargo, more salvage, more profit and more reasons to panic when the route collapses.</p>
           </div>
         </article>
         <article class="ship-card reveal">
-          <img src="assets/images/ship-pathfinder.png" alt="Statek Pathfinder Angel">
+          <img src="assets/images/ship-pathfinder.png" alt="Pathfinder ship">
           <div>
+            <p class="card-kicker" data-en="Specialist scout" data-pl="Specjalistyczny zwiadowca">Specialist scout</p>
             <h3>Pathfinder</h3>
-            <p>Zwrotny zwiadowca pod misje specjalne, skanowanie i precyzyjne wejścia w trudne sektory.</p>
+            <p data-en="A precise scout with gadget and support space for special contracts, research routes and careful treasure hunting." data-pl="Precyzyjny zwiadowca z miejscem na gadżety i support pod kontrakty specjalne, badania i ostrożne polowanie na skarby.">A precise scout with gadget and support space for special contracts, research routes and careful treasure hunting.</p>
           </div>
         </article>
       </div>
     </section>
 
-    <section class="section loadout" id="loadout">
-      <div class="section-heading">
-        <p class="eyebrow">Wyposażenie</p>
-        <h2>Nie chodzi tylko o większe działa.</h2>
+    <section class="section gadgets" id="gadgets">
+      <div class="section-heading heading-with-controls">
+        <div>
+          <p class="eyebrow" data-en="Gadgets and equipment" data-pl="Gadżety i wyposażenie">Gadgets and equipment</p>
+          <h2 data-en="The best run is usually won before the first shot." data-pl="Najlepszy lot zwykle wygrywa się przed pierwszym strzałem.">The best run is usually won before the first shot.</h2>
+        </div>
+        <div class="carousel-controls" aria-label="Gadget carousel controls">
+          <button class="carousel-button" type="button" data-scroll-target="gadget-carousel" data-scroll-dir="-1" aria-label="Previous gadgets">‹</button>
+          <button class="carousel-button" type="button" data-scroll-target="gadget-carousel" data-scroll-dir="1" aria-label="Next gadgets">›</button>
+        </div>
       </div>
-      <div class="loadout-grid">
+      <div class="carousel-track gadget-carousel" id="gadget-carousel" data-carousel>
         <article class="item-card reveal">
-          <img src="assets/images/item-rocket-launcher.png" alt="Ikona Rocket Launcher">
+          <img src="assets/images/item-rocket-launcher.png" alt="Rocket Launcher icon">
           <h3>Rocket Launcher</h3>
-          <p>Rakiety z namierzaniem dla celów, które nie chcą stać spokojnie.</p>
+          <p data-en="Explosive rockets with target lock for enemies that refuse to drift politely." data-pl="Rakiety z namierzaniem dla przeciwników, którzy nie chcą grzecznie dryfować.">Explosive rockets with target lock for enemies that refuse to drift politely.</p>
         </article>
         <article class="item-card reveal">
-          <img src="assets/images/item-space-torpedo.png" alt="Ikona Space Torpedo">
+          <img src="assets/images/item-space-torpedo.png" alt="Space Torpedo icon">
           <h3>Space Torpedo</h3>
-          <p>Szybki strzał z nosa statku i kompaktowy wybuch przy trafieniu.</p>
+          <p data-en="A fast nose-fired strike that detonates on impact in a compact blast." data-pl="Szybki strzał z nosa statku, który detonuje przy trafieniu w zwartym wybuchu.">A fast nose-fired strike that detonates on impact in a compact blast.</p>
         </article>
         <article class="item-card reveal">
-          <img src="assets/images/item-stasis-buoy.png" alt="Ikona Stasis Buoy">
+          <img src="assets/images/item-stasis-buoy.png" alt="Stasis Buoy icon">
           <h3>Stasis Buoy</h3>
-          <p>Puls spowalniający wrogów i ich broń, gdy robi się zbyt ciasno.</p>
+          <p data-en="Drops a slowing pulse that makes nearby ships and weapons sluggish." data-pl="Rozstawia spowalniający puls, który ocięża statki i broń w pobliżu.">Drops a slowing pulse that makes nearby ships and weapons sluggish.</p>
         </article>
         <article class="item-card reveal">
-          <img src="assets/images/item-tractor-beam.png" alt="Ikona Tractor Beam">
+          <img src="assets/images/item-tractor-beam.png" alt="Tractor Beam icon">
           <h3>Tractor Beam</h3>
-          <p>Przyciągaj łup i holuj obiekty, kiedy droga do ekstrakcji jest krótka.</p>
+          <p data-en="Locks onto collectible objects and tows them behind the ship while held." data-pl="Łapie obiekty do zebrania i holuje je za statkiem, gdy trzymasz aktywację.">Locks onto collectible objects and tows them behind the ship while held.</p>
         </article>
         <article class="item-card reveal">
-          <img src="assets/images/item-auto-turret.png" alt="Ikona Auto Turret">
+          <img src="assets/images/item-auto-turret.png" alt="Auto Turret icon">
           <h3>Auto Turret</h3>
-          <p>Rozstaw wieżyczkę, która osłoni plecy w trakcie rabunku.</p>
+          <p data-en="Anchors behind the ship and fires at the closest hostile contact." data-pl="Kotwiczy się za statkiem i strzela do najbliższego wrogiego kontaktu.">Anchors behind the ship and fires at the closest hostile contact.</p>
         </article>
         <article class="item-card reveal">
-          <img src="assets/images/item-treasure-scanner.png" alt="Ikona Treasure Scanner">
+          <img src="assets/images/item-rocket-auto-turret.png" alt="Rocket Auto Turret icon">
+          <h3>Rocket Auto Turret</h3>
+          <p data-en="A deployable turret that trades subtlety for straight explosive pressure." data-pl="Rozstawiana wieżyczka, która zamienia subtelność na prostą presję wybuchową.">A deployable turret that trades subtlety for straight explosive pressure.</p>
+        </article>
+        <article class="item-card reveal">
+          <img src="assets/images/item-dropbot.png" alt="Dropbot icon">
+          <h3>Dropbot</h3>
+          <p data-en="Evacuates marked cargo to extraction so one valuable item survives even if the ship does not." data-pl="Ewakuuje oznaczone cargo do ekstrakcji, aby jeden cenny przedmiot przetrwał nawet wtedy, gdy statek nie przetrwa.">Evacuates marked cargo to extraction so one valuable item survives even if the ship does not.</p>
+        </article>
+        <article class="item-card reveal">
+          <img src="assets/images/item-loot-hook.png" alt="Loot Hook icon">
+          <h3>Loot Hook</h3>
+          <p data-en="A contraband grapple that steals unsecured cargo from the nearest enemy ship." data-pl="Kontrabandowy hak, który kradnie niezabezpieczone cargo z najbliższego wrogiego statku.">A contraband grapple that steals unsecured cargo from the nearest enemy ship.</p>
+        </article>
+        <article class="item-card reveal">
+          <img src="assets/images/item-tether-harpoon.png" alt="Tether Harpoon icon">
+          <h3>Tether Harpoon</h3>
+          <p data-en="Latches onto an enemy ship, drags it toward you and slows its weapons." data-pl="Łapie wrogi statek, przyciąga go do ciebie i spowalnia jego broń.">Latches onto an enemy ship, drags it toward you and slows its weapons.</p>
+        </article>
+        <article class="item-card reveal">
+          <img src="assets/images/item-bio-trap.png" alt="Bio Trap icon">
+          <h3>Bio Trap</h3>
+          <p data-en="A black-market capture capsule that can turn a hostile astronaut into valuable cargo." data-pl="Czarnorynkowa kapsuła przechwytująca, która może zamienić wrogiego astronautę w cenne cargo.">A black-market capture capsule that can turn a hostile astronaut into valuable cargo.</p>
+        </article>
+        <article class="item-card reveal">
+          <img src="assets/images/item-metal-drift-wall.png" alt="Metal Drift Wall icon">
+          <h3>Metal Drift Wall</h3>
+          <p data-en="Deploys a heavy drifting hull wall that blocks fire and can be shoved into position." data-pl="Rozstawia ciężką dryfującą ścianę kadłuba, która blokuje ogień i może być przepychana.">Deploys a heavy drifting hull wall that blocks fire and can be shoved into position.</p>
+        </article>
+        <article class="item-card reveal">
+          <img src="assets/images/item-treasure-scanner.png" alt="Treasure Scanner icon">
           <h3>Treasure Scanner</h3>
-          <p>Sygnał prowadzący do ukrytych skarbów i lepszych decyzji w locie.</p>
+          <p data-en="Pings faster and louder as you approach hidden treasure." data-pl="Pika szybciej i głośniej, gdy zbliżasz się do ukrytego skarbu.">Pings faster and louder as you approach hidden treasure.</p>
+        </article>
+        <article class="item-card reveal">
+          <img src="assets/images/item-short-scanner.png" alt="Short Scanner icon">
+          <h3>Short Scanner</h3>
+          <p data-en="Reveals ships and enemies hiding inside nebulas, fire clouds and cover." data-pl="Ujawnia statki i przeciwników ukrytych w mgławicach, chmurach ognia i zasłonie.">Reveals ships and enemies hiding inside nebulas, fire clouds and cover.</p>
+        </article>
+        <article class="item-card reveal">
+          <img src="assets/images/item-space-bomb.png" alt="Space Bomb icon">
+          <h3>Space Bomb</h3>
+          <p data-en="Drops behind the ship, arms, then surges forward into a heavy blast." data-pl="Spada za statkiem, uzbraja się, a potem rusza naprzód w ciężki wybuch.">Drops behind the ship, arms, then surges forward into a heavy blast.</p>
+        </article>
+        <article class="item-card reveal">
+          <img src="assets/images/item-phase-shield.png" alt="Phase Shield icon">
+          <h3>Phase Shield</h3>
+          <p data-en="A defensive layer for pilots who expect the extraction route to get ugly." data-pl="Warstwa obronna dla pilotów, którzy wiedzą, że droga do ekstrakcji zrobi się brzydka.">A defensive layer for pilots who expect the extraction route to get ugly.</p>
+        </article>
+        <article class="item-card reveal">
+          <img src="assets/images/item-black-market-thruster.png" alt="Black Market Thruster icon">
+          <h3>Black Market Thruster</h3>
+          <p data-en="Illegal speed with a shield penalty. Perfect when survival means leaving first." data-pl="Nielegalna prędkość za cenę tarczy. Idealna, gdy przetrwanie oznacza odlecieć jako pierwszy.">Illegal speed with a shield penalty. Perfect when survival means leaving first.</p>
+        </article>
+        <article class="item-card reveal">
+          <img src="assets/images/item-asteroid-breacher-bomb.png" alt="Asteroid Breacher Bomb icon">
+          <h3>Asteroid Breacher Bomb</h3>
+          <p data-en="A focused demolition charge for cracking obstacles and opening paths." data-pl="Skupiony ładunek wyburzeniowy do rozbijania przeszkód i otwierania tras.">A focused demolition charge for cracking obstacles and opening paths.</p>
         </article>
       </div>
     </section>
 
     <section class="section world" id="world">
       <div class="section-heading">
-        <p class="eyebrow">Sektory i zagrożenia</p>
-        <h2>Mapa decyduje, ile możesz wygrać i ile możesz stracić.</h2>
+        <p class="eyebrow" data-en="Sectors and threats" data-pl="Sektory i zagrożenia">Sectors and threats</p>
+        <h2 data-en="The map decides how much you can win and how much you can lose." data-pl="Mapa decyduje, ile możesz wygrać i ile możesz stracić.">The map decides how much you can win and how much you can lose.</h2>
       </div>
       <div class="world-layout">
-        <div class="map-list reveal" aria-label="Dostępne sektory">
+        <div class="map-list reveal" aria-label="Available sectors">
           <span>Just Space</span>
           <span>Noob Haven</span>
           <span>Minefield</span>
@@ -219,11 +339,11 @@
           <span>Hidden Dimension</span>
         </div>
         <div class="threat-panel reveal">
-          <img src="assets/images/enemy-space-manta.png" alt="Space Manta z gry">
+          <img src="assets/images/enemy-space-manta.png" alt="Space Manta enemy from the game">
           <div>
-            <h3>Piraci, bestie i ciężkie cele</h3>
-            <p>
-              Na trasie czekają Pirate Fighters, Hunter Lance, Radar Ship, Space Manta, Gravity Squid, Pirate Base, Mothership, Cosmic Worm i Rift Warden. Każdy sektor dokłada własny zestaw problemów.
+            <h3 data-en="Pirates, creatures and heavy targets" data-pl="Piraci, bestie i ciężkie cele">Pirates, creatures and heavy targets</h3>
+            <p data-en="Pirate Fighters, Hunter Lance ships, Radar Ships, Space Mantas, Gravity Squids, Pirate Bases, Motherships, Cosmic Worms and Rift Wardens all pressure the route in different ways." data-pl="Pirate Fighters, Hunter Lance, Radar Ships, Space Mantas, Gravity Squids, Pirate Bases, Motherships, Cosmic Worms i Rift Wardens naciskają na trasę na różne sposoby.">
+              Pirate Fighters, Hunter Lance ships, Radar Ships, Space Mantas, Gravity Squids, Pirate Bases, Motherships, Cosmic Worms and Rift Wardens all pressure the route in different ways.
             </p>
           </div>
         </div>
@@ -232,15 +352,15 @@
 
     <section class="section status" id="status">
       <div class="status-copy">
-        <p class="eyebrow">Projekt na GitHubie</p>
-        <h2>Strona jest gotowa pod GitHub Pages.</h2>
-        <p>
-          Kod strony żyje w katalogu <strong>docs</strong>, więc można ją opublikować bez osobnego frameworka i bez procesu builda.
+        <p class="eyebrow" data-en="GitHub project" data-pl="Projekt na GitHubie">GitHub project</p>
+        <h2 data-en="The website is ready for GitHub Pages." data-pl="Strona jest gotowa pod GitHub Pages.">The website is ready for GitHub Pages.</h2>
+        <p data-en="It lives in the docs folder, so GitHub Pages can publish it directly from the main branch without a build step." data-pl="Strona żyje w katalogu docs, więc GitHub Pages może publikować ją bezpośrednio z brancha main, bez procesu builda.">
+          It lives in the docs folder, so GitHub Pages can publish it directly from the main branch without a build step.
         </p>
       </div>
       <div class="status-actions">
-        <a class="button button-primary" href="https://github.com/biwman/STARJACKERS">Repozytorium</a>
-        <a class="button button-secondary" href="https://github.com/biwman/STARJACKERS/releases">Releases</a>
+        <a class="button button-primary" href="https://github.com/biwman/STARJACKERS" data-en="Repository" data-pl="Repozytorium">Repository</a>
+        <a class="button button-secondary" href="https://github.com/biwman/STARJACKERS/releases" data-en="Releases" data-pl="Releases">Releases</a>
       </div>
     </section>
   </main>
@@ -250,8 +370,8 @@
     <a href="https://github.com/biwman/STARJACKERS">github.com/biwman/STARJACKERS</a>
   </footer>
 
-  <dialog class="media-dialog" data-dialog aria-label="Podgląd grafiki">
-    <button class="dialog-close" type="button" data-dialog-close aria-label="Zamknij podgląd">×</button>
+  <dialog class="media-dialog" data-dialog aria-label="Media preview">
+    <button class="dialog-close" type="button" data-dialog-close aria-label="Close preview">×</button>
     <img src="assets/images/starjackers-hero.jpg" alt="" data-dialog-image>
     <p data-dialog-title>STARJACKERS</p>
   </dialog>
