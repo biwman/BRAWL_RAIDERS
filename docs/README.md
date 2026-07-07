@@ -2,7 +2,7 @@
 
 Statyczna strona promocyjna gry STARJACKERS przygotowana pod GitHub Pages.
 
-Strona ma domyślną wersję angielską, przełącznik języka EN/PL, osadzony zwiastun z YouTube, galerię z 8 screenami z gry, przewijane poziomo sekcje statków i gadżetów oraz zakładkę Privacy Policy.
+Strona ma domyślną wersję angielską, przełącznik języka EN/PL, osadzony zwiastun z YouTube, galerię z 8 screenami z gry, przewijane poziomo sekcje statków i gadżetów, status testów wewnętrznych Google Play, kontakt dla testerów oraz zakładkę Privacy Policy.
 
 Publikacja:
 

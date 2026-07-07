@@ -259,11 +259,17 @@ a {
   background: var(--bg-2);
 }
 
+.contact {
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+}
+
 .section-heading,
 .intro-copy,
 .feature-grid,
 .trailer-layout,
 .gallery-grid,
+.contact-layout,
 .privacy-grid,
 .privacy-note,
 .world-layout,
@@ -627,6 +633,50 @@ a {
   padding-right: 48px;
 }
 
+.contact-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 28px;
+  align-items: center;
+}
+
+.contact-copy {
+  max-width: 760px;
+}
+
+.contact-copy h2 {
+  margin: 0;
+  font-size: 40px;
+  line-height: 1.1;
+}
+
+.contact-copy p:last-child {
+  color: var(--muted);
+}
+
+.contact-email {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  padding: 14px 18px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: #f4f8ff;
+  color: #07101a;
+  font-weight: 900;
+  text-align: center;
+  word-break: break-word;
+  transition: transform 160ms ease, border-color 160ms ease;
+}
+
+.contact-email:hover,
+.contact-email:focus-visible {
+  transform: translateY(-1px);
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.72);
+}
+
 .privacy-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -787,6 +837,10 @@ a {
     grid-template-columns: 1fr;
   }
 
+  .contact-layout {
+    grid-template-columns: 1fr;
+  }
+
   .status-copy {
     margin-left: 0;
   }
@@ -865,7 +919,8 @@ a {
   }
 
   .section-heading h2,
-  .status-copy h2 {
+  .status-copy h2,
+  .contact-copy h2 {
     font-size: 34px;
   }
 
@@ -925,6 +980,10 @@ a {
 
 @media (max-width: 480px) {
   .button {
+    width: 100%;
+  }
+
+  .contact-email {
     width: 100%;
   }
 
